@@ -70,6 +70,7 @@ Generator:
   scaling_factor: 8            # Upscaling factor (e.g., 2×, 4×, 8×)
 
 Discriminator:
+  model_type: 'standard'      # Discriminator architecture selector
   kernel_size: 3               # Conv kernel size for discriminator layers
   n_channels: 64               # Base channel width
   n_blocks: 8                  # Number of convolutional blocks

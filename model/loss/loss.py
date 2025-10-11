@@ -1,9 +1,9 @@
-import math
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import kornia.metrics as km
+
+from utils.spectral_helpers import sen2_stretch
 
 def _cfg_get(cfg, keys, default=None):
     cur = cfg
@@ -20,7 +20,6 @@ class GeneratorContentLoss(nn.Module):
     """
     Composite generator content loss that self-instantiates the configured perceptual metric.
     total = l1_w*L1 + sam_w*SAM + perc_w*Perceptual + tv_w*TV
-            + psnr_w*(10**(-PSNR/10)) + ssim_w*(1-SSIM)
     """
 
     def __init__(self, cfg):
@@ -35,8 +34,6 @@ class GeneratorContentLoss(nn.Module):
                                _cfg_get(cfg, ["Training","perceptual_loss_weight"], 0.1))
         self.perc_w = float(perc_w_cfg)
         self.tv_w   = float(_cfg_get(cfg, ["Training","Losses","tv_weight"], 0.0))
-        self.psnr_w = float(_cfg_get(cfg, ["Training","Losses","psnr_weight"], 0.0))
-        self.ssim_w = float(_cfg_get(cfg, ["Training","Losses","ssim_weight"], 0.0))
 
         self.max_val  = float(_cfg_get(cfg, ["Training","Losses","max_val"], 1.0))
         self.ssim_win = int(_cfg_get(cfg, ["Training","Losses","ssim_win"], 11))
@@ -78,9 +75,7 @@ class GeneratorContentLoss(nn.Module):
             self.l1_w   * comps["l1"] +
             self.sam_w  * comps["sam"] +
             self.perc_w * comps["perceptual"] +
-            self.tv_w   * comps["tv"] +
-            self.psnr_w * comps["psnr_loss"] +
-            self.ssim_w * comps["ssim_loss"]
+            self.tv_w   * comps["tv"]
         )
         metrics = {k: v.detach() for k, v in comps.items()}
         return loss, metrics
@@ -91,13 +86,13 @@ class GeneratorContentLoss(nn.Module):
         Compute all unweighted metric components and (optionally) prefix their keys.
 
         Args:
-            sr, hr: tensors in the same range as configured for PSNR/SSIM.
+            sr, hr: tensors in the same range as the generator output/HR targets.
             prefix: key prefix like 'train/' or 'val'. If non-empty and doesn't end
                     with '/', a '/' is added automatically.
 
         Returns:
             dict mapping metric names -> tensors (detached), e.g. {'train/l1': ...}.
-            Includes raw 'psnr'/'ssim' metrics alongside their loss surrogates.
+            Includes raw PSNR/SSIM metrics computed on stretched/clipped inputs.
         """
         comps = self._compute_components(sr, hr, build_graph=False)
         p = (prefix + "/") if prefix and not prefix.endswith("/") else prefix
@@ -186,29 +181,16 @@ class GeneratorContentLoss(nn.Module):
         comps["tv"] = _compute(self.tv_w, lambda: self._tv_loss(sr))
 
         # --- Quality metrics ---
-        def _psnr() -> torch.Tensor:
-            value = km.psnr(sr, hr, max_val=self.max_val)
-            if value.dim() > 0:
-                value = value.mean()
-            return value
-
-        psnr = _compute(self.psnr_w, _psnr)
-        comps["psnr"] = psnr
-        psnr_loss = torch.clamp(torch.exp(-psnr * math.log(10.0) / 10.0), min=0.0, max=1.0)
-        if not (build_graph and self.psnr_w != 0.0):
-            psnr_loss = psnr_loss.detach()
-        comps["psnr_loss"] = psnr_loss
-
-        def _ssim() -> torch.Tensor:
-            return km.ssim(
-                sr, hr, window_size=self.ssim_win, max_val=self.max_val, reduction="mean"
-            )
-
-        ssim = _compute(self.ssim_w, _ssim)
-        comps["ssim"] = ssim
-        ssim_loss = 1.0 - ssim
-        if not (build_graph and self.ssim_w != 0.0):
-            ssim_loss = ssim_loss.detach()
-        comps["ssim_loss"] = ssim_loss
+        with torch.no_grad():
+            sr_metric = sen2_stretch(sr)
+            hr_metric = sen2_stretch(hr)
+            psnr = km.psnr(sr_metric, hr_metric, max_val=self.max_val)
+            if psnr.dim() > 0:
+                psnr = psnr.mean()
+            comps["psnr"] = psnr.detach()
+            comps["ssim"] = km.ssim(
+                sr_metric, hr_metric, window_size=self.ssim_win,
+                max_val=self.max_val, reduction="mean"
+            ).detach()
 
         return comps

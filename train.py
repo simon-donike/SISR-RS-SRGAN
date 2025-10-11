@@ -97,8 +97,8 @@ if __name__ == '__main__':
     
     trainer = Trainer(accelerator='cuda',
                     devices=[0],
-                    check_val_every_n_epoch=1,
-                    val_check_interval=1.0,
+                    #check_val_every_n_epoch=1,
+                    val_check_interval=0.1,
                     limit_val_batches=250,
                     resume_from_checkpoint=resume_from_checkpoint,
                     max_epochs=99999,

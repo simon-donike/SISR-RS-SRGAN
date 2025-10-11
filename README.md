@@ -88,9 +88,6 @@ pip install -r requirements.txt
 > ```bash
 > # CUDA 11.7 builds
 > pip install torch==1.13.1 torchvision==0.14.1 --index-url https://download.pytorch.org/whl/cu117
->
-> # CPU-only builds
-> pip install torch==1.13.1+cpu torchvision==0.14.1+cpu --index-url https://download.pytorch.org/whl/cpu
 > ```
 
 ---

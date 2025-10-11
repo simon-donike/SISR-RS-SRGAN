@@ -161,9 +161,7 @@ class GeneratorContentLoss(nn.Module):
         psnr_loss = torch.exp(-psnr * math.log(10.0) / 10.0)
         comps["psnr_loss"] = torch.clamp(psnr_loss, min=0.0, max=1.0)
 
-        ssim = km.ssim(sr, hr, window_size=self.ssim_win, max_val=self.max_val)
-        if ssim.dim() > 0:
-            ssim = ssim.mean()
+        ssim = km.ssim(sr, hr, window_size=self.ssim_win, max_val=self.max_val, reduction="mean")
         comps["ssim"] = ssim
         comps["ssim_loss"] = 1.0 - ssim
 

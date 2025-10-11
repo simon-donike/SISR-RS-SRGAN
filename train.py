@@ -20,7 +20,7 @@ if __name__ == '__main__':
     # General
     torch.set_float32_matmul_precision('medium')
     # load config
-    cfg_filepath = "config.yaml"
+    cfg_filepath = "configs/config.yaml"
     config = OmegaConf.load(cfg_filepath)
 
     #############################################################################################################

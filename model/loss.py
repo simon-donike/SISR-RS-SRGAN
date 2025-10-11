@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,7 +19,8 @@ def _cfg_get(cfg, keys, default=None):
 class GeneratorContentLoss(nn.Module):
     """
     Composite generator content loss that self-instantiates TruncatedVGG19 from cfg.TruncatedVGG.
-    total = l1_w*L1 + sam_w*SAM + perc_w*MSE(VGG3) + tv_w*TV + psnr_w*(-PSNR) + ssim_w*(1-SSIM)
+    total = l1_w*L1 + sam_w*SAM + perc_w*MSE(VGG3) + tv_w*TV
+            + psnr_w*(10**(-PSNR/10)) + ssim_w*(1-SSIM)
     """
 
     def __init__(self, cfg):
@@ -77,7 +80,8 @@ class GeneratorContentLoss(nn.Module):
                     with '/', a '/' is added automatically.
 
         Returns:
-            dict mapping metric names -> tensors (detached), e.g. {'train/l1': ...}
+            dict mapping metric names -> tensors (detached), e.g. {'train/l1': ...}.
+            Includes raw 'psnr'/'ssim' metrics alongside their loss surrogates.
         """
         comps = self._compute_components(sr, hr)
         p = (prefix + "/") if prefix and not prefix.endswith("/") else prefix
@@ -120,8 +124,6 @@ class GeneratorContentLoss(nn.Module):
             "sam": torch.tensor(0.0, device=device),
             "perceptual": torch.tensor(0.0, device=device),
             "tv": torch.tensor(0.0, device=device),
-            "psnr_loss": torch.tensor(0.0, device=device),  # -PSNR
-            "ssim_loss": torch.tensor(0.0, device=device),  # 1 - SSIM
         }
 
         # L1
@@ -144,16 +146,25 @@ class GeneratorContentLoss(nn.Module):
         if self.tv_w != 0.0:
             comps["tv"] = self._tv_loss(sr)
 
-        # PSNR as loss = -PSNR
-        if self.psnr_w != 0.0:
-            psnr = km.psnr(sr, hr, max_val=self.max_val)
-            if psnr.dim() > 0:
-                psnr = psnr.mean()
-            comps["psnr_loss"] = -psnr
+        # --- Metrics (always computed so logging works regardless of weights) ---
+        # Historically PSNR/SSIM stayed at zero in the logs because we only
+        # evaluated them when their loss weights were non-zero.  Keep these
+        # metrics unconditional so training dashboards always receive the raw
+        # values even if the corresponding losses are disabled.
+        psnr = km.psnr(sr, hr, max_val=self.max_val)
+        if psnr.dim() > 0:
+            psnr = psnr.mean()
+        comps["psnr"] = psnr
+        # Convert PSNR (dB) into a bounded [0, 1] loss surrogate using
+        #     loss = 10 ** (-PSNR/10) = exp(-PSNR * ln(10) / 10).
+        # Clamp to [0, 1] to keep extreme low PSNR values numerically stable.
+        psnr_loss = torch.exp(-psnr * math.log(10.0) / 10.0)
+        comps["psnr_loss"] = torch.clamp(psnr_loss, min=0.0, max=1.0)
 
-        # SSIM as loss = 1 - SSIM
-        if self.ssim_w != 0.0:
-            ssim = km.ssim(sr, hr, window_size=self.ssim_win, max_val=self.max_val, reduction="mean")
-            comps["ssim_loss"] = 1.0 - ssim
+        ssim = km.ssim(sr, hr, window_size=self.ssim_win, max_val=self.max_val)
+        if ssim.dim() > 0:
+            ssim = ssim.mean()
+        comps["ssim"] = ssim
+        comps["ssim_loss"] = 1.0 - ssim
 
         return comps

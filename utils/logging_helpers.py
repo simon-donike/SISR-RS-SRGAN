@@ -2,7 +2,6 @@ import torch
 import matplotlib.pyplot as plt
 from PIL import Image
 import io
-import torchvision.transforms as transforms
 from utils.spectral_helpers import minmax_percentile
 
 def _to_numpy_img(t: torch.Tensor):
@@ -20,9 +19,6 @@ def _to_numpy_img(t: torch.Tensor):
 
 def plot_tensors(lr, sr, hr, title="Train"):
     # --- denorm + stretch on whatever device you're using ---
-    #sr = normalise_s2(sr, stage="denorm")
-    #lr = normalise_s2(lr, stage="denorm")
-    #hr = normalise_s2(hr, stage="denorm")
     lr = minmax_percentile(lr)
     sr = minmax_percentile(sr)
     hr = minmax_percentile(hr)

@@ -3,8 +3,8 @@ ENTRY: training_step(batch, batch_idx, optimizer_idx)
 ├─ 1) Forward + metrics (no grad)
 │   ├─ (lr, hr) = batch
 │   ├─ sr = G(lr)
-│   ├─ metrics = content_loss.return_metrics(sr, hr)    # {l1, sam, perceptual, tv, psnr_loss, ssim_loss}
-│   └─ LOG: each metric (e.g., "l1", "sam", "perceptual", "tv", "psnr_loss", "ssim_loss")
+│   ├─ metrics = content_loss.return_metrics(sr, hr)    # {l1, sam, perceptual, tv, psnr, ssim}
+│   └─ LOG: each metric (e.g., "l1", "sam", "perceptual", "tv", "psnr", "ssim")
 │
 ├─ 2) Pretrain flag
 │   ├─ pretrain = _pretrain_check()  # global_step vs g_pretrain_steps

@@ -12,7 +12,7 @@ ENTRY: training_step(batch, batch_idx, optimizer_idx)
 │
 ├─ 3) IF pretrain == True  (G-only warmup)
 │   │
-│   ├─ content_loss = content_loss.return_loss(sr, hr)
+│   ├─ (content_loss, loss_metrics) = content_loss.return_loss(sr, hr)
 │   │
 │   ├─ IF optimizer_idx == 1 (G step, pretrain):
 │   │     ├─ LOG "generator/content_loss" = content_loss
@@ -44,7 +44,7 @@ ENTRY: training_step(batch, batch_idx, optimizer_idx)
     │   └─ RETURN d_loss
     │
     └─ 4B) IF optimizer_idx == 1 (G step):
-        ├─ content_loss = content_loss.return_loss(sr, hr)     # L1+SAM+Perceptual(+TV/PSNR/SSIM) per cfg
+        ├─ (content_loss, loss_metrics) = content_loss.return_loss(sr, hr)     # tuple(loss, metrics)
         ├─ LOG "generator/content_loss" = content_loss
         │
         ├─ sr_logits = D(sr)                                   # no detach so GAN grads reach G

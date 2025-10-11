@@ -182,11 +182,10 @@ class SRGAN_model(pl.LightningModule):
         # ======================================================================
 
         # -------- CREATE SR DATA AND LOG METRICS --------
-        lr_imgs,hr_imgs = batch                                  # unpack LR/HR tensors from dataloader batch
+        lr_imgs, hr_imgs = batch                                  # unpack LR/HR tensors from dataloader batch
         sr_imgs = self.forward(lr_imgs)                          # forward pass of the generator to produce SR from LR
         with torch.no_grad():  # ← avoids autograd work for metrics
-            #metrics = calculate_metrics(sr_imgs, hr_imgs, phase="train_metrics")
-            metrics = self.content_loss_criterion.return_metrics(sr_imgs, hr_imgs,prefix="train_metrics/")  # compute content metrics only for logging
+            metrics = self.content_loss_criterion.return_metrics(sr_imgs, hr_imgs, prefix="train_metrics/")  # compute content metrics only for logging
             for key, value in metrics.items(): # log all metrics
                 self.log(f'{key}', value)                       # log each metric (e.g., PSNR/SSIM/LPIPS) under "train_metrics/*"
 
@@ -251,7 +250,7 @@ class SRGAN_model(pl.LightningModule):
             
             """ 1. Get VGG space loss """
             # encode images
-            content_loss = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)   # perceptual/content criterion (e.g., VGG)
+            content_loss, _ = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)   # perceptual/content criterion (e.g., VGG)
             self.log("generator/content_loss", content_loss)                           # log content loss for G
 
             
@@ -281,7 +280,7 @@ class SRGAN_model(pl.LightningModule):
         # Purpose: train only the generator using content loss, no adversarial part.
         # ======================================================================
         if optimizer_idx == 1:
-            content_loss = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)  # compute perceptual/content loss (e.g., VGG or L1)
+            content_loss, _ = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)  # compute perceptual/content loss (e.g., VGG or L1)
             self.log("generator/content_loss", content_loss, prog_bar=True)            # log pure content loss
             self.log("generator/total_loss", content_loss, sync_dist=True)             # total = content only (no adversarial term)
             return content_loss                                                        # return loss for optimizer step (G only)

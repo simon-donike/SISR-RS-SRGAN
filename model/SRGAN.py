@@ -182,13 +182,9 @@ class SRGAN_model(pl.LightningModule):
         # Purpose: compute SR prediction, evaluate training metrics, log them.
         # ======================================================================
 
-        # -------- CREATE SR DATA AND LOG METRICS --------
+        # -------- CREATE SR DATA --------
         lr_imgs, hr_imgs = batch                                  # unpack LR/HR tensors from dataloader batch
         sr_imgs = self.forward(lr_imgs)                          # forward pass of the generator to produce SR from LR
-        with torch.no_grad():  # ← avoids autograd work for metrics
-            metrics = self.content_loss_criterion.return_metrics(sr_imgs, hr_imgs, prefix="train_metrics/")  # compute content metrics only for logging
-            for key, value in metrics.items(): # log all metrics
-                self.log(f'{key}', value)                       # log each metric (e.g., PSNR/SSIM/LPIPS) under "train_metrics/*"
 
         # ======================================================================
         # SECTION: Pretraining phase gate
@@ -197,7 +193,7 @@ class SRGAN_model(pl.LightningModule):
 
         # -------- DETERMINE PRETRAINING --------
         pretrain_phase = self._pretrain_check()                  # check schedule: True => content-only pretraining
-        if optimizer_idx == 1: # log wether pretraining is active or not
+        if optimizer_idx == 1:  # log whether pretraining is active or not
             self.log("training/pretrain_phase", float(pretrain_phase), prog_bar=False)  # log once per G step to track phase state
 
         # ======================================================================
@@ -251,8 +247,10 @@ class SRGAN_model(pl.LightningModule):
             
             """ 1. Get VGG space loss """
             # encode images
-            content_loss, _ = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)   # perceptual/content criterion (e.g., VGG)
+            content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)   # perceptual/content criterion (e.g., VGG)
             self.log("generator/content_loss", content_loss)                           # log content loss for G
+            for key, value in metrics.items():
+                self.log(f"train_metrics/{key}", value)                             # log detailed metrics without extra forward passes
 
             
             """ 2. Get Discriminator Opinion and loss """
@@ -281,9 +279,11 @@ class SRGAN_model(pl.LightningModule):
         # Purpose: train only the generator using content loss, no adversarial part.
         # ======================================================================
         if optimizer_idx == 1:
-            content_loss, _ = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)  # compute perceptual/content loss (e.g., VGG or L1)
+            content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)  # compute perceptual/content loss (e.g., VGG or L1)
             self.log("generator/content_loss", content_loss, prog_bar=True)            # log pure content loss
             self.log("generator/total_loss", content_loss, sync_dist=True)             # total = content only (no adversarial term)
+            for key, value in metrics.items():
+                self.log(f"train_metrics/{key}", value)                               # reuse computed metrics for logging
             return content_loss                                                        # return loss for optimizer step (G only)
 
         # ======================================================================

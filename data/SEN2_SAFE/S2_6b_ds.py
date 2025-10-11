@@ -343,7 +343,7 @@ class S2SAFEDataset(Dataset):
 
         # Split into train/val sets
         n = len(self.samples)
-        split_n = 20  # last 20 samples go to validation
+        split_n = 1000  # last 1000 samples go to validation
 
         if phase not in ("train", "val"):
             raise ValueError(f"phase must be 'train' or 'val', got {phase!r}")

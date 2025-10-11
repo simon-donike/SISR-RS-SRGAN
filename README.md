@@ -11,6 +11,7 @@
 - [ ] incorporate the SEN2NAIP versions + downloading  
 - [x] implement different discriminators
 - [ ] implement different visual loses (like LPIPS, VGG, ...)
+- [ ] upgrade to torch>2.0 (complicated, PL doesnt support multiple schedulers in >2)
 ---
 
 ## 🧠 Overview

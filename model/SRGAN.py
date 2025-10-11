@@ -78,7 +78,7 @@ class SRGAN_model(pl.LightningModule):
         # ======================================================================
         if self.config.Generator.model_type == 'SRResNet':
             # Standard SRResNet generator
-            from model.srresnet import Generator
+            from model.generators.srresnet import Generator
             self.generator = Generator(
                 in_channels=self.config.Model.in_bands,                # number of input channels
                 large_kernel_size=self.config.Generator.large_kernel_size,
@@ -90,7 +90,7 @@ class SRGAN_model(pl.LightningModule):
 
         elif self.config.Generator.model_type in ['res', 'rcab', 'rrdb', 'lka']:
             # Advanced generator variants (ResNet, RCAB, RRDB, etc.)
-            from model.flexible_generator import FlexibleGenerator
+            from model.generators.flexible_generator import FlexibleGenerator
             self.generator = FlexibleGenerator(
                 in_channels=self.config.Model.in_bands,
                 n_channels=self.config.Generator.n_channels,
@@ -112,7 +112,7 @@ class SRGAN_model(pl.LightningModule):
         n_blocks = getattr(self.config.Discriminator, 'n_blocks', None)
 
         if discriminator_type == 'standard':
-            from model.srgan_discriminator import Discriminator
+            from model.descriminators.srgan_discriminator import Discriminator
 
             discriminator_kwargs = {
                 "in_channels": self.config.Model.in_bands,
@@ -122,7 +122,7 @@ class SRGAN_model(pl.LightningModule):
 
             self.discriminator = Discriminator(**discriminator_kwargs)
         elif discriminator_type == 'patchgan':
-            from model.patchgan import PatchGANDiscriminator
+            from model.descriminators.patchgan import PatchGANDiscriminator
 
             patchgan_layers = n_blocks if n_blocks is not None else 3
             self.discriminator = PatchGANDiscriminator(

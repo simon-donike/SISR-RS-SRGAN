@@ -7,7 +7,7 @@ from typing import Callable, Dict
 import torch
 from torch import nn
 
-from .model_blocks import (
+from ..model_blocks import (
     ResidualBlockNoBN,
     RCAB,
     RRDB,

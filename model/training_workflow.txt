@@ -1,0 +1,56 @@
+ENTRY: training_step(batch, batch_idx, optimizer_idx)
+│
+├─ 1) Forward + metrics (no grad)
+│   ├─ (lr, hr) = batch
+│   ├─ sr = G(lr)
+│   ├─ metrics = content_loss.return_metrics(sr, hr)    # {l1, sam, perceptual, tv, psnr_loss, ssim_loss}
+│   └─ LOG: each metric (e.g., "l1", "sam", "perceptual", "tv", "psnr_loss", "ssim_loss")
+│
+├─ 2) Pretrain flag
+│   ├─ pretrain = _pretrain_check()  # global_step vs g_pretrain_steps
+│   └─ IF optimizer_idx == 1: LOG "training/pretrain_phase" = float(pretrain)
+│
+├─ 3) IF pretrain == True  (G-only warmup)
+│   │
+│   ├─ content_loss = content_loss.return_loss(sr, hr)
+│   │
+│   ├─ IF optimizer_idx == 1 (G step, pretrain):
+│   │     ├─ LOG "generator/content_loss" = content_loss
+│   │     └─ RETURN content_loss            # backprop through content terms only
+│   │
+│   └─ IF optimizer_idx == 0 (D step, pretrain):
+│         ├─ LOG "discriminator/D(x)_prob_mean"    = 0.0
+│         ├─ LOG "discriminator/D(G(z))_prob_mean" = 0.0
+│         ├─ fake_pretrain_loss = 0.0  (scalar, requires_grad=True)
+│         ├─ LOG "discriminator/adversarial_loss"  = fake_pretrain_loss
+│         └─ RETURN fake_pretrain_loss   # closure runs; D weights unchanged
+│
+└─ 4) ELSE pretrain == False  (proper GAN training)
+    │
+    ├─ 4A) IF optimizer_idx == 0 (D step):
+    │   ├─ hr_logits = D(hr)
+    │   ├─ sr_logits = D(sr.detach())             # detach to block G grads in D step
+    │   ├─ real_target = adv_target               # 0.9 if label_smoothing else 1.0
+    │   ├─ fake_target = 0.0
+    │   ├─ loss_real = BCEWithLogits(hr_logits, real_target)
+    │   ├─ loss_fake = BCEWithLogits(sr_logits, fake_target)
+    │   ├─ d_loss = loss_real + loss_fake
+    │   ├─ LOG "discriminator/adversarial_loss" = d_loss   (sync_dist=True)
+    │   ├─ with no_grad:
+    │   │   ├─ d_real_prob = sigmoid(hr_logits).mean()
+    │   │   └─ d_fake_prob = sigmoid(sr_logits).mean()
+    │   ├─ LOG "discriminator/D(x)_prob_mean"    = d_real_prob (prog_bar, sync_dist)
+    │   ├─ LOG "discriminator/D(G(z))_prob_mean" = d_fake_prob (prog_bar, sync_dist)
+    │   └─ RETURN d_loss
+    │
+    └─ 4B) IF optimizer_idx == 1 (G step):
+        ├─ content_loss = content_loss.return_loss(sr, hr)     # L1+SAM+Perceptual(+TV/PSNR/SSIM) per cfg
+        ├─ LOG "generator/content_loss" = content_loss
+        │
+        ├─ sr_logits = D(sr)                                   # no detach so GAN grads reach G
+        ├─ g_adv = BCEWithLogits(sr_logits, target=1.0)        # no smoothing for G
+        ├─ adv_weight = _adv_loss_weight()                     # logs training/adv_loss_weight internally
+        │
+        ├─ total_loss = content_loss + adv_weight * g_adv
+        ├─ LOG "generator/total_loss" = total_loss              (sync_dist=True)
+        └─ RETURN total_loss

@@ -1,0 +1,16 @@
+other/
+__pycache__/
+wandb/
+trash/
+logs/
+*.pth
+*.ckpt
+*.pyc
+.vscode*
+*.vscode
+.vscode
+lightning_logs/
+lightning_logs/*
+lightning_logs
+
+

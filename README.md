@@ -202,3 +202,5 @@ coming soon...
 
 Developed by **Simon Donike** (IPL–UV) within the **ESA Φ‑lab / OpenSR** initiative. 
 
+## Notes
+This repo has been extensively reworked using Codex since I wanted to see if/how well it works. The AI changes wer concerned almost exclusively with structuring, commenting, and documentation. The GAN workflow itself was adapted from my previous implementations and the resulting experience with training these models: ([Remote-Sensing-SRGAN](https://github.com/simon-donike/Remote-Sensing-SRGAN)) and [NIR-GAN](https://github.com/simon-donike/NIR-GAN). The only exception is the loss object, even though its AI slop it works for now so I won't touch it again.

@@ -58,9 +58,12 @@ class GeneratorContentLoss(nn.Module):
         self.truncated_vgg19.eval()  # acts as fixed feature extractor
 
     # ---------- public API ----------
-    def return_loss(self, sr: torch.Tensor, hr: torch.Tensor) -> torch.Tensor:
-        comps = self._compute_components(sr, hr)
-        return (
+    def return_loss(
+        self, sr: torch.Tensor, hr: torch.Tensor
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        """Compute the weighted generator loss and return accompanying raw metrics."""
+        comps = self._compute_components(sr, hr, build_graph=True)
+        loss = (
             self.l1_w   * comps["l1"] +
             self.sam_w  * comps["sam"] +
             self.perc_w * comps["perceptual"] +
@@ -68,6 +71,8 @@ class GeneratorContentLoss(nn.Module):
             self.psnr_w * comps["psnr_loss"] +
             self.ssim_w * comps["ssim_loss"]
         )
+        metrics = {k: v.detach() for k, v in comps.items()}
+        return loss, metrics
 
     @torch.no_grad()
     def return_metrics(self, sr: torch.Tensor, hr: torch.Tensor, prefix: str = "") -> dict[str, torch.Tensor]:
@@ -83,7 +88,7 @@ class GeneratorContentLoss(nn.Module):
             dict mapping metric names -> tensors (detached), e.g. {'train/l1': ...}.
             Includes raw 'psnr'/'ssim' metrics alongside their loss surrogates.
         """
-        comps = self._compute_components(sr, hr)
+        comps = self._compute_components(sr, hr, build_graph=False)
         p = (prefix + "/") if prefix and not prefix.endswith("/") else prefix
         return {f"{p}{k}": v.detach() for k, v in comps.items()}
 
@@ -117,52 +122,64 @@ class GeneratorContentLoss(nn.Module):
             idx = self.fixed_idx.to(device=x.device)
         return x[:, idx, :, :]
 
-    def _compute_components(self, sr: torch.Tensor, hr: torch.Tensor) -> dict:
-        device = sr.device
-        comps = {
-            "l1": torch.tensor(0.0, device=device),
-            "sam": torch.tensor(0.0, device=device),
-            "perceptual": torch.tensor(0.0, device=device),
-            "tv": torch.tensor(0.0, device=device),
-        }
+    def _compute_components(
+        self, sr: torch.Tensor, hr: torch.Tensor, *, build_graph: bool
+    ) -> dict[str, torch.Tensor]:
+        comps: dict[str, torch.Tensor] = {}
 
-        # L1
-        if self.l1_w != 0.0:
-            comps["l1"] = F.l1_loss(sr, hr)
+        def _compute(weight: float, fn) -> torch.Tensor:
+            requires_grad = build_graph and weight != 0.0
+            if requires_grad:
+                return fn()
+            with torch.no_grad():
+                return fn().detach()
 
-        # SAM
-        if self.sam_w != 0.0:
-            comps["sam"] = self._sam_loss(sr, hr)
+        # Core reconstruction metrics (always unweighted)
+        comps["l1"] = _compute(self.l1_w, lambda: F.l1_loss(sr, hr))
+        comps["sam"] = _compute(self.sam_w, lambda: self._sam_loss(sr, hr))
 
         # Perceptual (VGG on 3 bands)
-        if self.perc_w != 0.0:
-            sr_3 = self._pick_rgb(sr); hr_3 = self._pick_rgb(hr)
+        sr_3 = self._pick_rgb(sr)
+        hr_3 = self._pick_rgb(hr)
+        if build_graph and self.perc_w != 0.0:
             sr_v = self.truncated_vgg19(sr_3)
+        else:
             with torch.no_grad():
-                hr_v = self.truncated_vgg19(hr_3)
-            comps["perceptual"] = F.mse_loss(sr_v, hr_v)
+                sr_v = self.truncated_vgg19(sr_3)
+        with torch.no_grad():
+            hr_v = self.truncated_vgg19(hr_3)
+        perceptual = F.mse_loss(sr_v, hr_v)
+        if not (build_graph and self.perc_w != 0.0):
+            perceptual = perceptual.detach()
+        comps["perceptual"] = perceptual
 
-        # TV
-        if self.tv_w != 0.0:
-            comps["tv"] = self._tv_loss(sr)
+        # Total variation
+        comps["tv"] = _compute(self.tv_w, lambda: self._tv_loss(sr))
 
-        # --- Metrics (always computed so logging works regardless of weights) ---
-        # Historically PSNR/SSIM stayed at zero in the logs because we only
-        # evaluated them when their loss weights were non-zero.  Keep these
-        # metrics unconditional so training dashboards always receive the raw
-        # values even if the corresponding losses are disabled.
-        psnr = km.psnr(sr, hr, max_val=self.max_val)
-        if psnr.dim() > 0:
-            psnr = psnr.mean()
+        # --- Quality metrics ---
+        def _psnr() -> torch.Tensor:
+            value = km.psnr(sr, hr, max_val=self.max_val)
+            if value.dim() > 0:
+                value = value.mean()
+            return value
+
+        psnr = _compute(self.psnr_w, _psnr)
         comps["psnr"] = psnr
-        # Convert PSNR (dB) into a bounded [0, 1] loss surrogate using
-        #     loss = 10 ** (-PSNR/10) = exp(-PSNR * ln(10) / 10).
-        # Clamp to [0, 1] to keep extreme low PSNR values numerically stable.
-        psnr_loss = torch.exp(-psnr * math.log(10.0) / 10.0)
-        comps["psnr_loss"] = torch.clamp(psnr_loss, min=0.0, max=1.0)
+        psnr_loss = torch.clamp(torch.exp(-psnr * math.log(10.0) / 10.0), min=0.0, max=1.0)
+        if not (build_graph and self.psnr_w != 0.0):
+            psnr_loss = psnr_loss.detach()
+        comps["psnr_loss"] = psnr_loss
 
-        ssim = km.ssim(sr, hr, window_size=self.ssim_win, max_val=self.max_val, reduction="mean")
+        def _ssim() -> torch.Tensor:
+            return km.ssim(
+                sr, hr, window_size=self.ssim_win, max_val=self.max_val, reduction="mean"
+            )
+
+        ssim = _compute(self.ssim_w, _ssim)
         comps["ssim"] = ssim
-        comps["ssim_loss"] = 1.0 - ssim
+        ssim_loss = 1.0 - ssim
+        if not (build_graph and self.ssim_w != 0.0):
+            ssim_loss = ssim_loss.detach()
+        comps["ssim_loss"] = ssim_loss
 
         return comps

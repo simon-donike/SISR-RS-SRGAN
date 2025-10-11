@@ -59,17 +59,40 @@ The YAML keeps the SRGAN flexible: swap architectures or rebalance perceptual vs
 
 ## 🧰 Installation
 
+> ⚠️ **Python version**: the pinned `torch==1.13.1` and `torchvision==0.14.1` wheels target
+> Python 3.10 (or earlier). Create your environment with a Python 3.10 interpreter to avoid
+> installation failures on newer runtimes (e.g., Python 3.11).
+
 ```bash
 # Clone the repository
 git clone https://github.com/ESAOpenSR/Remote-Sensing-SRGAN.git
 cd Remote-Sensing-SRGAN
 
-# (optional) Create a virtual environment
-python3 -m venv vsnv && source vsnv/bin/activate
+# (optional) Create a Python 3.10 virtual environment
+python3.10 -m venv .venv
+source .venv/bin/activate
 
-# Install
+# (recommended) Upgrade pip so dependency resolution succeeds
+python -m pip install --upgrade pip
+
+# Install project dependencies
 pip install -r requirements.txt
+
+# (optional) Install extras for LPIPS metrics or TacoReader data loading
+# pip install lpips tacoreader
 ```
+
+> ℹ️ **Tip:** If the default PyPI index cannot find `torch==1.13.1`, install
+> PyTorch directly from the official wheel index before running
+> `pip install -r requirements.txt`:
+>
+> ```bash
+> # CUDA 11.7 builds
+> pip install torch==1.13.1 torchvision==0.14.1 --index-url https://download.pytorch.org/whl/cu117
+>
+> # CPU-only builds
+> pip install torch==1.13.1+cpu torchvision==0.14.1+cpu --index-url https://download.pytorch.org/whl/cpu
+> ```
 
 ---
 

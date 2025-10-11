@@ -96,7 +96,7 @@ Make sure the datafolders exist and are correctly associated with the dataset cl
 Train the GAN model.
 
 ```bash
-python train.py --config configs/pretrain.yaml
+python train.py --config configs/config.yaml
 ```
 
 ### 2) Inference on Large Scenes

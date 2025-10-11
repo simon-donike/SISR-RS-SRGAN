@@ -46,15 +46,12 @@ Training:
     # --- Content loss components (GeneratorContentLoss) ---
     l1_weight: 1.0             # L1 loss over all bands
     sam_weight: 0.05           # Spectral Angle Mapper loss
-    perceptual_weight: 0.1     # VGG-based perceptual MSE (3-band only)
+    perceptual_weight: 0.1     # Perceptual similarity term weight
+    perceptual_metric: 'vgg'   # ['vgg', 'lpips'] - LPIPS requires pip install lpips
     tv_weight: 0.0             # Total Variation regularization (optional)
 
-    # --- Quality metric auxiliary losses (optional) ---
-    psnr_weight: 0.0           # Uses loss = -PSNR
-    ssim_weight: 0.0           # Uses loss = 1 - SSIM
-
-    # --- Perceptual & metric settings ---
-    max_val: 1.0               # Dynamic range for PSNR/SSIM (2.0 if inputs ∈ [-1,1])
+    # --- Metric evaluation settings ---
+    max_val: 1.0               # Peak value assumed by PSNR/SSIM after metric preprocessing
     ssim_win: 11               # SSIM window size (must be odd integer)
 
 

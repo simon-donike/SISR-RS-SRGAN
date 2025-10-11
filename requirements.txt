@@ -1,0 +1,20 @@
+# NOTE: Torch 1.13.1 wheels are provided for Python 3.10 and earlier. Use a Python 3.10.x
+# interpreter when creating the environment to satisfy these pinned dependencies.
+# If PyPI cannot locate torch/torchvision, install them from the official
+# PyTorch wheel index (CPU or CUDA builds) before re-running
+# `pip install -r requirements.txt`.
+torch==1.13.1
+torchvision==0.14.1
+pytorch-lightning==1.9.0
+numpy
+kornia
+wandb
+omegaconf
+matplotlib
+rasterio
+scikit-image
+Pillow
+
+# Optional extras (enable additional metrics/data loaders)
+# lpips
+# tacoreader

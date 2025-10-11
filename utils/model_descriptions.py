@@ -19,13 +19,13 @@ def print_model_summary(self):
     if g_type == "SRResNet":
         g_desc = "SRResNet (Residual Blocks with BatchNorm)"
     elif g_type == "res":
-        g_desc = "SRResNet_NoBN_Flex (Residual Blocks, no BatchNorm)"
+        g_desc = "flexible_generator (Residual Blocks without BatchNorm)"
     elif g_type == "rcab":
-        g_desc = "SRResNet_NoBN_Flex (RCAB Blocks with Channel Attention)"
+        g_desc = "flexible_generator (RCAB Blocks with Channel Attention)"
     elif g_type == "rrdb":
-        g_desc = "SRResNet_NoBN_Flex (RRDB Dense Residual Blocks)"
+        g_desc = "flexible_generator (RRDB Dense Residual Blocks)"
     elif g_type == "lka":
-        g_desc = "SRResNet_NoBN_Flex (LKA Large-Kernel Attention Blocks)"
+        g_desc = "flexible_generator (LKA Large-Kernel Attention Blocks)"
     else:
         g_desc = f"Custom Generator Type: {g_type}"
 

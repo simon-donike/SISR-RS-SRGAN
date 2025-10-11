@@ -23,12 +23,13 @@ This repository provides:
 * **Configurable losses** (content/perceptual/adversarial) with fully exposed **loss weights**.
 * A **stabilized GAN procedure** (G‑only pretraining → adversarial ramp‑up → scheduled D updates) that makes RS‑SR training more reliable.
 * Smooth integration with the **OpenSR** ecosystem for data handling, evaluation, and large‑scene inference.
+* **Configuration‑first workflow**: everything — from generator/discriminator choices to loss weights and warmup length — is selectable in `configs/config.yaml`.
 
 ### Key Features
 
 * 🧩 **Flexible generator**: choose block type `res`, `rcab`, `rrdb`, or `lka`; set `n_blocks`, `n_channels`, and `scale ∈ {2,4,8}`.
 * 🛰️ **Flexible inputs**: train on **any band layout** (e.g., S2 RGB‑NIR, 6‑band stacks, or custom multispectral sets). Normalization/denorm utilities provided.
-* ⚖️ **Flexible losses & weights**: L1/Charbonnier, perceptual (VGG/LPIPS), adversarial (hinge/vanilla) with **per‑term weights**.
+* ⚖️ **Flexible losses & weights**: combine L1, Spectral Angle Mapper, VGG19 perceptual MSE, Total Variation, PSNR/SSIM surrogates, and a BCE adversarial term with **per‑loss weights**.
 * 🧪 **Robust training strategy**: generator **pretraining**, **linear adversarial loss ramp**, and **discriminator update schedules/curves**.
 * 📊 **Clear monitoring**: PSNR, SSIM, LPIPS, qualitative panels, and Weights & Biases logging.
 
@@ -42,6 +43,17 @@ This repository provides:
 * **LKA (lka)**: Large‑Kernel Attention blocks approximating wide‑context kernels; good for **large structures** common in RS (fields, roads, shorelines).
 
 > All variants share the same I/O heads and upsampling (pixel‑shuffle) and can load compatible weights when shapes match.
+
+## ⚙️ Config‑driven components
+
+| Component | Options | Config keys |
+|-----------|---------|-------------|
+| **Generators** | `SRResNet`, `res`, `rcab`, `rrdb`, `lka` | `Generator.model_type`, depth via `Generator.n_blocks`, width via `Generator.n_channels`, kernels and scale. |
+| **Discriminators** | `standard` SRGAN CNN, `patchgan` | `Discriminator.model_type`, granularity with `Discriminator.n_blocks`. |
+| **Content losses** | L1, Spectral Angle Mapper, VGG19 perceptual MSE, Total Variation, PSNR‑surrogate, SSIM‑surrogate | Weighted by `Training.Losses.*` (e.g. `l1_weight`, `sam_weight`, `perceptual_weight`, `tv_weight`, `psnr_weight`, `ssim_weight`). |
+| **Adversarial loss** | BCE‑with‑logits on real/fake logits | Warmup via `Training.pretrain_g_only`, ramped by `adv_loss_ramp_steps`, capped at `adv_loss_beta`, optional label smoothing. |
+
+The YAML keeps the SRGAN flexible: swap architectures or rebalance perceptual vs. spectral fidelity without touching the code.
 
 ---
 
@@ -101,9 +113,9 @@ opensr_utils.large_file_processing(
 
 All key knobs are exposed via YAML:
 
-* **Model**: `in_channels`, `n_channels`, `n_blocks`, `scale`, `block_type ∈ {res, rcab, rrdb, lka}`
-* **Losses**: `l1_weight`, `perc_weight`, `adv_weight` (plus choice of perceptual net and GAN loss)
-* **Training**: `pretrain_g_only`, `g_pretrain_steps`, `adv_loss_ramp_steps`, `disc_update_schedule`
+* **Model**: `in_channels`, `n_channels`, `n_blocks`, `scale`, `block_type ∈ {SRResNet, res, rcab, rrdb, lka}`
+* **Losses**: `l1_weight`, `sam_weight`, `perceptual_weight`, `tv_weight`, `psnr_weight`, `ssim_weight`, `adv_loss_beta`
+* **Training**: `pretrain_g_only`, `g_pretrain_steps`, `adv_loss_ramp_steps`, `label_smoothing`, discriminator cadence controls
 * **Data**: band order, normalization stats, crop sizes, augmentations
 
 Example (excerpt):
@@ -119,20 +131,21 @@ Training:
   pretrain_g_only: true
   g_pretrain_steps: 20000
   adv_loss_ramp_steps: 15000
+  label_smoothing: true
 Losses:
   l1_weight: 1.0
-  perc_weight: 0.01
-  adv_weight: 0.001
+  sam_weight: 0.05
+  perceptual_weight: 0.1
+  adv_loss_beta: 0.001
 ```
 
 ---
 
 ## 🎚️ Training Strategy (stabilization)
 
-* **G‑only pretraining:** Train with content/perceptual losses while `adv_weight = 0` for the first *N* steps.
-* **Adversarial ramp‑up:** Increase `adv_weight` **linearly** over `adv_loss_ramp_steps` until reaching the target weight.
+* **G‑only pretraining:** Train with content/perceptual losses while the adversarial term is held at zero during the first `g_pretrain_steps`.
+* **Adversarial ramp‑up:** Increase the BCE adversarial weight **linearly** over `adv_loss_ramp_steps` until it reaches `adv_loss_beta`.
 * **Discriminator schedule:** Optionally update D with a **step curve** (e.g., 1:1, 1:2, or warm‑up skips) to avoid early D domination.
-* **EMA & checkpoints:** (optional) maintain an exponential moving average of G; save periodic checkpoints and best‑val.
 
 These choices are **purpose‑built for remote sensing**, where GANs are prone to hallucinations and optimization instabilities due to multi‑band inputs and domain shifts. The schedule and ramp make training **easier, safer, and more reproducible**.
 

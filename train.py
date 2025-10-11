@@ -20,7 +20,7 @@ if __name__ == '__main__':
     # General
     torch.set_float32_matmul_precision('medium')
     # load config
-    cfg_filepath = "config_20m.yaml"
+    cfg_filepath = "config.yaml"
     config = OmegaConf.load(cfg_filepath)
 
     #############################################################################################################
@@ -40,8 +40,8 @@ if __name__ == '__main__':
     """ GET DATA """
     #############################################################################################################
     # create dataloaders via dataset_selector -> config -> class selection -> convert to pl_module
-    from data.datasets import dataset_selector
-    pl_datamodule = dataset_selector(config)
+    from data.data_utils import select_dataset
+    pl_datamodule = select_dataset(config)
 
     #############################################################################################################
     """ Configure Trainer """

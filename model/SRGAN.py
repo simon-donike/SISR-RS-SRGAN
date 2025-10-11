@@ -8,11 +8,9 @@ from omegaconf import OmegaConf
 import wandb
 
 # local imports
-from utils.calculate_metrics import calculate_metrics
 from utils.logging_helpers import plot_tensors
-from utils.logging_helpers import plot_fusion
-from data.normalise_s2 import normalise_s2, normalise_10k
-from data.dataloader_utils import histogram as histogram_match
+from utils.spectral_helpers import normalise_10k
+from utils.spectral_helpers import histogram as histogram_match
 from utils.model_descriptions import print_model_summary
 
 

@@ -1,67 +1,107 @@
-# General Settings
-SR_type: 'SISR' # [SISR, MISR]
-# dont forget to also set the sen2_amount
+# ============================================================================ #
+# ⚙️ GENERAL CONFIGURATION FILE
+# ---------------------------------------------------------------------------- #
+# This file defines all key components for training and evaluating the SR model.
+# Sections: Data, Model, Training, Architecture, Optimization, Scheduling, Logging
+# ============================================================================ #
 
-# Data Settings
+
+# ============================================================================ #
+# 🗂️ DATA SETTINGS
+# ---------------------------------------------------------------------------- #
 Data:
-  # Loader Settings
-  train_batch_size: 12 #12
-  val_batch_size: 8
-  num_workers: 6
-  prefetch_factor: 2 #8 #2
+  # Loader parameters
+  train_batch_size: 12        # Batch size for training
+  val_batch_size: 8           # Batch size for validation
+  num_workers: 6              # Number of parallel workers for dataloader
+  prefetch_factor: 2          # Samples prefetched per worker (2 is stable default)
 
-  # Detailed Dataset Setttings
-  dataset_type: 'S2_6b' # ['cv', 'SPOT6', 'S2_6b']
-  data_dir: 'E:/thesis_paper/data/' # ['data/openImages/',''E:/thesis_paper/data/', '/data3/S2_20m']
-  sen2_amount: 4
-  spectral_matching: 'histogram'
-  return_type: 'cross_sensor' #interpolated_matched
+  # Dataset configuration
+  dataset_type: 'S2_6b'       # Choose dataset type: ['cv', 'SPOT6', 'S2_6b']
 
 
-# Model, Loss, Training  Settings
+# ============================================================================ #
+# 🧠 MODEL AND CHECKPOINT SETTINGS
+# ---------------------------------------------------------------------------- #
 Model:
-  in_bands: 6
-  load_checkpoint: False
-  ckpt_path: 'logs\curated_ckpts\pretrained_MISR_SPOT6synt.ckpt'
-  load_fusion_checkpoint: False
-  fusion_ckpt_path: 'logs\curated_ckpts\pretrained_Fusion.ckpt'
-Warmup:
-  fusion: # train fusion in isolation previously
-    enable: True
-    epochs: 1
-    lr: 1e-4
+  in_bands: 6                 # Number of input channels (e.g. RGB-NIR-SWIR etc.)
+  continue_training: False    # Resume full training (PL checkpoint path or False)
+  load_checkpoint: False      # Load weights only (path or False)
 
+
+# ============================================================================ #
+# 🏋️ TRAINING CONFIGURATION
+# ---------------------------------------------------------------------------- #
+Training:
+  # --- Pretraining and adversarial setup ---
+  pretrain_g_only: True        # Train generator only for initial phase
+  g_pretrain_steps: 150000     # Number of generator-only warmup steps
+  adv_loss_ramp_steps: 20000   # Gradual adversarial weight ramp steps
+  label_smoothing: True        # Discriminator target smoothing (1.0 → 0.9)
+
+  Losses:
+    # --- GAN term ---
+    adv_loss_beta: 1e-3        # Final adversarial loss weight after ramp-up
+
+    # --- Content loss components (GeneratorContentLoss) ---
+    l1_weight: 1.0             # L1 loss over all bands
+    sam_weight: 0.05           # Spectral Angle Mapper loss
+    perceptual_weight: 0.1     # VGG-based perceptual MSE (3-band only)
+    tv_weight: 0.0             # Total Variation regularization (optional)
+
+    # --- Quality metric auxiliary losses (optional) ---
+    psnr_weight: 0.0           # Uses loss = -PSNR
+    ssim_weight: 0.0           # Uses loss = 1 - SSIM
+
+    # --- Perceptual & metric settings ---
+    max_val: 1.0               # Dynamic range for PSNR/SSIM (2.0 if inputs ∈ [-1,1])
+    ssim_win: 11               # SSIM window size (must be odd integer)
+
+
+# ============================================================================ #
+# 🧩 ARCHITECTURAL PARAMETERS
+# ---------------------------------------------------------------------------- #
 Generator:
-  large_kernel_size: 9
-  small_kernel_size: 3
-  n_channels: 64
-  n_blocks: 16
-  scaling_factor: 4
+  model_type: 'rrdb'           # Block type: ['SRResNet', 'res', 'rcab', 'rrdb', 'lka']
+  large_kernel_size: 9         # Kernel for head and tail conv layers
+  small_kernel_size: 3         # Kernel for intermediate blocks
+  n_channels: 96               # Number of feature channels (original 64)
+  n_blocks: 32                 # Number of residual/attention blocks (original 16)
+  scaling_factor: 8            # Upscaling factor (e.g., 2×, 4×, 8×)
 
 Discriminator:
-  kernel_size: 3
-  n_channels: 64
-  n_blocks: 8
-  fc_size: 1024
+  kernel_size: 3               # Conv kernel size for discriminator layers
+  n_channels: 64               # Base channel width
+  n_blocks: 8                  # Number of convolutional blocks
+  fc_size: 1024                # Fully connected layer size
 
 TruncatedVGG:
-  i: 5
+  i: 5                         # Layer indices for feature extraction
   j: 4
 
+
+# ============================================================================ #
+# 🧮 OPTIMIZATION SETTINGS
+# ---------------------------------------------------------------------------- #
 Optimizers:
-  optim_g_lr: 1e-4
-  optim_d_lr: 1e-4
+  optim_g_lr: 1e-4             # Learning rate for Generator
+  optim_d_lr: 1e-4             # Learning rate for Discriminator
 
+
+# ============================================================================ #
+# 📉 SCHEDULERS AND EARLY STOPPING
+# ---------------------------------------------------------------------------- #
 Schedulers:
-  metric: 'val/L1'
-  patience_g: 100
-  patience_d: 100
-  factor_g: 0.5
-  factor_d: 0.5
-  verbose: True
+  metric: 'val_metrics/l1'     # Metric monitored for both schedulers
+  patience_g: 100              # Patience (epochs) for Generator LR scheduler
+  patience_d: 100              # Patience (epochs) for Discriminator LR scheduler
+  factor_g: 0.5                # LR reduction factor for Generator
+  factor_d: 0.5                # LR reduction factor for Discriminator
+  verbose: True                # Enable scheduler logging output
 
-Losses:
-  adv_loss_beta:  1e-3
 
+# ============================================================================ #
+# 🧾 LOGGING SETTINGS
+# ---------------------------------------------------------------------------- #
 Logging:
-  num_val_images: 5
+  num_val_images: 5            # Number of validation images logged per epoch

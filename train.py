@@ -21,10 +21,9 @@ if __name__ == '__main__':
     # ---- CLI: single positional argument (config path) ----
     parser = argparse.ArgumentParser(description="Train SRGAN with a YAML config.")
     parser.add_argument(
-        "config",
-        nargs="?",
+        "--config", "-c",
         default="configs/config_20m.yaml",
-        help="Path to YAML config file (default: configs/config.yaml)"
+        help="Path to YAML config file (default: configs/config_20m.yaml)"
     )
     args = parser.parse_args()
 

@@ -201,3 +201,24 @@ class GeneratorContentLoss(nn.Module):
             comps["ssim"] = ssim.detach()
 
         return comps
+
+
+if __name__ == "__main__":
+    # simple test
+    from omegaconf import OmegaConf
+
+    with open("configs/config_20m.yaml", "r") as f:
+        cfg = OmegaConf.load(f)
+
+    loss_fn = GeneratorContentLoss(cfg)
+
+    B, C, H, W = 2, 13, 64, 64
+    sr = torch.rand(B, C, H, W)
+    hr = torch.rand(B, C, H, W)
+
+    loss, metrics = loss_fn.return_loss(sr, hr)
+    print("Loss:", loss.item())
+    print("Metrics:", {k: v.item() for k, v in metrics.items()})
+
+    eval_metrics = loss_fn.return_metrics(sr, hr, prefix="val")
+    print("Eval metrics:", {k: v.item() for k, v in eval_metrics.items()})

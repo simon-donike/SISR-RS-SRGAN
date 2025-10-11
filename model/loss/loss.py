@@ -185,12 +185,19 @@ class GeneratorContentLoss(nn.Module):
             sr_metric = sen2_stretch(sr)
             hr_metric = sen2_stretch(hr)
             psnr = km.psnr(sr_metric, hr_metric, max_val=self.max_val)
+            ssim = km.ssim(
+                sr_metric,
+                hr_metric,
+                window_size=self.ssim_win,
+                max_val=self.max_val,
+            )
+
             if psnr.dim() > 0:
                 psnr = psnr.mean()
+            if ssim.dim() > 0:
+                ssim = ssim.mean()
+
             comps["psnr"] = psnr.detach()
-            comps["ssim"] = km.ssim(
-                sr_metric, hr_metric, window_size=self.ssim_win,
-                max_val=self.max_val, reduction="mean"
-            ).detach()
+            comps["ssim"] = ssim.detach()
 
         return comps

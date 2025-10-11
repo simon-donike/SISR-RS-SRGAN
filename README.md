@@ -6,12 +6,11 @@
 
 ---
 ## 🧑‍🚀 ToDOs  
-- [ ] create validate.py  
-- [ ] build interface with opensr-test  
-- [ ] build interface with SEN2SR  
+- [ ] create inference.py  (interface with opensr-test)
+- [ ] build interface with SEN2SR (for 10m + 20m SR)
 - [ ] incorporate the SEN2NAIP versions + downloading  
-- [ ] make EVERYTHING flexible depending on config.yaml  
-- [ ] implement different discriminators  
+- [x] implement different discriminators
+- [ ] implement different visual loses (like LPIPS, VGG, ...)
 ---
 
 ## 🧠 Overview
@@ -202,5 +201,5 @@ coming soon...
 
 Developed by **Simon Donike** (IPL–UV) within the **ESA Φ‑lab / OpenSR** initiative. 
 
-## Notes
+## 📒 Notes
 This repo has been extensively reworked using Codex since I wanted to see if/how well it works. The AI changes wer concerned almost exclusively with structuring, commenting, and documentation. The GAN workflow itself was adapted from my previous implementations and the resulting experience with training these models: ([Remote-Sensing-SRGAN](https://github.com/simon-donike/Remote-Sensing-SRGAN)) and [NIR-GAN](https://github.com/simon-donike/NIR-GAN). The only exception is the loss object, even though its AI slop it works for now so I won't touch it again.

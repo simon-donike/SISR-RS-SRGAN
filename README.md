@@ -34,8 +34,6 @@ This repository provides:
 * **RRDB (rrdb)**: Residual‑in‑Residual Dense Blocks (as in ESRGAN); deeper receptive fields with dense skip pathways for sharper detail.
 * **LKA (lka)**: Large‑Kernel Attention blocks approximating wide‑context kernels; good for **large structures** common in RS (fields, roads, shorelines).
 
-> All variants share the same I/O heads and upsampling (pixel‑shuffle) and can load compatible weights when shapes match.
-
 ## ⚙️ Config‑driven components
 
 | Component | Options | Config keys |
@@ -89,7 +87,7 @@ pip install -r requirements.txt
 
 ### 0) Data
 
-Make sure the datafolders exist and are correctly associated with the dataset classes in the dataset folder. Use either your own data or any of the provided dataset.
+Make sure the datafolders exist and are correctly associated with the dataset classes in the dataset folder. Use either your own data or any of the provided datasets in the `data/` folder.
 
 ### 1) SRGAN Training
 
@@ -119,37 +117,16 @@ opensr_utils.large_file_processing(
 
 ## 🏗️ Configuration Highlights
 
-All key knobs are exposed via YAML:
+All key knobs are exposed via YAML in the `configs` folder:
 
 * **Model**: `in_channels`, `n_channels`, `n_blocks`, `scale`, `block_type ∈ {SRResNet, res, rcab, rrdb, lka}`
 * **Losses**: `l1_weight`, `sam_weight`, `perceptual_weight`, `tv_weight`, `adv_loss_beta`
 * **Training**: `pretrain_g_only`, `g_pretrain_steps`, `adv_loss_ramp_steps`, `label_smoothing`, discriminator cadence controls
 * **Data**: band order, normalization stats, crop sizes, augmentations
 
-Example (excerpt):
-
-```yaml
-Model:
-  in_channels: 6
-  n_channels: 96
-  n_blocks: 32
-  scale: 4
-  block_type: rcab
-Training:
-  pretrain_g_only: true
-  g_pretrain_steps: 20000
-  adv_loss_ramp_steps: 15000
-  label_smoothing: true
-Losses:
-  l1_weight: 1.0
-  sam_weight: 0.05
-  perceptual_weight: 0.1
-  adv_loss_beta: 0.001
-```
-
 ---
 
-## 🎚️ Training Strategy (stabilization)
+## 🎚️ Training Sstabilization Strategies
 
 * **G‑only pretraining:** Train with content/perceptual losses while the adversarial term is held at zero during the first `g_pretrain_steps`.
 * **Adversarial ramp‑up:** Increase the BCE adversarial weight **linearly** over `adv_loss_ramp_steps` until it reaches `adv_loss_beta`.
@@ -164,22 +141,13 @@ These choices are **purpose‑built for remote sensing**, where GANs are prone t
 * **Metrics:** PSNR, SSIM, LPIPS *(PSNR/SSIM use `sen2_stretch` with clipping for stable reflectance ranges)*
 * **Visuals:** side‑by‑side LR/SR/HR panels (clamped, stretched), saved under `visualizations/`
 * **W&B:** loss curves, example previews, system metrics
-* **Outputs:** all logs, configs, and artifacts are centralized in `logs/`
+* **Outputs:** all logs, configs, and artifacts are centralized in `logs/` and on WandB.
 
 ---
 
 ## 🛰️ Datasets
 
 Two dataset pipelines ship with the repository under `data/`. Both return `(lr, hr)` pairs that are wired into the training `LightningDataModule` through `data/data_utils.py`.
-
-### SEN2NAIP (4× Sentinel‑2 → NAIP pairs)
-
-* **Purpose.** Wraps the Taco Foundation `SEN2NAIPv2` release, which provides pre‑aligned Sentinel‑2 observations and NAIP aerial reference chips. The dataset class simply reads the file paths stored in the `.taco` manifest and loads the rasters on the fly—Sentinel‑2 frames act as the low‑resolution input, NAIP tiles are the 4× higher‑resolution target.
-* **Scale.** This loader is hard‑coded for 4× super‑resolution. The Taco manifest already contains the bilinearly downsampled Sentinel‑2 inputs, so no alternative scale factors are exposed.
-* **Setup.**
-  1. Install the optional dependencies used by the loader: `pip install tacoreader rasterio` (plus Git LFS for the download step).
-  2. Fetch the dataset by running `python data/SEN2AIP/download_S2N.py`. The helper script downloads the manifest and image tiles from the Hugging Face hub into the working directory.
-  3. Point your config to the resulting `.taco` file when you instantiate `SEN2NAIP` (e.g. in a custom `select_dataset` branch). No extra preprocessing is required—the dataset returns NumPy arrays that are subsequently converted to tensors by the training pipeline.
 
 ### Sentinel‑2 SAFE windowed chips
 
@@ -192,6 +160,16 @@ Two dataset pipelines ship with the repository under `data/`. Both return `(lr, 
   1. Organise your `.SAFE` products under a common root (the builder expects the usual `GRANULE/<id>/IMG_DATA` structure).
   2. Run the builder (see the `__main__` example in `data/SEN2_SAFE/S2_6b_ds.py`) to generate a manifest JSON containing file metadata and chip coordinates.
   3. Instantiate `S2SAFEDataset` with the manifest path, the band list/order, your desired `hr_size`, and the super‑resolution factor. The dataset will normalise values and synthesise the LR input automatically.
+
+### SEN2NAIP (4× Sentinel‑2 → NAIP pairs)
+
+* **Purpose.** Wraps the Taco Foundation `SEN2NAIPv2` release, which provides pre‑aligned Sentinel‑2 observations and NAIP aerial reference chips. The dataset class simply reads the file paths stored in the `.taco` manifest and loads the rasters on the fly—Sentinel‑2 frames act as the low‑resolution input, NAIP tiles are the 4× higher‑resolution target.
+* **Scale.** This loader is hard‑coded for 4× super‑resolution. The Taco manifest already contains the bilinearly downsampled Sentinel‑2 inputs, so no alternative scale factors are exposed.
+* **Setup.**
+  1. Install the optional dependencies used by the loader: `pip install tacoreader rasterio` (plus Git LFS for the download step).
+  2. Fetch the dataset by running `python data/SEN2AIP/download_S2N.py`. The helper script downloads the manifest and image tiles from the Hugging Face hub into the working directory.
+  3. Point your config to the resulting `.taco` file when you instantiate `SEN2NAIP` (e.g. in a custom `select_dataset` branch). No extra preprocessing is required—the dataset returns NumPy arrays that are subsequently converted to tensors by the training pipeline.
+
 
 ### Adding a new dataset
 

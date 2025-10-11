@@ -72,7 +72,7 @@ class SRGAN_model(pl.LightningModule):
         # ======================================================================
         if self.config.Generator.model_type == 'SRResNet':
             # Standard SRResNet generator
-            from model.model_blocks import Generator
+            from model.srresnet import Generator
             self.generator = Generator(
                 in_channels=self.config.Model.in_bands,                # number of input channels
                 large_kernel_size=self.config.Generator.large_kernel_size,
@@ -84,8 +84,8 @@ class SRGAN_model(pl.LightningModule):
 
         elif self.config.Generator.model_type in ['res', 'rcab', 'rrdb', 'lka']:
             # Advanced generator variants (ResNet, RCAB, RRDB, etc.)
-            from model.SRGAN_advanced import SRResNet_NoBN_Flex as Generator
-            self.generator = Generator(
+            from model.flexible_generator import FlexibleGenerator
+            self.generator = FlexibleGenerator(
                 in_channels=self.config.Model.in_bands,
                 n_channels=self.config.Generator.n_channels,
                 n_blocks=self.config.Generator.n_blocks,
@@ -102,14 +102,18 @@ class SRGAN_model(pl.LightningModule):
         # SECTION: Initialize Discriminator
         # Purpose: Build discriminator network for adversarial training.
         # ======================================================================
-        from model.model_blocks import Discriminator
-        self.discriminator = Discriminator(
-            in_channels=self.config.Model.in_bands,
-            kernel_size=self.config.Discriminator.kernel_size,
-            n_channels=self.config.Discriminator.n_channels,
-            n_blocks=self.config.Discriminator.n_blocks,
-            fc_size=self.config.Discriminator.fc_size
-        )
+        discriminator_type = getattr(self.config.Discriminator, 'model_type', 'standard')
+        if discriminator_type == 'standard':
+            from model.srgan_discriminator import Discriminator
+            self.discriminator = Discriminator(
+                in_channels=self.config.Model.in_bands,
+                kernel_size=self.config.Discriminator.kernel_size,
+                n_channels=self.config.Discriminator.n_channels,
+                n_blocks=self.config.Discriminator.n_blocks,
+                fc_size=self.config.Discriminator.fc_size
+            )
+        else:
+            raise ValueError(f"Unknown discriminator model type: {discriminator_type}")
         # ======================================================================
         # SECTION: Print Model Summary
         # Purpose: Output model architecture and parameter counts.

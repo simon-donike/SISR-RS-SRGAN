@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .flexible_generator import FlexibleGenerator, flexible_generator
-from .model_blocks import (
+from ..model_blocks import (
     ConvolutionalBlock,
     SubPixelConvolutionalBlock,
     ResidualBlock,

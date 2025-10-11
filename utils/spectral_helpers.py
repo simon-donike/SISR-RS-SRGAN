@@ -99,7 +99,8 @@ def sen2_stretch(im: torch.Tensor) -> torch.Tensor:
     torch.Tensor
         Contrast-stretched image tensor.
     """
-    return im * (10 / 3.)
+    stretched = im * (10 / 3.)
+    return torch.clamp(stretched, 0.0, 1.0)
 
 
 def minmax_percentile(tensor: torch.Tensor, pmin: float = 2, pmax: float = 98) -> torch.Tensor:

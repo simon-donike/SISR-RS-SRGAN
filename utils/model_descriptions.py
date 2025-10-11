@@ -71,11 +71,26 @@ def print_model_summary(self):
     # ------------------------------------------------------------------
     # Discriminator Info
     # ------------------------------------------------------------------
+    d_type = getattr(self.config.Discriminator, "model_type", "standard")
+    d_blocks = getattr(self.config.Discriminator, "n_blocks", None)
+    effective_blocks = getattr(self.discriminator, "n_blocks", getattr(self.discriminator, "n_layers", d_blocks))
+    base_channels = getattr(self.discriminator, "base_channels", "N/A")
+    kernel_size = getattr(self.discriminator, "kernel_size", "N/A")
+    fc_size = getattr(self.discriminator, "fc_size", None)
+
+    if d_type == "patchgan":
+        d_desc = "PatchGAN"
+    else:
+        d_desc = "SRGAN"
+
     print(f"🧠 Discriminator")
-    print(f"   • Channels:          {self.config.Discriminator.n_channels}")
-    print(f"   • Blocks:            {self.config.Discriminator.n_blocks}")
-    print(f"   • Kernel Size:       {self.config.Discriminator.kernel_size}")
-    print(f"   • FC Layer Size:     {self.config.Discriminator.fc_size}")
+    print(f"   • Architecture:     {d_desc}")
+    if effective_blocks is not None:
+        print(f"   • Blocks/Layers:    {effective_blocks}")
+    print(f"   • Base Channels:    {base_channels}")
+    print(f"   • Kernel Size:      {kernel_size}")
+    if fc_size is not None:
+        print(f"   • FC Layer Size:    {fc_size}")
     print(f"   • Params:            {d_params:.2f} M\n")
 
     # ------------------------------------------------------------------

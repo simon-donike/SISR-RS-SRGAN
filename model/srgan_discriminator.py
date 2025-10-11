@@ -16,18 +16,28 @@ class Discriminator(nn.Module):
     def __init__(
         self,
         in_channels: int = 3,
-        kernel_size: int = 3,
-        n_channels: int = 64,
         n_blocks: int = 8,
-        fc_size: int = 1024,
     ) -> None:
         super().__init__()
 
+        if n_blocks < 1:
+            raise ValueError("The SRGAN discriminator requires at least one block.")
+
+        kernel_size = 3
+        base_channels = 64
+        fc_size = 1024
+
         conv_blocks: list[nn.Module] = []
         current_in = in_channels
-        out_channels = n_channels
+        out_channels = base_channels
         for i in range(n_blocks):
-            out_channels = (n_channels if i == 0 else current_in * 2) if i % 2 == 0 else current_in
+            if i == 0:
+                out_channels = base_channels
+            elif i % 2 == 0:
+                out_channels = current_in * 2
+            else:
+                out_channels = current_in
+
             conv_blocks.append(
                 ConvolutionalBlock(
                     in_channels=current_in,
@@ -39,12 +49,18 @@ class Discriminator(nn.Module):
                 )
             )
             current_in = out_channels
+
         self.conv_blocks = nn.Sequential(*conv_blocks)
 
         self.adaptive_pool = nn.AdaptiveAvgPool2d((6, 6))
         self.fc1 = nn.Linear(out_channels * 6 * 6, fc_size)
         self.leaky_relu = nn.LeakyReLU(0.2)
         self.fc2 = nn.Linear(fc_size, 1)
+
+        self.base_channels = base_channels
+        self.kernel_size = kernel_size
+        self.fc_size = fc_size
+        self.n_blocks = n_blocks
 
     def forward(self, imgs: torch.Tensor) -> torch.Tensor:
         batch_size = imgs.size(0)

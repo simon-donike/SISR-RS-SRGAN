@@ -182,7 +182,36 @@ These choices are **purpose‑built for remote sensing**, where GANs are prone t
 
 ## 🛰️ Datasets
 
-Works with **Sentinel‑2** (10m/20m) and **other RS imagery** (e.g., Pleiades). Band‑flexible loaders and normalization are provided; integrate with **OpenSR‑Utils** for SAFE/S2GM/GeoTIFF ingestion and tiling.
+Two dataset pipelines ship with the repository under `data/`. Both return `(lr, hr)` pairs that are wired into the training `LightningDataModule` through `data/data_utils.py`.
+
+### SEN2NAIP (4× Sentinel‑2 → NAIP pairs)
+
+* **Purpose.** Wraps the Taco Foundation `SEN2NAIPv2` release, which provides pre‑aligned Sentinel‑2 observations and NAIP aerial reference chips. The dataset class simply reads the file paths stored in the `.taco` manifest and loads the rasters on the fly—Sentinel‑2 frames act as the low‑resolution input, NAIP tiles are the 4× higher‑resolution target.
+* **Scale.** This loader is hard‑coded for 4× super‑resolution. The Taco manifest already contains the bilinearly downsampled Sentinel‑2 inputs, so no alternative scale factors are exposed.
+* **Setup.**
+  1. Install the optional dependencies used by the loader: `pip install tacoreader rasterio` (plus Git LFS for the download step).
+  2. Fetch the dataset by running `python data/SEN2AIP/download_S2N.py`. The helper script downloads the manifest and image tiles from the Hugging Face hub into the working directory.
+  3. Point your config to the resulting `.taco` file when you instantiate `SEN2NAIP` (e.g. in a custom `select_dataset` branch). No extra preprocessing is required—the dataset returns NumPy arrays that are subsequently converted to tensors by the training pipeline.
+
+### Sentinel‑2 SAFE windowed chips
+
+* **Purpose.** Allows training directly from raw Sentinel‑2 Level‑1C/Level‑2A `.SAFE` products. A manifest builder enumerates the granule imagery, records chip windows, and the dataset turns each window into an `(lr, hr)` pair.
+* **Pipeline.**
+  1. `S2SAFEWindowIndexBuilder` crawls a root directory of `.SAFE` products, collects the band metadata, and (optionally) windows each raster into fixed chip sizes, storing the results as JSON.
+  2. `S2SAFEDataset` groups those single‑band windows by granule, stacks the requested band order, and crops everything to the requested high‑resolution size (default `512×512`).
+  3. The stacked HR tensor is downsampled in code with anti‑aliased bilinear interpolation to create the LR observation, so the model sees the interpolated image as input and the original Sentinel‑2 patch as target. Invalid chips (NaNs, nodata, near‑black) are filtered out during training.
+* **Setup.**
+  1. Organise your `.SAFE` products under a common root (the builder expects the usual `GRANULE/<id>/IMG_DATA` structure).
+  2. Run the builder (see the `__main__` example in `data/SEN2_SAFE/S2_6b_ds.py`) to generate a manifest JSON containing file metadata and chip coordinates.
+  3. Instantiate `S2SAFEDataset` with the manifest path, the band list/order, your desired `hr_size`, and the super‑resolution factor. The dataset will normalise values and synthesise the LR input automatically.
+
+### Adding a new dataset
+
+1. **Create the dataset class** inside `data/<your_dataset>/`. Mirror the existing API (`__len__`, `__getitem__` returning `(lr, hr)`) so it can plug into the shared training utilities.
+2. **Register it with the selector** by adding a new branch in `data/data_utils.py::select_dataset`, alongside the existing `S2_6b`/`S2_4b` options, so the configuration key resolves to your implementation.
+3. **Expose a config toggle** by adding the new `Data.dataset_type` value to your experiment YAML (for example `configs/config_20m.yaml`). Point any dataset‑specific parameters (paths, band lists, scale factors) to your new loader inside that branch.
+
+This keeps dataset plumbing centralised: dataset classes own their I/O logic, `select_dataset` wires them into Lightning, and the configuration file becomes the single switch for experiments.
 
 ---
 

@@ -1,4 +1,4 @@
-"""PatchGAN discriminator tuned for 4× remote-sensing super-resolution."""
+"""PatchGAN discriminator adapted from the pix2pix/CycleGAN reference implementation."""
 
 from __future__ import annotations
 
@@ -8,16 +8,29 @@ from torch import nn
 __all__ = ["PatchGANDiscriminator"]
 
 
-def get_norm_layer():
-    """Return the normalization layer factory used for PatchGAN."""
+def get_norm_layer(norm_type: str = "instance"):
+    """Return a normalization layer factory.
 
-    # Instance normalization proved effective for multi-spectral remote-sensing imagery
-    # as it keeps per-instance contrast statistics without tracking dataset-wide moments.
-    return functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=False)
+    Parameters
+    ----------
+    norm_type: str
+        Type of normalization: ``"batch"``, ``"instance"`` or ``"none"``.
+    """
+
+    if norm_type == "batch":
+        return functools.partial(nn.BatchNorm2d, affine=True, track_running_stats=True)
+    if norm_type == "instance":
+        return functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=False)
+    if norm_type == "none":
+        def _identity(_channels: int):
+            return nn.Identity()
+
+        return _identity
+    raise NotImplementedError(f"Normalization layer [{norm_type}] is not supported.")
 
 
 class NLayerDiscriminator(nn.Module):
-    """PatchGAN discriminator that classifies overlapping image patches."""
+    """Defines a PatchGAN discriminator that classifies overlapping patches."""
 
     def __init__(self, input_nc: int, ndf: int = 64, n_layers: int = 3, norm_layer=nn.BatchNorm2d):
         super().__init__()
@@ -28,7 +41,7 @@ class NLayerDiscriminator(nn.Module):
 
         kw = 4
         padw = 1
-        sequence: list[nn.Module] = [
+        sequence = [
             nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),
             nn.LeakyReLU(0.2, True),
         ]
@@ -73,20 +86,26 @@ class NLayerDiscriminator(nn.Module):
 
 
 class PatchGANDiscriminator(nn.Module):
-    """PatchGAN discriminator with sensible defaults for 4× remote-sensing SR."""
+    """Convenience wrapper exposing the PatchGAN discriminator."""
 
     def __init__(
         self,
         input_nc: int,
-        ndf: int = 64,
-        n_layers: int = 4,
+        n_layers: int = 3,
+        norm_type: str = "instance",
     ) -> None:
         super().__init__()
-        norm_layer = get_norm_layer()
 
-        # Clamp to a sane range to avoid degenerate receptive fields.
-        depth = max(3, min(n_layers, 6))
-        self.model = NLayerDiscriminator(input_nc, ndf, n_layers=depth, norm_layer=norm_layer)
+        if n_layers < 1:
+            raise ValueError("PatchGAN discriminator requires at least one layer.")
+
+        ndf = 64
+        norm_layer = get_norm_layer(norm_type)
+        self.model = NLayerDiscriminator(input_nc, ndf=ndf, n_layers=n_layers, norm_layer=norm_layer)
+
+        self.base_channels = ndf
+        self.kernel_size = 4
+        self.n_layers = n_layers
 
     def forward(self, input):  # type: ignore[override]
         return self.model(input)

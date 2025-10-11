@@ -279,6 +279,9 @@ class S2SAFEDataset(Dataset):
         hr_size: Tuple[int, int] = (512, 512),   # <— new (HR chip size)
         sr_factor: int = 4,                      # <— new (SR scale)
         antialias: bool = True,                  # <— optional, recommended
+        split_seed: int = 42,
+        val_fraction: float = 0.1,   # ignored if val_count is set
+        val_count: Optional[int] = None,
     ):
         if manifest_json:
             with open(manifest_json, "r") as f:
@@ -341,18 +344,33 @@ class S2SAFEDataset(Dataset):
         else:
             self.samples = [{"paths":[w["path"]], "bands":[w["band"]], "window":w["window"]} for w in self.windows]
 
-        # Split into train/val sets
-        n = len(self.samples)
-        split_n = 1000  # last 1000 samples go to validation
-
+               # --- REPLACE your old split block with this ---
         if phase not in ("train", "val"):
             raise ValueError(f"phase must be 'train' or 'val', got {phase!r}")
 
+        n = len(self.samples)
+        if n == 0:
+            self.phase = phase
+            return
+
+        # decide how many go to val
+        if val_count is not None:
+            k_val = max(0, min(int(val_count), n))
+        else:
+            k_val = max(1, min(int(round(n * float(val_fraction))), n-1))
+
+        # deterministic shuffle of indices
+        idxs = list(range(n))
+        rng = random.Random(int(split_seed))
+        rng.shuffle(idxs)
+
+        val_set = set(idxs[:k_val])
+        if phase == "val":
+            self.samples = [self.samples[i] for i in idxs[:k_val]]
+        else:  # train
+            self.samples = [self.samples[i] for i in idxs[k_val:]]
+
         self.phase = phase
-        if phase == "train":
-            self.samples = self.samples[:-split_n] if n > split_n else []
-        else:  # phase == "val"
-            self.samples = self.samples[-split_n:]
 
 
     def _extract_group_key(self, path: str) -> str:
@@ -540,11 +558,20 @@ if __name__ == "__main__":
         sr_factor=8,          # ← now 8×
         antialias=True,
     )
+    ds_20m_val = S2SAFEDataset(
+        phase="val",
+        manifest_json="/data3/S2_20m/s2_safe_manifest_20m.json",
+        group_by="granule",
+        group_regex=r".*?/GRANULE/([^/]+)/IMG_DATA/.*",
+        bands_keep=desired_20m_order,
+        band_order=desired_20m_order,
+        dtype="float32",
+        hr_size=(512, 512),   # keep HR chip size
+        sr_factor=8,          # ← now 8×
+        antialias=True,
+    )
 
-    dl = torch.utils.data.DataLoader(ds_20m, batch_size=16, shuffle=True, num_workers=8, pin_memory=True)
-    #from tqdm import tqdm
-    #for i in tqdm(dl):
-    #    pass
+    print(len(ds_20m), len(ds_20m_val   ))
 
     # 3) Iterate
     x = ds_20m[1]

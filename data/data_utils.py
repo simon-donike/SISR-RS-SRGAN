@@ -160,7 +160,7 @@ def datamodule_from_datasets(config, ds_train, ds_val):
             """Return the validation DataLoader (no shuffle)."""
             kwargs = dict(
                 batch_size=self.val_bs,
-                shuffle=False,                # Deterministic ordering for validation
+                shuffle=True,                # shuffle ordering for validation - more diversity in batches
                 num_workers=self.num_workers,
                 pin_memory=True,
                 persistent_workers=self.num_workers > 0,

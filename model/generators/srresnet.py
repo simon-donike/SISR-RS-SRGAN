@@ -4,7 +4,7 @@ import math
 import torch
 from torch import nn
 
-from .model_blocks import (
+from ..model_blocks import (
     ConvolutionalBlock,
     ResidualBlock,
     SubPixelConvolutionalBlock,

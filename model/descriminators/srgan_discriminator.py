@@ -5,7 +5,7 @@ from __future__ import annotations
 import torch
 from torch import nn
 
-from .model_blocks import ConvolutionalBlock
+from ..model_blocks import ConvolutionalBlock
 
 __all__ = ["Discriminator"]
 

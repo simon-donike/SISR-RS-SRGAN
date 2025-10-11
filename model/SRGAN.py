@@ -15,7 +15,8 @@ from utils.model_descriptions import print_model_summary
 
 
 #############################################################################################################
-# Build PL MODEL
+# Basic SRGAN Model with flexible Generator/Discriminator, scalable losses, pretraining, and ramp-up
+#############################################################################################################
 class SRGAN_model(pl.LightningModule):
     """
     SRGAN_model — PyTorch Lightning implementation of a Super-Resolution GAN.

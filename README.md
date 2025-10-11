@@ -6,12 +6,12 @@
 
 ---
 ## 🧑‍🚀 ToDOs  
-- [ ] create validate.py  
-- [ ] build interface with opensr-test  
-- [ ] build interface with SEN2SR  
+- [ ] create inference.py  (interface with opensr-test)
+- [ ] build interface with SEN2SR (for 10m + 20m SR)
 - [ ] incorporate the SEN2NAIP versions + downloading  
-- [ ] make EVERYTHING flexible depending on config.yaml  
-- [ ] implement different discriminators  
+- [x] implement different discriminators
+- [ ] implement different visual loses (like LPIPS, VGG, ...)
+- [ ] upgrade to torch>2.0 (complicated, PL doesnt support multiple schedulers in >2)
 ---
 
 ## 🧠 Overview
@@ -59,17 +59,37 @@ The YAML keeps the SRGAN flexible: swap architectures or rebalance perceptual vs
 
 ## 🧰 Installation
 
+> ⚠️ **Python version**: the pinned `torch==1.13.1` and `torchvision==0.14.1` wheels target
+> Python 3.10 (or earlier). Create your environment with a Python 3.10 interpreter to avoid
+> installation failures on newer runtimes (e.g., Python 3.11).
+
 ```bash
 # Clone the repository
 git clone https://github.com/ESAOpenSR/Remote-Sensing-SRGAN.git
 cd Remote-Sensing-SRGAN
 
-# (optional) Create a virtual environment
-python3 -m venv vsnv && source vsnv/bin/activate
+# (optional) Create a Python 3.10 virtual environment
+python3.10 -m venv .venv
+source .venv/bin/activate
 
-# Install
+# (recommended) Upgrade pip so dependency resolution succeeds
+python -m pip install --upgrade pip
+
+# Install project dependencies
 pip install -r requirements.txt
+
+# (optional) Install extras for LPIPS metrics or TacoReader data loading
+# pip install lpips tacoreader
 ```
+
+> ℹ️ **Tip:** If the default PyPI index cannot find `torch==1.13.1`, install
+> PyTorch directly from the official wheel index before running
+> `pip install -r requirements.txt`:
+>
+> ```bash
+> # CUDA 11.7 builds
+> pip install torch==1.13.1 torchvision==0.14.1 --index-url https://download.pytorch.org/whl/cu117
+> ```
 
 ---
 
@@ -202,5 +222,5 @@ coming soon...
 
 Developed by **Simon Donike** (IPL–UV) within the **ESA Φ‑lab / OpenSR** initiative. 
 
-## Notes
+## 📒 Notes
 This repo has been extensively reworked using Codex since I wanted to see if/how well it works. The AI changes wer concerned almost exclusively with structuring, commenting, and documentation. The GAN workflow itself was adapted from my previous implementations and the resulting experience with training these models: ([Remote-Sensing-SRGAN](https://github.com/simon-donike/Remote-Sensing-SRGAN)) and [NIR-GAN](https://github.com/simon-donike/NIR-GAN). The only exception is the loss object, even though its AI slop it works for now so I won't touch it again.

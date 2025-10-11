@@ -12,7 +12,7 @@ from rasterio.windows import Window
 from rasterio.errors import RasterioIOError
 import random
 import matplotlib.pyplot as plt
-from utils.normalise_s2 import normalise_10k
+from utils.spectral_helpers import normalise_10k
 import re
 from pathlib import Path
 

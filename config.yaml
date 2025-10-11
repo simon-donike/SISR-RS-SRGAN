@@ -1,0 +1,67 @@
+# General Settings
+SR_type: 'SISR' # [SISR, MISR]
+# dont forget to also set the sen2_amount
+
+# Data Settings
+Data:
+  # Loader Settings
+  train_batch_size: 12 #12
+  val_batch_size: 8
+  num_workers: 6
+  prefetch_factor: 2 #8 #2
+
+  # Detailed Dataset Setttings
+  dataset_type: 'S2_6b' # ['cv', 'SPOT6', 'S2_6b']
+  data_dir: 'E:/thesis_paper/data/' # ['data/openImages/',''E:/thesis_paper/data/', '/data3/S2_20m']
+  sen2_amount: 4
+  spectral_matching: 'histogram'
+  return_type: 'cross_sensor' #interpolated_matched
+
+
+# Model, Loss, Training  Settings
+Model:
+  in_bands: 6
+  load_checkpoint: False
+  ckpt_path: 'logs\curated_ckpts\pretrained_MISR_SPOT6synt.ckpt'
+  load_fusion_checkpoint: False
+  fusion_ckpt_path: 'logs\curated_ckpts\pretrained_Fusion.ckpt'
+Warmup:
+  fusion: # train fusion in isolation previously
+    enable: True
+    epochs: 1
+    lr: 1e-4
+
+Generator:
+  large_kernel_size: 9
+  small_kernel_size: 3
+  n_channels: 64
+  n_blocks: 16
+  scaling_factor: 4
+
+Discriminator:
+  kernel_size: 3
+  n_channels: 64
+  n_blocks: 8
+  fc_size: 1024
+
+TruncatedVGG:
+  i: 5
+  j: 4
+
+Optimizers:
+  optim_g_lr: 1e-4
+  optim_d_lr: 1e-4
+
+Schedulers:
+  metric: 'val/L1'
+  patience_g: 100
+  patience_d: 100
+  factor_g: 0.5
+  factor_d: 0.5
+  verbose: True
+
+Losses:
+  adv_loss_beta:  1e-3
+
+Logging:
+  num_val_images: 5

@@ -5,14 +5,6 @@
 **Description:** **Remote-Sensing-SRGAN** is a flexible, research‑grade GAN framework for **super‑resolution (SR) of Sentinel‑2 and other remote‑sensing imagery**. It supports **arbitrary input band counts**, **configurable architectures**, **scalable depth/width**, and a **modular loss system**—with a robust training strategy (generator pretraining, adversarial ramp‑up, and discriminator schedules) that **stabilizes traditionally sensitive GAN training on EO data**.
 
 ---
-## 🧑‍🚀 ToDOs  
-- [ ] create inference.py  (interface with opensr-test)
-- [ ] build interface with SEN2SR (for 10m + 20m SR)
-- [ ] incorporate the SEN2NAIP versions + downloading  
-- [x] implement different discriminators
-- [ ] implement different visual loses (like LPIPS, VGG, ...)
-- [ ] upgrade to torch>2.0 (complicated, PL doesnt support multiple schedulers in >2)
----
 
 ## 🧠 Overview
 
@@ -95,23 +87,19 @@ pip install -r requirements.txt
 
 ## 🚀 Quickstart
 
-### 1) Generator Pretraining (content only)
+### 0) Data
 
-Pretrain the generator (e.g., L1 + perceptual) to learn faithful reconstructions before adding GAN pressure.
+Make sure the datafolders exist and are correctly associated with the dataset classes in the dataset folder. Use either your own data or any of the provided dataset.
+
+### 1) SRGAN Training
+
+Train the GAN model.
 
 ```bash
 python train.py --config configs/pretrain.yaml
 ```
 
-### 2) Adversarial Finetuning (full GAN)
-
-Enable the discriminator and ramp the adversarial term smoothly.
-
-```bash
-python train.py --config configs/srgan.yaml
-```
-
-### 3) Inference on Large Scenes
+### 2) Inference on Large Scenes
 
 Use OpenSR‑Utils for tiled processing of SAFE/S2GM/GeoTIFF inputs.
 
@@ -221,9 +209,8 @@ This keeps dataset plumbing centralised: dataset classes own their I/O logic, `s
 Remote-Sensing-SRGAN/
 ├── models/                # Generator/Discriminator + block implementations
 ├── utils/                 # Normalization, stretching, plotting, logging
+├── utils/                 # Dataset implementations and downloading scripts
 ├── train.py               # Training entry point (Lightning-compatible)
-├── validate.py            # Validation pipeline & visualizations
-└── demo.py                # Minimal example
 ```
 
 ---
@@ -253,3 +240,11 @@ Developed by **Simon Donike** (IPL–UV) within the **ESA Φ‑lab / OpenSR** in
 
 ## 📒 Notes
 This repo has been extensively reworked using Codex since I wanted to see if/how well it works. The AI changes wer concerned almost exclusively with structuring, commenting, and documentation. The GAN workflow itself was adapted from my previous implementations and the resulting experience with training these models: ([Remote-Sensing-SRGAN](https://github.com/simon-donike/Remote-Sensing-SRGAN)) and [NIR-GAN](https://github.com/simon-donike/NIR-GAN). The only exceptions are the loss class and the .SAFE dataset class, even though its AI slop it works for now so I won't touch them again.
+
+## 🧑‍🚀 ToDOs  
+- [ ] create inference.py  (interface with opensr-test)
+- [ ] build interface with SEN2SR (for 10m + 20m SR)
+- [x] incorporate the SEN2NAIP versions + downloading  
+- [x] implement different discriminators
+- [x] implement different visual loses (like LPIPS, VGG, ...)
+- [ ] upgrade to torch>2.0 (complicated, PL doesnt support multiple schedulers in >2)

@@ -248,7 +248,7 @@ class SRGAN_model(pl.LightningModule):
             """ 1. Get VGG space loss """
             # encode images
             content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)   # perceptual/content criterion (e.g., VGG)
-            self.log("generator/content_loss", content_loss)                           # log content loss for G
+            self._log_generator_content_loss(content_loss)                             # log content loss for G (consistent args)
             for key, value in metrics.items():
                 self.log(f"train_metrics/{key}", value)                             # log detailed metrics without extra forward passes
 
@@ -280,7 +280,7 @@ class SRGAN_model(pl.LightningModule):
         # ======================================================================
         if optimizer_idx == 1:
             content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)  # compute perceptual/content loss (e.g., VGG or L1)
-            self.log("generator/content_loss", content_loss, prog_bar=True)            # log pure content loss
+            self._log_generator_content_loss(content_loss)                             # log pure content loss
             self.log("generator/total_loss", content_loss, sync_dist=True)             # total = content only (no adversarial term)
             for key, value in metrics.items():
                 self.log(f"train_metrics/{key}", value)                               # reuse computed metrics for logging
@@ -434,6 +434,16 @@ class SRGAN_model(pl.LightningModule):
         self.print("[SRGAN] Starting training!")  # log start message
         if self.pretrain_g_only:                  # if pretraining mode is enabled
             self.print(f"[SRGAN] Pretraining G only for {self.g_pretrain_steps} steps., Current global_step={self.global_step}")  # log pretrain info
+
+
+    def _log_generator_content_loss(self, content_loss: torch.Tensor) -> None:
+        """Helper to consistently log the generator content loss across training phases."""
+        self.log(
+            "generator/content_loss",
+            content_loss,
+            prog_bar=True,
+            sync_dist=True,
+        )
 
 
     def _pretrain_check(self):  # helper to check if still in pretrain phase

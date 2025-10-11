@@ -103,14 +103,23 @@ class SRGAN_model(pl.LightningModule):
         # Purpose: Build discriminator network for adversarial training.
         # ======================================================================
         discriminator_type = getattr(self.config.Discriminator, 'model_type', 'standard')
+        discriminator_blocks = getattr(self.config.Discriminator, 'n_blocks', 8)
         if discriminator_type == 'standard':
             from model.srgan_discriminator import Discriminator
+            n_blocks = discriminator_blocks
             self.discriminator = Discriminator(
                 in_channels=self.config.Model.in_bands,
                 kernel_size=self.config.Discriminator.kernel_size,
                 n_channels=self.config.Discriminator.n_channels,
-                n_blocks=self.config.Discriminator.n_blocks,
+                n_blocks=n_blocks,
                 fc_size=self.config.Discriminator.fc_size
+            )
+        elif discriminator_type == 'patchgan':
+            from model.patchgan import PatchGANDiscriminator
+            self.discriminator = PatchGANDiscriminator(
+                input_nc=self.config.Model.in_bands,
+                ndf=self.config.Discriminator.n_channels,
+                n_blocks=discriminator_blocks,
             )
         else:
             raise ValueError(f"Unknown discriminator model type: {discriminator_type}")

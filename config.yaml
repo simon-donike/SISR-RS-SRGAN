@@ -75,6 +75,7 @@ Discriminator:
   n_channels: 64               # Base channel width
   n_blocks: 8                  # Number of convolutional blocks
   fc_size: 1024                # Fully connected layer size
+  n_layers: null               # Optional override for discriminator depth (standard & PatchGAN)
 
 TruncatedVGG:
   i: 5                         # Layer indices for feature extraction

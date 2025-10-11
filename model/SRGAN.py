@@ -280,7 +280,11 @@ class SRGAN_model(pl.LightningModule):
         # ======================================================================
         if optimizer_idx == 1:
             content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)  # compute perceptual/content loss (e.g., VGG or L1)
+<<<<<<< HEAD
             self._log_generator_content_loss(content_loss)                             # log pure content loss
+=======
+            self.log("generator/content_loss", content_loss)                            # log pure content loss
+>>>>>>> f187532 (a)
             self.log("generator/total_loss", content_loss, sync_dist=True)             # total = content only (no adversarial term)
             for key, value in metrics.items():
                 self.log(f"train_metrics/{key}", value)                               # reuse computed metrics for logging

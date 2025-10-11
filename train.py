@@ -10,23 +10,35 @@ from multiprocessing import freeze_support
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 # local imports
-from model.SRGAN import SRGAN_model
 
-# Run Main Function
 if __name__ == '__main__':
-    # required for Multprocessing on Windows
+    import argparse
+    from multiprocessing import freeze_support
+
+    # required for Multiprocessing on Windows
     freeze_support()
+
+    # ---- CLI: single positional argument (config path) ----
+    parser = argparse.ArgumentParser(description="Train SRGAN with a YAML config.")
+    parser.add_argument(
+        "config",
+        nargs="?",
+        default="configs/config_20m.yaml",
+        help="Path to YAML config file (default: configs/config.yaml)"
+    )
+    args = parser.parse_args()
 
     # General
     torch.set_float32_matmul_precision('medium')
     # load config
-    cfg_filepath = "configs/config.yaml"
+    cfg_filepath = args.config
     config = OmegaConf.load(cfg_filepath)
 
     #############################################################################################################
     " LOAD MODEL "
     #############################################################################################################
     # load pretrained or instanciate new
+    from model.SRGAN import SRGAN_model
     if config.Model.load_checkpoint != False:
         model = SRGAN_model.load_from_checkpoint(config.Model.load_checkpoint, strict=False)
     else:

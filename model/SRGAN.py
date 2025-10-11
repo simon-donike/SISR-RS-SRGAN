@@ -59,6 +59,12 @@ class SRGAN_model(pl.LightningModule):
         from model.loss import GeneratorContentLoss
         self.content_loss_criterion = GeneratorContentLoss(self.config)  # perceptual loss (VGG + pixel)
         self.adversarial_loss_criterion = torch.nn.BCEWithLogitsLoss()   # binary cross-entropy for D/G
+        
+        # ======================================================================
+        # SECTION: Print Model Summary
+        # Purpose: Output model architecture and parameter counts.
+        # ======================================================================
+        print_model_summary(self)  # print model summary to console
 
     def get_models(self):
         """
@@ -126,12 +132,6 @@ class SRGAN_model(pl.LightningModule):
             )
         else:
             raise ValueError(f"Unknown discriminator model type: {discriminator_type}")
-        # ======================================================================
-        # SECTION: Print Model Summary
-        # Purpose: Output model architecture and parameter counts.
-        # ======================================================================
-        print_model_summary(self)  # print model summary to console
-
 
 
     def forward(self, lr_imgs):

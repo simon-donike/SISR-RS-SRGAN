@@ -20,7 +20,7 @@ def select_dataset(config):
     pl_datamodule : LightningDataModule
         A tiny DataModule that exposes train/val DataLoaders built from the selected datasets.
     """
-    dataset_selection = config.Data.dataset_selection
+    dataset_selection = config.Data.dataset_type
 
     if dataset_selection == "S2_6b":
         # Import here to avoid import costs when other datasets are used elsewhere.

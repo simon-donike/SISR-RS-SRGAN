@@ -3,9 +3,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import io
 import torchvision.transforms as transforms
-from data.sen2_stretch import sen2_stretch,minmax_percentile
-from utils.normalise_s2 import normalise_s2
-
+from utils.spectral_helpers import minmax_percentile
 
 def _to_numpy_img(t: torch.Tensor):
     """

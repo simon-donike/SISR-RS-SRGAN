@@ -12,7 +12,6 @@
 - [ ] incorporate the SEN2NAIP versions + downloading  
 - [ ] make EVERYTHING flexible depending on config.yaml  
 - [ ] implement different discriminators  
-- [ ]  
 ---
 
 ## 🧠 Overview

@@ -49,7 +49,7 @@ class GeneratorContentLoss(nn.Module):
         self.register_buffer("fixed_idx", fixed_idx if fixed_idx is not None else None, persistent=False)
 
         # --- instantiate & freeze VGG encoder from config ---
-        from model.vgg import TruncatedVGG19
+        from .vgg import TruncatedVGG19
         i = int(_cfg_get(cfg, ["TruncatedVGG","i"], 5))
         j = int(_cfg_get(cfg, ["TruncatedVGG","j"], 4))
         self.truncated_vgg19 = TruncatedVGG19(i=i, j=j)

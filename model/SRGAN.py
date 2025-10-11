@@ -109,25 +109,24 @@ class SRGAN_model(pl.LightningModule):
         # Purpose: Build discriminator network for adversarial training.
         # ======================================================================
         discriminator_type = getattr(self.config.Discriminator, 'model_type', 'standard')
-        discriminator_layers = getattr(self.config.Discriminator, 'n_layers', None)
+        n_blocks = getattr(self.config.Discriminator, 'n_blocks', None)
+
         if discriminator_type == 'standard':
             from model.srgan_discriminator import Discriminator
-            n_blocks = self.config.Discriminator.n_blocks
-            if discriminator_layers is not None:
-                n_blocks = discriminator_layers
-            self.discriminator = Discriminator(
-                in_channels=self.config.Model.in_bands,
-                kernel_size=self.config.Discriminator.kernel_size,
-                n_channels=self.config.Discriminator.n_channels,
-                n_blocks=n_blocks,
-                fc_size=self.config.Discriminator.fc_size
-            )
+
+            discriminator_kwargs = {
+                "in_channels": self.config.Model.in_bands,
+            }
+            if n_blocks is not None:
+                discriminator_kwargs["n_blocks"] = n_blocks
+
+            self.discriminator = Discriminator(**discriminator_kwargs)
         elif discriminator_type == 'patchgan':
             from model.patchgan import PatchGANDiscriminator
-            patchgan_layers = discriminator_layers if discriminator_layers is not None else 4
+
+            patchgan_layers = n_blocks if n_blocks is not None else 3
             self.discriminator = PatchGANDiscriminator(
                 input_nc=self.config.Model.in_bands,
-                ndf=self.config.Discriminator.n_channels,
                 n_layers=patchgan_layers,
             )
         else:

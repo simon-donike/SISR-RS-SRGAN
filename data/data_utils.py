@@ -139,6 +139,9 @@ def datamodule_from_datasets(config, ds_train, ds_val):
             self.num_workers = getattr(config.Data, "num_workers", 4)
             self.prefetch_factor = getattr(config.Data, "prefetch_factor", 2)
 
+            # print dataset sizes for sanity
+            print(f"Created Dataset type {config.Data.dataset_type} with {len(self.ds_train)} training samples and {len(self.ds_val)} validation samples.\n")
+
         def train_dataloader(self):
             """Return the training DataLoader with common performance flags."""
             kwargs = dict(

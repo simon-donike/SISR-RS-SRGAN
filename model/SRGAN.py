@@ -368,7 +368,7 @@ class SRGAN_model(pl.LightningModule):
             # If in pretraining, discard D metrics
             if self._pretrain_check(): # check if we'e in pretrain phase
                 self.log("discriminator/adversarial_loss",
-                        torch.zeros(1, device=self.device),
+                        torch.zeros(1, device=lr_imgs.device),
                         prog_bar=False, sync_dist=True)
             else:
                 # run discriminator and get loss between pred labels and true labels

@@ -29,7 +29,7 @@ This repository provides:
 
 * 🧩 **Flexible generator**: choose block type `res`, `rcab`, `rrdb`, or `lka`; set `n_blocks`, `n_channels`, and `scale ∈ {2,4,8}`.
 * 🛰️ **Flexible inputs**: train on **any band layout** (e.g., S2 RGB‑NIR, 6‑band stacks, or custom multispectral sets). Normalization/denorm utilities provided.
-* ⚖️ **Flexible losses & weights**: combine L1, Spectral Angle Mapper, VGG19 perceptual MSE, Total Variation, PSNR/SSIM surrogates, and a BCE adversarial term with **per‑loss weights**.
+* ⚖️ **Flexible losses & weights**: combine L1, Spectral Angle Mapper, VGG19 or LPIPS perceptual distances, Total Variation, PSNR/SSIM surrogates, and a BCE adversarial term with **per‑loss weights**.
 * 🧪 **Robust training strategy**: generator **pretraining**, **linear adversarial loss ramp**, and **discriminator update schedules/curves**.
 * 📊 **Clear monitoring**: PSNR, SSIM, LPIPS, qualitative panels, and Weights & Biases logging.
 
@@ -50,7 +50,7 @@ This repository provides:
 |-----------|---------|-------------|
 | **Generators** | `SRResNet`, `res`, `rcab`, `rrdb`, `lka` | `Generator.model_type`, depth via `Generator.n_blocks`, width via `Generator.n_channels`, kernels and scale. |
 | **Discriminators** | `standard` SRGAN CNN, `patchgan` | `Discriminator.model_type`, granularity with `Discriminator.n_blocks`. |
-| **Content losses** | L1, Spectral Angle Mapper, VGG19 perceptual MSE, Total Variation, PSNR‑surrogate, SSIM‑surrogate | Weighted by `Training.Losses.*` (e.g. `l1_weight`, `sam_weight`, `perceptual_weight`, `tv_weight`, `psnr_weight`, `ssim_weight`). |
+| **Content losses** | L1, Spectral Angle Mapper, VGG19/LPIPS perceptual metrics, Total Variation, PSNR‑surrogate, SSIM‑surrogate | Weighted by `Training.Losses.*` (e.g. `l1_weight`, `sam_weight`, `perceptual_weight`, `perceptual_metric`, `tv_weight`, `psnr_weight`, `ssim_weight`). |
 | **Adversarial loss** | BCE‑with‑logits on real/fake logits | Warmup via `Training.pretrain_g_only`, ramped by `adv_loss_ramp_steps`, capped at `adv_loss_beta`, optional label smoothing. |
 
 The YAML keeps the SRGAN flexible: swap architectures or rebalance perceptual vs. spectral fidelity without touching the code.

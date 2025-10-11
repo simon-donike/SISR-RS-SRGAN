@@ -18,8 +18,8 @@ def _cfg_get(cfg, keys, default=None):
 
 class GeneratorContentLoss(nn.Module):
     """
-    Composite generator content loss that self-instantiates TruncatedVGG19 from cfg.TruncatedVGG.
-    total = l1_w*L1 + sam_w*SAM + perc_w*MSE(VGG3) + tv_w*TV
+    Composite generator content loss that self-instantiates the configured perceptual metric.
+    total = l1_w*L1 + sam_w*SAM + perc_w*Perceptual + tv_w*TV
             + psnr_w*(10**(-PSNR/10)) + ssim_w*(1-SSIM)
     """
 
@@ -48,14 +48,25 @@ class GeneratorContentLoss(nn.Module):
             assert fixed_idx.numel() == 3, "fixed_idx must have length 3"
         self.register_buffer("fixed_idx", fixed_idx if fixed_idx is not None else None, persistent=False)
 
-        # --- instantiate & freeze VGG encoder from config ---
-        from .vgg import TruncatedVGG19
-        i = int(_cfg_get(cfg, ["TruncatedVGG","i"], 5))
-        j = int(_cfg_get(cfg, ["TruncatedVGG","j"], 4))
-        self.truncated_vgg19 = TruncatedVGG19(i=i, j=j)
-        for p in self.truncated_vgg19.parameters():
+        # --- configure perceptual metric ---
+        self.perc_metric = str(_cfg_get(cfg, ["Training", "Losses", "perceptual_metric"], "vgg")).lower()
+
+        if self.perc_metric == "vgg":
+            from .vgg import TruncatedVGG19
+
+            i = int(_cfg_get(cfg, ["TruncatedVGG", "i"], 5))
+            j = int(_cfg_get(cfg, ["TruncatedVGG", "j"], 4))
+            self.perceptual_model = TruncatedVGG19(i=i, j=j)
+        elif self.perc_metric == "lpips":
+            import lpips
+
+            self.perceptual_model = lpips.LPIPS(net="alex")
+        else:
+            raise ValueError(f"Unsupported perceptual metric: {self.perc_metric}")
+
+        for p in self.perceptual_model.parameters():
             p.requires_grad = False
-        self.truncated_vgg19.eval()  # acts as fixed feature extractor
+        self.perceptual_model.eval()
 
     # ---------- public API ----------
     def return_loss(
@@ -122,6 +133,34 @@ class GeneratorContentLoss(nn.Module):
             idx = self.fixed_idx.to(device=x.device)
         return x[:, idx, :, :]
 
+    def _perceptual_distance(self, sr_3: torch.Tensor, hr_3: torch.Tensor, *, build_graph: bool) -> torch.Tensor:
+        requires_grad = build_graph and self.perc_w != 0.0
+
+        if self.perc_metric == "vgg":
+            if requires_grad:
+                sr_features = self.perceptual_model(sr_3)
+            else:
+                with torch.no_grad():
+                    sr_features = self.perceptual_model(sr_3)
+            with torch.no_grad():
+                hr_features = self.perceptual_model(hr_3)
+            distance = F.mse_loss(sr_features, hr_features)
+        elif self.perc_metric == "lpips":
+            sr_norm = sr_3.mul(2.0).sub(1.0)
+            hr_norm = hr_3.mul(2.0).sub(1.0).detach()
+            if requires_grad:
+                distance = self.perceptual_model(sr_norm, hr_norm)
+            else:
+                with torch.no_grad():
+                    distance = self.perceptual_model(sr_norm, hr_norm)
+            distance = distance.mean()
+        else:
+            raise RuntimeError(f"Unhandled perceptual metric: {self.perc_metric}")
+
+        if not requires_grad:
+            distance = distance.detach()
+        return distance
+
     def _compute_components(
         self, sr: torch.Tensor, hr: torch.Tensor, *, build_graph: bool
     ) -> dict[str, torch.Tensor]:
@@ -138,20 +177,10 @@ class GeneratorContentLoss(nn.Module):
         comps["l1"] = _compute(self.l1_w, lambda: F.l1_loss(sr, hr))
         comps["sam"] = _compute(self.sam_w, lambda: self._sam_loss(sr, hr))
 
-        # Perceptual (VGG on 3 bands)
+        # Perceptual distance on 3 selected bands
         sr_3 = self._pick_rgb(sr)
         hr_3 = self._pick_rgb(hr)
-        if build_graph and self.perc_w != 0.0:
-            sr_v = self.truncated_vgg19(sr_3)
-        else:
-            with torch.no_grad():
-                sr_v = self.truncated_vgg19(sr_3)
-        with torch.no_grad():
-            hr_v = self.truncated_vgg19(hr_3)
-        perceptual = F.mse_loss(sr_v, hr_v)
-        if not (build_graph and self.perc_w != 0.0):
-            perceptual = perceptual.detach()
-        comps["perceptual"] = perceptual
+        comps["perceptual"] = self._perceptual_distance(sr_3, hr_3, build_graph=build_graph)
 
         # Total variation
         comps["tv"] = _compute(self.tv_w, lambda: self._tv_loss(sr))

@@ -46,7 +46,8 @@ Training:
     # --- Content loss components (GeneratorContentLoss) ---
     l1_weight: 1.0             # L1 loss over all bands
     sam_weight: 0.05           # Spectral Angle Mapper loss
-    perceptual_weight: 0.1     # VGG-based perceptual MSE (3-band only)
+    perceptual_weight: 0.1     # Perceptual similarity term weight
+    perceptual_metric: 'vgg'   # ['vgg', 'lpips'] - LPIPS requires pip install lpips
     tv_weight: 0.0             # Total Variation regularization (optional)
 
     # --- Quality metric auxiliary losses (optional) ---

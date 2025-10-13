@@ -35,7 +35,7 @@ Model:
 Training:
   # --- Pretraining and adversarial setup ---
   pretrain_g_only: True        # Train generator only for initial phase
-  g_pretrain_steps: 15000     # Number of generator-only warmup steps
+  g_pretrain_steps: 10000     # Number of generator-only warmup steps
   adv_loss_ramp_steps: 5000   # Gradual adversarial weight ramp steps
   label_smoothing: True        # Discriminator target smoothing (1.0 → 0.9)
 

@@ -71,11 +71,6 @@ Discriminator:
   model_type: 'standard'       # Discriminator architecture selector ['standard', 'patchgan']
   n_blocks: 8                  # Number of convolutional blocks / layers: ['standard': 8, 'patchgan': 3]
 
-TruncatedVGG:
-  i: 5                         # Layer indices for feature extraction
-  j: 4
-
-
 # ============================================================================ #
 # 🧮 OPTIMIZATION SETTINGS
 # ---------------------------------------------------------------------------- #

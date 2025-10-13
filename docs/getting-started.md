@@ -4,9 +4,19 @@ This guide walks through environment setup, configuration management, and the mi
 
 ## Prerequisites
 
-* Python 3.10 (required by the pinned PyTorch 1.13 / torchvision 0.14 wheels).【F:README.md†L45-L73】
-* CUDA-capable GPU if you plan to train on large Sentinel-2 chips (the default trainer is configured for GPU execution).【F:train.py†L69-L90】
-* Optional: Weights & Biases account for experiment tracking and Git LFS if you plan to download large datasets.
+The project pins PyTorch 1.13 and torchvision 0.14 wheels that target Python 3.10. Set up your environment with that interpreter and install dependencies before launching training.
+
+```markdown
+--8<-- "../README.md:lines=52-83"
+```
+
+The default trainer is configured for CUDA acceleration and streams metrics to both TensorBoard and Weights & Biases.
+
+```python
+--8<-- "../train.py:lines=69-110"
+```
+
+Create a Weights & Biases account if you plan to use the built-in experiment tracking, and install Git LFS when working with large dataset manifests.
 
 ## Create an environment
 
@@ -34,13 +44,11 @@ pip install torch==1.13.1 torchvision==0.14.1 --index-url https://download.pytor
 
 ## Configure your experiment
 
-All experiment settings live in YAML files under `configs/`. The `config_20m.yaml` template targets Sentinel-2 20 m inputs, while `config_10m.yaml` demonstrates 10 m multi-band training. Key sections include:
+All experiment settings live in YAML files under `configs/`. The `config_20m.yaml` template targets Sentinel-2 20 m inputs, while `config_10m.yaml` demonstrates 10 m multi-band training. Each section controls loaders, models, training schedules, and logging behaviour.
 
-* `Data`: batch sizes, worker counts, and dataset selector (`S2_6b`, `S2_4b`, `SISR_WW`, etc.).【F:configs/config_10m.yaml†L12-L33】
-* `Model`: input band count and checkpoint loading behaviour.【F:configs/config_10m.yaml†L22-L28】
-* `Training`: warm-up lengths, adversarial ramp strategy, and loss weights.【F:configs/config_10m.yaml†L35-L70】
-* `Generator` / `Discriminator`: architecture choices and scale factor.【F:configs/config_10m.yaml†L73-L101】
-* `Optimizers`, `Schedulers`, `Logging`: learning rates, ReduceLROnPlateau settings, and validation visualisations.【F:configs/config_10m.yaml†L103-L132】
+```yaml
+--8<-- "../configs/config_10m.yaml:lines=12-132"
+```
 
 Duplicate a config file if you need to adjust parameters without touching the defaults:
 
@@ -56,12 +64,11 @@ Use the training script with the desired YAML file:
 python train.py --config configs/my_experiment.yaml
 ```
 
-Under the hood the script:
+Under the hood the script loads the YAML, constructs datasets, wires loggers and callbacks, and launches GPU-accelerated training with Lightning.
 
-1. Loads the configuration via OmegaConf and instantiates the Lightning `SRGAN_model`.【F:train.py†L24-L48】
-2. Selects and wraps the dataset into a Lightning `DataModule` based on `Data.dataset_type`.【F:train.py†L49-L57】【F:data/data_utils.py†L1-L95】
-3. Configures Weights & Biases, TensorBoard, and learning rate monitoring callbacks. 【F:train.py†L59-L93】
-4. Starts training with GPU acceleration enabled by default. 【F:train.py†L69-L90】
+```python
+--8<-- "../train.py:lines=19-113"
+```
 
 Training logs, checkpoints, and exported validation panels are written into `logs/` alongside the W&B run.
 
@@ -69,12 +76,17 @@ Training logs, checkpoints, and exported validation panels are written into `log
 
 Two checkpoint switches let you reuse trained weights without editing Python code:
 
-* `Model.load_checkpoint`: path to a Lightning checkpoint whose weights should initialise the generator/discriminator before training begins. 【F:train.py†L34-L47】
-* `Model.continue_training`: path to a checkpoint that should be fully resumed (optimizer states, schedulers, etc.). Leave both as `False` to start from scratch.【F:train.py†L34-L47】
+```python
+--8<-- "../train.py:lines=34-48"
+```
 
 ## Inference quick peek
 
-For offline inference, instantiate `SRGAN_model` and call `predict_step` with low-resolution tensors. The method auto-normalises Sentinel-2 style inputs, runs the generator, histogram matches the output, and denormalises back to the original range.【F:model/SRGAN.py†L103-L144】
+For offline inference, instantiate `SRGAN_model` and call `predict_step` with low-resolution tensors. The method auto-normalises Sentinel-2 style inputs, runs the generator, histogram matches the output, and denormalises back to the original range.
+
+```python
+--8<-- "../model/SRGAN.py:lines=153-192"
+```
 
 ```python
 from model.SRGAN import SRGAN_model

@@ -7,11 +7,53 @@ Remote-Sensing-SRGAN is a research-grade training stack for single-image super-r
 
 ## Project highlights
 
-* **Flexible generator zoo.** Choose between SRResNet, residual, RCAB, RRDB, large-kernel attention, or conditional GAN backbones with scale factors from 2×–8×.【F:model/SRGAN.py†L59-L101】
-* **Pluggable losses.** Combine pixel, spectral, perceptual, adversarial, and total-variation terms with independent weights and activation schedules.【F:model/SRGAN.py†L44-L58】【F:configs/config_10m.yaml†L35-L70】
-* **Remote-sensing ready datasets.** Sentinel-2 SAFE windowing and the SEN2NAIP worldwide pairs are built in, with Lightning datamodules created on the fly from the config.【F:data/data_utils.py†L1-L95】
-* **Stabilised training flow.** Generator-only warm-up, adversarial ramp-up, discriminator scheduling, and Lightning callbacks are wired into the training script.【F:train.py†L19-L93】【F:model/SRGAN.py†L34-L43】
-* **Comprehensive logging.** TensorBoard visualisations, Weights & Biases tracking, and qualitative inspection panels are emitted during training.【F:train.py†L59-L93】【F:model/SRGAN.py†L12-L16】
+### Flexible generator zoo
+
+Choose between SRResNet, residual, RCAB, RRDB, large-kernel attention, or conditional GAN backbones with scale factors from 2×–8×.
+
+```python
+--8<-- "../model/SRGAN.py:lines=72-118"
+```
+
+### Pluggable losses
+
+Pixel, spectral, perceptual, adversarial, and total-variation terms can be mixed with independent weights and activation schedules.
+
+```python
+--8<-- "../model/SRGAN.py:lines=34-58"
+```
+
+```yaml
+--8<-- "../configs/config_10m.yaml:lines=35-70"
+```
+
+### Remote-sensing ready datasets
+
+Sentinel-2 SAFE windowing and the SEN2NAIP worldwide pairs are built in, with Lightning datamodules created on the fly from the configuration.
+
+```python
+--8<-- "../data/data_utils.py:lines=1-95"
+```
+
+### Stabilised training flow
+
+Generator-only warm-up, adversarial ramp-up, discriminator scheduling, and Lightning callbacks are wired into the training script.
+
+```python
+--8<-- "../train.py:lines=19-93"
+```
+
+### Comprehensive logging
+
+TensorBoard visualisations, Weights & Biases tracking, and qualitative inspection panels are emitted during training.
+
+```python
+--8<-- "../model/SRGAN.py:lines=12-16"
+```
+
+```python
+--8<-- "../train.py:lines=59-93"
+```
 
 ## Repository layout
 

@@ -1,11 +1,9 @@
-# mkdocs.yml  (place at repo root)
-
 site_name: SRGAN for Remote Sensing
 site_description: Flexible super-resolution GANs for satellite imagery
 site_url: https://simon-donike.github.io/SISR-RS-SRGAN/
 repo_url: https://github.com/simon-donike/SISR-RS-SRGAN
 repo_name: simon-donike/SISR-RS-SRGAN
-edit_uri: edit/main/docs/     # "Edit this page" links
+edit_uri: edit/main/docs/
 
 docs_dir: docs
 
@@ -24,7 +22,7 @@ plugins:
       handlers:
         python:
           options:
-            docstring_style: google  # or "numpy"
+            docstring_style: google
             show_source: true
 
 markdown_extensions:
@@ -37,11 +35,10 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.details
   - pymdownx.tasklist
-  # Enable code snippet includes:  --8<-- "path:lines=a-b"
   - pymdownx.snippets:
       base_path:
-        - .      # repo root
-        - ..     # parent (safe fallback on CI)
+        - .
+        - ..
       check_paths: true
       encoding: utf-8
 

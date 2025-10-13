@@ -42,6 +42,7 @@ Training:
   Losses:
     # --- GAN term ---
     adv_loss_beta: 1e-3        # Final adversarial loss weight after ramp-up
+    adv_loss_schedule: 'sigmoid'  # Adversarial weight ramp type: ['linear', 'sigmoid']
 
     # --- Content loss components (GeneratorContentLoss) ---
     l1_weight: 1.0             # L1 loss over all bands

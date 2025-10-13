@@ -473,4 +473,5 @@ class SRGAN_model(pl.LightningModule):
 
 
 if __name__=="__main__":       
-    model = SRGAN_model(config_file_path="config.yaml")
+    model = SRGAN_model(config_file_path="configs/config_20m.yaml")
+    model.forward(torch.randn(1,6,32,32))

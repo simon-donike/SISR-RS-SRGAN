@@ -1,16 +1,23 @@
-other/
-__pycache__/
-wandb/
-trash/
-logs/
+# Checkpoints
 *.pth
-*.ckpt
+*.ckpt 
+# VSC & Py stuff
 *.pyc
 .vscode*
 *.vscode
 .vscode
+__pycache__/
+
+# Logs
 lightning_logs/
 lightning_logs/*
 lightning_logs
+wandb/
 
-
+# local folders
+other/
+trash/
+logs/
+SISR_WW/
+data/SEN2NAIP_custom/
+data/SEN2NAIP_custom/*

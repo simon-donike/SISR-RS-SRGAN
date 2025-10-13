@@ -91,6 +91,12 @@ def select_dataset(config):
             antialias=True,
         )
 
+    elif dataset_selection =="SISR_WW":
+        from data.SISR_WW.SISR_WW_dataset import SISRWorldWide
+        path = "/data3/SEN2NAIP_global"
+        ds_train = SISRWorldWide(path=path,split="train")
+        ds_val = SISRWorldWide(path=path,split="val")
+        
     else:
         # Centralized error so unsupported keys fail loudly & clearly.
         raise NotImplementedError(f"Dataset {dataset_selection} not implemented")
@@ -170,3 +176,9 @@ def datamodule_from_datasets(config, ds_train, ds_val):
             return DataLoader(self.ds_val, **kwargs)
 
     return CustomDataModule(ds_train, ds_val, config)
+
+
+if __name__ == "__main__":
+    from omegaconf import OmegaConf
+    config = OmegaConf.load("configs/config_10m.yaml")
+    _ = select_dataset(config)

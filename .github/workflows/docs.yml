@@ -1,0 +1,22 @@
+name: docs
+on:
+  push:
+    branches: [ main ]   # ensure you push to this branch
+  workflow_dispatch:
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install mkdocs-material mkdocstrings[python]
+      - run: mkdocs build --strict
+      - uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages

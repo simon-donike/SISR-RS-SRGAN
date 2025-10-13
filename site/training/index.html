@@ -533,18 +533,26 @@
 <p>Remote-Sensing-SRGAN uses PyTorch Lightning to manage training loops, logging, and checkpointing. This guide explains the runtime workflow, callbacks, and practical tips for stable training on large remote-sensing datasets.</p>
 <h2 id="end-to-end-flow">End-to-end flow<a class="headerlink" href="#end-to-end-flow" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Configuration load:</strong> <code>train.py</code> reads the YAML file supplied via <code>--config</code> and passes it to <code>SRGAN_model</code>.【F:train.py†L19-L47】</li>
-<li><strong>Dataset selection:</strong> <code>select_dataset</code> constructs train/validation datasets and wraps them into a Lightning <code>DataModule</code>. Dataset statistics are printed for sanity. 【F:data/data_utils.py†L1-L95】【F:data/data_utils.py†L121-L140】</li>
-<li><strong>Logger setup:</strong> Weights &amp; Biases, TensorBoard, and a learning-rate monitor are initialised. Checkpoints are saved under <code>logs/&lt;project&gt;/&lt;timestamp&gt;/</code>.【F:train.py†L59-L93】</li>
-<li><strong>Training loop:</strong> <code>Trainer.fit</code> launches GPU-accelerated training with callbacks for checkpointing, early stopping, and LR monitoring. 【F:train.py†L69-L96】</li>
+<li><strong>Configuration load:</strong> <code>train.py</code> reads the YAML file supplied via <code>--config</code> and passes it to <code>SRGAN_model</code>.</li>
+<li><strong>Dataset selection:</strong> <code>select_dataset</code> constructs train/validation datasets and wraps them into a Lightning <code>DataModule</code>. Dataset statistics are printed for sanity.</li>
+<li><strong>Logger setup:</strong> Weights &amp; Biases, TensorBoard, and a learning-rate monitor are initialised. Checkpoints are saved under <code>logs/&lt;project&gt;/&lt;timestamp&gt;/</code>.</li>
+<li><strong>Training loop:</strong> <code>Trainer.fit</code> launches GPU-accelerated training with callbacks for checkpointing, early stopping, and LR monitoring.</li>
 </ol>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="lightning-hooks-inside-srgan_model">Lightning hooks inside <code>SRGAN_model</code><a class="headerlink" href="#lightning-hooks-inside-srgan_model" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>training_step</code>: Receives both generator and discriminator optimisers (Lightning’s GAN pattern). Handles generator-only pretraining, adversarial ramp-up, and logging of scalar losses/metrics.</li>
 <li><code>validation_step</code>: Generates super-resolved outputs for qualitative logging, computes metrics (PSNR, SSIM, LPIPS if configured), and stores them for epoch-level aggregation.</li>
-<li><code>configure_optimizers</code>: Creates two Adam optimisers plus <code>ReduceLROnPlateau</code> schedulers based on config values. 【F:model/SRGAN.py†L5-L12】</li>
-<li><code>on_validation_epoch_end</code>: Uses <code>utils.logging_helpers.plot_tensors</code> to push LR/SR/HR panels to TensorBoard and Weights &amp; Biases. 【F:model/SRGAN.py†L12-L16】【F:utils/logging_helpers.py†L1-L200】</li>
+<li><code>configure_optimizers</code>: Creates two Adam optimisers plus <code>ReduceLROnPlateau</code> schedulers based on config values.</li>
+<li><code>on_validation_epoch_end</code>: Uses <code>utils.logging_helpers.plot_tensors</code> to push LR/SR/HR panels to TensorBoard and Weights &amp; Biases.</li>
 </ul>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <p>Inspect <code>model/SRGAN.py</code> for detailed comments describing each step of the training loop and logging behaviour.</p>
 <h2 id="callbacks-and-logging">Callbacks and logging<a class="headerlink" href="#callbacks-and-logging" title="Permanent link">&para;</a></h2>
 <p><code>train.py</code> wires in several Lightning callbacks out of the box:</p>
@@ -558,34 +566,42 @@
 <tbody>
 <tr>
 <td><code>ModelCheckpoint</code></td>
-<td>Saves <code>last.ckpt</code> and top-2 checkpoints based on <code>Schedulers.metric</code> (default: <code>val_metrics/l1</code>).【F:train.py†L69-L93】</td>
+<td>Saves <code>last.ckpt</code> and top-2 checkpoints based on <code>Schedulers.metric</code> (default: <code>val_metrics/l1</code>).</td>
 </tr>
 <tr>
 <td><code>LearningRateMonitor</code></td>
-<td>Logs generator/discriminator learning rates each epoch to W&amp;B/TensorBoard.【F:train.py†L88-L93】</td>
+<td>Logs generator/discriminator learning rates each epoch to W&amp;B/TensorBoard.</td>
 </tr>
 <tr>
 <td><code>EarlyStopping</code></td>
-<td>Monitors the same validation metric with large patience (250 epochs) to guard against divergence. 【F:train.py†L80-L88】</td>
+<td>Monitors the same validation metric with large patience (250 epochs) to guard against divergence.</td>
 </tr>
 </tbody>
 </table>
-<p>Weights &amp; Biases is configured with <code>project="SRGAN_6bands"</code> and entity <code>opensr</code>. Set the <code>WANDB_PROJECT</code> or edit the script if you need per-experiment projects. TensorBoard logs are stored in <code>logs/</code> alongside W&amp;B run data.【F:train.py†L59-L93】</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<p>Weights &amp; Biases is configured with <code>project="SRGAN_6bands"</code> and entity <code>opensr</code>. Set the <code>WANDB_PROJECT</code> or edit the script if you need per-experiment projects. TensorBoard logs are stored in <code>logs/</code> alongside W&amp;B run data.</p>
 <h2 id="adversarial-training-schedule">Adversarial training schedule<a class="headerlink" href="#adversarial-training-schedule" title="Permanent link">&para;</a></h2>
 <p>GAN training is stabilised through three mechanisms:</p>
 <ul>
-<li><strong>Generator pretraining:</strong> For the first <code>Training.g_pretrain_steps</code>, only the generator optimiser runs; the discriminator is skipped. This lets the generator learn a strong content prior before adversarial updates start.【F:model/SRGAN.py†L34-L43】【F:configs/config_10m.yaml†L35-L52】</li>
-<li><strong>Adversarial ramp-up:</strong> After pretraining, the adversarial loss weight increases linearly or sigmoidally over <code>Training.adv_loss_ramp_steps</code> until it reaches <code>Losses.adv_loss_beta</code>.【F:model/SRGAN.py†L34-L43】【F:configs/config_10m.yaml†L35-L70】</li>
-<li><strong>Label smoothing:</strong> When <code>Training.label_smoothing=True</code>, real labels are reduced to 0.9 to prevent discriminator overconfidence.【F:model/SRGAN.py†L34-L43】</li>
+<li><strong>Generator pretraining:</strong> For the first <code>Training.g_pretrain_steps</code>, only the generator optimiser runs; the discriminator is skipped. This lets the generator learn a strong content prior before adversarial updates start.</li>
+<li><strong>Adversarial ramp-up:</strong> After pretraining, the adversarial loss weight increases linearly or sigmoidally over <code>Training.adv_loss_ramp_steps</code> until it reaches <code>Losses.adv_loss_beta</code>.</li>
+<li><strong>Label smoothing:</strong> When <code>Training.label_smoothing=True</code>, real labels are reduced to 0.9 to prevent discriminator overconfidence.</li>
 </ul>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <p>These heuristics reduce mode collapse and stabilise training on multi-spectral inputs where illumination and texture vary drastically between bands.</p>
 <h2 id="practical-tips">Practical tips<a class="headerlink" href="#practical-tips" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Monitor PSNR/SSIM/LPIPS in W&amp;B to detect spectral artefacts early. If LPIPS diverges while PSNR improves, consider increasing <code>Losses.perceptual_weight</code>.</li>
-<li>Use moderate <code>train_batch_size</code> values (8–16) to balance GPU utilisation and dataset variety. Increase <code>Data.prefetch_factor</code> when <code>num_workers &gt; 0</code> to keep GPUs busy.【F:data/data_utils.py†L97-L140】</li>
-<li>To benchmark architectures quickly, reuse trained generators by setting <code>Model.load_checkpoint</code> and adjusting only the discriminator or loss weights.</li>
-<li>Keep an eye on GPU memory when scaling <code>Generator.n_blocks</code> and <code>n_channels</code>; RRDB and LKA variants are heavier than SRResNet.</li>
+<li>Use moderate <code>train_batch_size</code> values (8–16) to balance GPU utilisation and dataset variety. Increase <code>Data.prefetch_factor</code> when <code>num_workers &gt; 0</code> to keep GPUs busy.</li>
 </ul>
+<p><div class="highlight"><pre><span></span><code>
+</code></pre></div>
+* To benchmark architectures quickly, reuse trained generators by setting <code>Model.load_checkpoint</code> and adjusting only the discriminator or loss weights.
+* Keep an eye on GPU memory when scaling <code>Generator.n_blocks</code> and <code>n_channels</code>; RRDB and LKA variants are heavier than SRResNet.</p>
 
 
 

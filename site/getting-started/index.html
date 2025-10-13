@@ -539,11 +539,13 @@
 <h1 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
 <p>This guide walks through environment setup, configuration management, and the minimal commands required to launch a Remote-Sensing-SRGAN experiment.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Python 3.10 (required by the pinned PyTorch 1.13 / torchvision 0.14 wheels).【F:README.md†L45-L73】</li>
-<li>CUDA-capable GPU if you plan to train on large Sentinel-2 chips (the default trainer is configured for GPU execution).【F:train.py†L69-L90】</li>
-<li>Optional: Weights &amp; Biases account for experiment tracking and Git LFS if you plan to download large datasets.</li>
-</ul>
+<p>The project pins PyTorch 1.13 and torchvision 0.14 wheels that target Python 3.10. Set up your environment with that interpreter and install dependencies before launching training.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<p>The default trainer is configured for CUDA acceleration and streams metrics to both TensorBoard and Weights &amp; Biases.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<p>Create a Weights &amp; Biases account if you plan to use the built-in experiment tracking, and install Git LFS when working with large dataset manifests.</p>
 <h2 id="create-an-environment">Create an environment<a class="headerlink" href="#create-an-environment" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># Clone the repository</span>
 git<span class="w"> </span>clone<span class="w"> </span>https://github.com/ESAOpenSR/Remote-Sensing-SRGAN.git
@@ -563,14 +565,9 @@ pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </s
 <div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">torch</span><span class="o">==</span><span class="m">1</span>.13.1<span class="w"> </span><span class="nv">torchvision</span><span class="o">==</span><span class="m">0</span>.14.1<span class="w"> </span>--index-url<span class="w"> </span>https://download.pytorch.org/whl/cu117
 </code></pre></div>
 <h2 id="configure-your-experiment">Configure your experiment<a class="headerlink" href="#configure-your-experiment" title="Permanent link">&para;</a></h2>
-<p>All experiment settings live in YAML files under <code>configs/</code>. The <code>config_20m.yaml</code> template targets Sentinel-2 20 m inputs, while <code>config_10m.yaml</code> demonstrates 10 m multi-band training. Key sections include:</p>
-<ul>
-<li><code>Data</code>: batch sizes, worker counts, and dataset selector (<code>S2_6b</code>, <code>S2_4b</code>, <code>SISR_WW</code>, etc.).【F:configs/config_10m.yaml†L12-L33】</li>
-<li><code>Model</code>: input band count and checkpoint loading behaviour.【F:configs/config_10m.yaml†L22-L28】</li>
-<li><code>Training</code>: warm-up lengths, adversarial ramp strategy, and loss weights.【F:configs/config_10m.yaml†L35-L70】</li>
-<li><code>Generator</code> / <code>Discriminator</code>: architecture choices and scale factor.【F:configs/config_10m.yaml†L73-L101】</li>
-<li><code>Optimizers</code>, <code>Schedulers</code>, <code>Logging</code>: learning rates, ReduceLROnPlateau settings, and validation visualisations.【F:configs/config_10m.yaml†L103-L132】</li>
-</ul>
+<p>All experiment settings live in YAML files under <code>configs/</code>. The <code>config_20m.yaml</code> template targets Sentinel-2 20 m inputs, while <code>config_10m.yaml</code> demonstrates 10 m multi-band training. Each section controls loaders, models, training schedules, and logging behaviour.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <p>Duplicate a config file if you need to adjust parameters without touching the defaults:</p>
 <div class="highlight"><pre><span></span><code>cp<span class="w"> </span>configs/config_20m.yaml<span class="w"> </span>configs/my_experiment.yaml
 </code></pre></div>
@@ -578,22 +575,18 @@ pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </s
 <p>Use the training script with the desired YAML file:</p>
 <div class="highlight"><pre><span></span><code>python<span class="w"> </span>train.py<span class="w"> </span>--config<span class="w"> </span>configs/my_experiment.yaml
 </code></pre></div>
-<p>Under the hood the script:</p>
-<ol>
-<li>Loads the configuration via OmegaConf and instantiates the Lightning <code>SRGAN_model</code>.【F:train.py†L24-L48】</li>
-<li>Selects and wraps the dataset into a Lightning <code>DataModule</code> based on <code>Data.dataset_type</code>.【F:train.py†L49-L57】【F:data/data_utils.py†L1-L95】</li>
-<li>Configures Weights &amp; Biases, TensorBoard, and learning rate monitoring callbacks. 【F:train.py†L59-L93】</li>
-<li>Starts training with GPU acceleration enabled by default. 【F:train.py†L69-L90】</li>
-</ol>
+<p>Under the hood the script loads the YAML, constructs datasets, wires loggers and callbacks, and launches GPU-accelerated training with Lightning.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <p>Training logs, checkpoints, and exported validation panels are written into <code>logs/</code> alongside the W&amp;B run.</p>
 <h2 id="resume-or-fine-tune">Resume or fine-tune<a class="headerlink" href="#resume-or-fine-tune" title="Permanent link">&para;</a></h2>
 <p>Two checkpoint switches let you reuse trained weights without editing Python code:</p>
-<ul>
-<li><code>Model.load_checkpoint</code>: path to a Lightning checkpoint whose weights should initialise the generator/discriminator before training begins. 【F:train.py†L34-L47】</li>
-<li><code>Model.continue_training</code>: path to a checkpoint that should be fully resumed (optimizer states, schedulers, etc.). Leave both as <code>False</code> to start from scratch.【F:train.py†L34-L47】</li>
-</ul>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="inference-quick-peek">Inference quick peek<a class="headerlink" href="#inference-quick-peek" title="Permanent link">&para;</a></h2>
-<p>For offline inference, instantiate <code>SRGAN_model</code> and call <code>predict_step</code> with low-resolution tensors. The method auto-normalises Sentinel-2 style inputs, runs the generator, histogram matches the output, and denormalises back to the original range.【F:model/SRGAN.py†L103-L144】</p>
+<p>For offline inference, instantiate <code>SRGAN_model</code> and call <code>predict_step</code> with low-resolution tensors. The method auto-normalises Sentinel-2 style inputs, runs the generator, histogram matches the output, and denormalises back to the original range.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">model.SRGAN</span><span class="w"> </span><span class="kn">import</span> <span class="n">SRGAN_model</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">SRGAN_model</span><span class="p">(</span><span class="n">config_file_path</span><span class="o">=</span><span class="s2">&quot;configs/my_experiment.yaml&quot;</span><span class="p">)</span>
 <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>

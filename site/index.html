@@ -296,6 +296,57 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Project highlights">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flexible-generator-zoo" class="md-nav__link">
+    <span class="md-ellipsis">
+      Flexible generator zoo
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pluggable-losses" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pluggable losses
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#remote-sensing-ready-datasets" class="md-nav__link">
+    <span class="md-ellipsis">
+      Remote-sensing ready datasets
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stabilised-training-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stabilised training flow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comprehensive-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Comprehensive logging
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -514,13 +565,30 @@
 <p>Training GANs on multi-band Earth observation data is notoriously brittle. This project codifies the training heuristics that have proven stable in production — generator pretraining, adversarial weight ramp-up, and configurable discriminator cadence — while exposing every knob through YAML. The goal is to make it easy to reproduce remote-sensing SR experiments without rewriting boilerplate.</p>
 </div>
 <h2 id="project-highlights">Project highlights<a class="headerlink" href="#project-highlights" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Flexible generator zoo.</strong> Choose between SRResNet, residual, RCAB, RRDB, large-kernel attention, or conditional GAN backbones with scale factors from 2×–8×.【F:model/SRGAN.py†L59-L101】</li>
-<li><strong>Pluggable losses.</strong> Combine pixel, spectral, perceptual, adversarial, and total-variation terms with independent weights and activation schedules.【F:model/SRGAN.py†L44-L58】【F:configs/config_10m.yaml†L35-L70】</li>
-<li><strong>Remote-sensing ready datasets.</strong> Sentinel-2 SAFE windowing and the SEN2NAIP worldwide pairs are built in, with Lightning datamodules created on the fly from the config.【F:data/data_utils.py†L1-L95】</li>
-<li><strong>Stabilised training flow.</strong> Generator-only warm-up, adversarial ramp-up, discriminator scheduling, and Lightning callbacks are wired into the training script.【F:train.py†L19-L93】【F:model/SRGAN.py†L34-L43】</li>
-<li><strong>Comprehensive logging.</strong> TensorBoard visualisations, Weights &amp; Biases tracking, and qualitative inspection panels are emitted during training.【F:train.py†L59-L93】【F:model/SRGAN.py†L12-L16】</li>
-</ul>
+<h3 id="flexible-generator-zoo">Flexible generator zoo<a class="headerlink" href="#flexible-generator-zoo" title="Permanent link">&para;</a></h3>
+<p>Choose between SRResNet, residual, RCAB, RRDB, large-kernel attention, or conditional GAN backbones with scale factors from 2×–8×.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<h3 id="pluggable-losses">Pluggable losses<a class="headerlink" href="#pluggable-losses" title="Permanent link">&para;</a></h3>
+<p>Pixel, spectral, perceptual, adversarial, and total-variation terms can be mixed with independent weights and activation schedules.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<h3 id="remote-sensing-ready-datasets">Remote-sensing ready datasets<a class="headerlink" href="#remote-sensing-ready-datasets" title="Permanent link">&para;</a></h3>
+<p>Sentinel-2 SAFE windowing and the SEN2NAIP worldwide pairs are built in, with Lightning datamodules created on the fly from the configuration.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<h3 id="stabilised-training-flow">Stabilised training flow<a class="headerlink" href="#stabilised-training-flow" title="Permanent link">&para;</a></h3>
+<p>Generator-only warm-up, adversarial ramp-up, discriminator scheduling, and Lightning callbacks are wired into the training script.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<h3 id="comprehensive-logging">Comprehensive logging<a class="headerlink" href="#comprehensive-logging" title="Permanent link">&para;</a></h3>
+<p>TensorBoard visualisations, Weights &amp; Biases tracking, and qualitative inspection panels are emitted during training.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="repository-layout">Repository layout<a class="headerlink" href="#repository-layout" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>SISR-RS-SRGAN/
 ├── configs/              # YAML experiment definitions

@@ -454,6 +454,48 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Lightning module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#initialisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Initialisation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-wiring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Model wiring
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inference-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Inference helpers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#training-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Training hooks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -548,13 +590,23 @@
 <h1 id="model-components">Model Components<a class="headerlink" href="#model-components" title="Permanent link">&para;</a></h1>
 <p>Remote-Sensing-SRGAN builds on a modular Lightning implementation that lets you swap generator and discriminator backbones as well as plug in new loss terms. This section describes the main components and how they interact during training.</p>
 <h2 id="lightning-module">Lightning module<a class="headerlink" href="#lightning-module" title="Permanent link">&para;</a></h2>
-<p>The central <code>SRGAN_model</code> class orchestrates the entire training loop:</p>
-<ul>
-<li>Loads configuration values from YAML via OmegaConf during initialisation.【F:model/SRGAN.py†L25-L43】</li>
-<li>Instantiates the chosen generator, discriminator, and perceptual loss network through <code>get_models()</code>.【F:model/SRGAN.py†L59-L150】</li>
-<li>Exposes <code>forward</code> for generator inference and <code>predict_step</code> for deployment-ready predictions with auto-normalisation and histogram matching.【F:model/SRGAN.py†L153-L192】</li>
-<li>Implements Lightning hooks for adversarial training, including generator-only pretraining, adversarial ramp-up, and rich logging (see <code>training_step</code> and helpers).【F:model/SRGAN.py†L195-L320】</li>
-</ul>
+<p>The central <code>SRGAN_model</code> class orchestrates the entire training loop.</p>
+<h3 id="initialisation">Initialisation<a class="headerlink" href="#initialisation" title="Permanent link">&para;</a></h3>
+<p>Configuration values are loaded through OmegaConf, losses are configured, and a model summary is printed for quick inspection.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<h3 id="model-wiring">Model wiring<a class="headerlink" href="#model-wiring" title="Permanent link">&para;</a></h3>
+<p><code>get_models()</code> attaches the generator and discriminator variants requested in the YAML configuration.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<h3 id="inference-helpers">Inference helpers<a class="headerlink" href="#inference-helpers" title="Permanent link">&para;</a></h3>
+<p><code>forward</code> and <code>predict_step</code> wrap generator inference with automatic normalisation and histogram matching so predictions align with Sentinel-2 statistics.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<h3 id="training-hooks">Training hooks<a class="headerlink" href="#training-hooks" title="Permanent link">&para;</a></h3>
+<p>Lightning hooks drive generator-only pretraining, adversarial ramp-up, and detailed metric logging.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="generator-zoo">Generator zoo<a class="headerlink" href="#generator-zoo" title="Permanent link">&para;</a></h2>
 <p>Pick the generator backbone by setting <code>Generator.model_type</code> in the config. The options map to classes under <code>model/generators/</code>:</p>
 <table>
@@ -567,49 +619,71 @@
 <tbody>
 <tr>
 <td><code>SRResNet</code></td>
-<td>Classic SRResNet with residual blocks sans batch norm; a strong baseline for content pretraining.【F:model/SRGAN.py†L64-L76】</td>
+<td>Classic SRResNet with residual blocks sans batch norm; a strong baseline for content pretraining.</td>
 </tr>
 <tr>
 <td><code>res</code></td>
-<td>Flexible residual blocks with configurable depth/width defined in <code>FlexibleGenerator</code> (supports residual scaling).【F:model/SRGAN.py†L77-L101】【F:model/generators/flexible_generator.py†L1-L96】</td>
+<td>Flexible residual blocks with configurable depth/width defined in <code>FlexibleGenerator</code> (supports residual scaling).</td>
 </tr>
 <tr>
 <td><code>rcab</code></td>
-<td>Residual channel attention blocks for finer texture modelling using the same flexible generator with RCAB building blocks.【F:model/generators/flexible_generator.py†L1-L96】【F:model/model_blocks/<strong>init</strong>.py†L144-L173】</td>
+<td>Residual channel attention blocks for finer texture modelling using the same flexible generator with RCAB building blocks.</td>
 </tr>
 <tr>
 <td><code>rrdb</code></td>
-<td>Residual-in-residual dense blocks (ESRGAN-style) for deeper receptive fields, enabled through the flexible generator registry.【F:model/generators/flexible_generator.py†L21-L96】【F:model/model_blocks/<strong>init</strong>.py†L176-L213】</td>
+<td>Residual-in-residual dense blocks (ESRGAN-style) for deeper receptive fields, enabled through the flexible generator registry.</td>
 </tr>
 <tr>
 <td><code>lka</code></td>
-<td>Large kernel attention variant approximating global receptive fields, useful for broad RS structures.【F:model/generators/flexible_generator.py†L21-L96】【F:model/model_blocks/<strong>init</strong>.py†L215-L249】</td>
+<td>Large kernel attention variant approximating global receptive fields, useful for broad RS structures.</td>
 </tr>
 <tr>
 <td><code>conditional_cgan</code> / <code>cgan</code></td>
-<td>Conditional GAN generator that injects latent noise and conditional embeddings in addition to the spectral input.【F:model/SRGAN.py†L88-L101】【F:model/generators/cgan_generator.py†L15-L137】</td>
+<td>Conditional GAN generator that injects latent noise and conditional embeddings in addition to the spectral input.</td>
 </tr>
 </tbody>
 </table>
-<p>Each generator consumes <code>Model.in_bands</code> channels, expands to <code>Generator.n_channels</code> features, and upsamples by <code>Generator.scaling_factor</code> using pixel shuffle stages. Kernel sizes (<code>large_kernel_size</code>, <code>small_kernel_size</code>) tailor the receptive field for remote-sensing textures.【F:model/SRGAN.py†L64-L101】【F:model/generators/flexible_generator.py†L49-L96】</p>
+<p>Each generator consumes <code>Model.in_bands</code> channels, expands to <code>Generator.n_channels</code> features, and upsamples by <code>Generator.scaling_factor</code> using pixel shuffle stages. Kernel sizes (<code>large_kernel_size</code>, <code>small_kernel_size</code>) tailor the receptive field for remote-sensing textures.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<p>Specialised blocks (RRDB, RCAB, large-kernel attention) are registered in <code>model/model_blocks</code> and consumed by the flexible generator.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<p>Conditional GAN support routes through the dedicated generator class, which injects noise vectors and optional conditional embeddings.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="discriminators">Discriminators<a class="headerlink" href="#discriminators" title="Permanent link">&para;</a></h2>
-<p>Discriminator selection lives under <code>Discriminator.model_type</code>:</p>
-<ul>
-<li><code>standard</code>: The canonical SRGAN discriminator with adjustable depth (<code>n_blocks</code>), implemented in <code>model/descriminators/srgan_discriminator.py</code>. The constructor accepts <code>in_channels</code> (matching the number of input bands).【F:model/SRGAN.py†L102-L117】</li>
-<li><code>patchgan</code>: Patch-level discriminator inspired by pix2pix, parameterised by <code>n_layers</code> and automatically set from <code>n_blocks</code>. Good for local fidelity supervision on large tiles.【F:model/SRGAN.py†L118-L150】</li>
-</ul>
+<p>Discriminator selection lives under <code>Discriminator.model_type</code>. The Lightning module wires either the standard SRGAN CNN or a PatchGAN variant and forwards multi-band inputs without assuming RGB ordering.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<p>The PatchGAN implementation and supporting building blocks live under <code>model/descriminators/</code>.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <p>Because both discriminators receive multi-band inputs, the repo avoids hard-coding RGB assumptions and allows training on arbitrary spectral stacks.</p>
 <h2 id="losses">Losses<a class="headerlink" href="#losses" title="Permanent link">&para;</a></h2>
-<p>Generator training minimises a combination of content and adversarial losses:</p>
-<ul>
-<li><strong>Content loss (<code>GeneratorContentLoss</code>)</strong> combines weighted L1, spectral angle mapper (SAM), perceptual (VGG or LPIPS), and total variation terms as configured in the YAML file.【F:model/SRGAN.py†L34-L58】【F:model/loss/loss.py†L1-L210】</li>
-<li><strong>Adversarial loss</strong> uses <code>torch.nn.BCEWithLogitsLoss</code> against discriminator logits with optional label smoothing to improve stability.【F:model/SRGAN.py†L34-L58】</li>
-</ul>
-<p>During generator-only pretraining, the adversarial term is disabled; it ramps up to <code>adv_loss_beta</code> over <code>adv_loss_ramp_steps</code> iterations according to the chosen schedule (<code>linear</code> or <code>sigmoid</code>).【F:model/SRGAN.py†L34-L58】【F:configs/config_10m.yaml†L35-L70】</p>
+<p>Generator training minimises a combination of content and adversarial losses. The Lightning module instantiates both criteria and scales them according to the YAML configuration.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<p><code>GeneratorContentLoss</code> mixes L1, spectral angle mapper, perceptual metrics, and total variation into a single callable.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<p>Training warm-ups and adversarial ramp schedules are defined directly in the configuration.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="normalisation-and-inference-helpers">Normalisation and inference helpers<a class="headerlink" href="#normalisation-and-inference-helpers" title="Permanent link">&para;</a></h2>
-<p>Remote-sensing imagery often arrives as 0–10,000 scaled reflectance. <code>utils.spectral_helpers</code> provides <code>normalise_10k</code> for scaling to 0–1 and <code>histogram</code> for histogram matching. <code>predict_step</code> calls both utilities to ensure outputs match the statistical distribution of inputs before returning CPU tensors.【F:model/SRGAN.py†L160-L192】【F:utils/spectral_helpers.py†L53-L200】</p>
+<p>Remote-sensing imagery often arrives as 0–10,000 scaled reflectance. <code>utils.spectral_helpers</code> provides <code>normalise_10k</code> for scaling to 0–1 and <code>histogram</code> for histogram matching. <code>predict_step</code> calls both utilities to ensure outputs match the statistical distribution of inputs before returning CPU tensors.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="logging-utilities">Logging utilities<a class="headerlink" href="#logging-utilities" title="Permanent link">&para;</a></h2>
-<p>Qualitative logging is handled via <code>utils.logging_helpers.plot_tensors</code>, which renders low-/super-/high-resolution panels for TensorBoard and Weights &amp; Biases. The Lightning module invokes these helpers inside validation hooks so you can monitor spectral fidelity and artefacts during training.【F:model/SRGAN.py†L12-L16】【F:utils/logging_helpers.py†L1-L200】</p>
+<p>Qualitative logging is handled via <code>utils.logging_helpers.plot_tensors</code>, which renders low-/super-/high-resolution panels for TensorBoard and Weights &amp; Biases. The Lightning module invokes these helpers inside validation hooks so you can monitor spectral fidelity and artefacts during training.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="extending-the-model">Extending the model<a class="headerlink" href="#extending-the-model" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Add new generator families by creating a file under <code>model/generators/</code> and wiring it into <code>SRGAN_model.get_models</code> plus <code>model/generators/__init__.py</code>.</li>

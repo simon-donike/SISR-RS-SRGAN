@@ -575,63 +575,12 @@
 <p>Remote-Sensing-SRGAN is intentionally configuration-first. Every YAML file under <code>configs/</code> controls the entire experiment lifecycle — from dataset selection to optimiser schedules. This page documents the key sections and explains how they map to the Python implementation.</p>
 <h2 id="anatomy-of-a-config-file">Anatomy of a config file<a class="headerlink" href="#anatomy-of-a-config-file" title="Permanent link">&para;</a></h2>
 <p>Each config follows the same structure as <code>configs/config_10m.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">Data</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">train_batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">12</span>
-<span class="w">  </span><span class="nt">val_batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
-<span class="w">  </span><span class="nt">num_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
-<span class="w">  </span><span class="nt">prefetch_factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<span class="w">  </span><span class="nt">dataset_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;SISR_WW&quot;</span>
-
-<span class="nt">Model</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">in_bands</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
-<span class="w">  </span><span class="nt">continue_training</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">False</span>
-<span class="w">  </span><span class="nt">load_checkpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">False</span>
-
-<span class="nt">Training</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">pretrain_g_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
-<span class="w">  </span><span class="nt">g_pretrain_steps</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15000</span>
-<span class="w">  </span><span class="nt">adv_loss_ramp_steps</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5000</span>
-<span class="w">  </span><span class="nt">label_smoothing</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
-<span class="w">  </span><span class="nt">Losses</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">adv_loss_beta</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e-3</span>
-<span class="w">    </span><span class="nt">adv_loss_schedule</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sigmoid</span>
-<span class="w">    </span><span class="nt">l1_weight</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
-<span class="w">    </span><span class="nt">sam_weight</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
-<span class="w">    </span><span class="nt">perceptual_weight</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span>
-<span class="w">    </span><span class="nt">perceptual_metric</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vgg</span>
-<span class="w">    </span><span class="nt">tv_weight</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0</span>
-<span class="w">    </span><span class="nt">max_val</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
-<span class="w">    </span><span class="nt">ssim_win</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">11</span>
-
-<span class="nt">Generator</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">model_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cgan</span>
-<span class="w">  </span><span class="nt">large_kernel_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9</span>
-<span class="w">  </span><span class="nt">small_kernel_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
-<span class="w">  </span><span class="nt">n_channels</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">96</span>
-<span class="w">  </span><span class="nt">n_blocks</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">32</span>
-<span class="w">  </span><span class="nt">scaling_factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
-
-<span class="nt">Discriminator</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">model_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">standard</span>
-<span class="w">  </span><span class="nt">n_blocks</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
-
-<span class="nt">Optimizers</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">optim_g_lr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e-4</span>
-<span class="w">  </span><span class="nt">optim_d_lr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e-4</span>
-
-<span class="nt">Schedulers</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">metric</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">val_metrics/l1</span>
-<span class="w">  </span><span class="nt">patience_g</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
-<span class="w">  </span><span class="nt">patience_d</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
-<span class="w">  </span><span class="nt">factor_g</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
-<span class="w">  </span><span class="nt">factor_d</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
-<span class="w">  </span><span class="nt">verbose</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
-
-<span class="nt">Logging</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">num_val_images</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+<div class="highlight"><pre><span></span><code>
 </code></pre></div>
 <h2 id="data-block">Data block<a class="headerlink" href="#data-block" title="Permanent link">&para;</a></h2>
-<p>The data section controls loader throughput and selects the dataset implementation. The <code>dataset_type</code> key is forwarded to <code>data.data_utils.select_dataset</code>, which instantiates the proper dataset class and wraps it into a Lightning <code>DataModule</code> with the requested batch sizes and worker settings.【F:data/data_utils.py†L1-L95】【F:data/data_utils.py†L97-L150】</p>
+<p>The data section controls loader throughput and selects the dataset implementation. The <code>dataset_type</code> key is forwarded to <code>data.data_utils.select_dataset</code>, which instantiates the proper dataset class and wraps it into a Lightning <code>DataModule</code> with the requested batch sizes and worker settings.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h3 id="available-dataset-types">Available dataset types<a class="headerlink" href="#available-dataset-types" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -643,15 +592,15 @@
 <tbody>
 <tr>
 <td><code>S2_6b</code></td>
-<td>Loads Sentinel-2 SAFE chips with six 20 m bands (B05, B06, B07, B8A, B11, B12). Histogram-matched low-resolution inputs are synthesised on-the-fly. 【F:data/data_utils.py†L17-L48】</td>
+<td>Loads Sentinel-2 SAFE chips with six 20 m bands (B05, B06, B07, B8A, B11, B12). Histogram-matched low-resolution inputs are synthesised on-the-fly.</td>
 </tr>
 <tr>
 <td><code>S2_4b</code></td>
-<td>Reuses the SAFE pipeline for four 10 m bands (B05, B04, B03, B02). Useful for RGB+NIR 4× tasks. 【F:data/data_utils.py†L50-L82】</td>
+<td>Reuses the SAFE pipeline for four 10 m bands (B05, B04, B03, B02). Useful for RGB+NIR 4× tasks.</td>
 </tr>
 <tr>
 <td><code>SISR_WW</code></td>
-<td>Wraps the SEN2NAIP worldwide dataset for 4× cross-sensor training. Training/validation splits are constructed from a root directory. 【F:data/data_utils.py†L84-L95】</td>
+<td>Wraps the SEN2NAIP worldwide dataset for 4× cross-sensor training. Training/validation splits are constructed from a root directory.</td>
 </tr>
 </tbody>
 </table>
@@ -659,32 +608,54 @@
 <h2 id="model-block">Model block<a class="headerlink" href="#model-block" title="Permanent link">&para;</a></h2>
 <p>The <code>Model</code> section captures properties that affect both training and checkpoint management:</p>
 <ul>
-<li><code>in_bands</code>: number of channels consumed by the generator and discriminator. This value is forwarded directly when models are instantiated.【F:model/SRGAN.py†L62-L100】</li>
-<li><code>load_checkpoint</code>: path to a Lightning checkpoint whose weights should initialise the model before training begins.【F:train.py†L34-L47】</li>
-<li><code>continue_training</code>: checkpoint to resume including optimiser states and scheduler counters (mapped to <code>Trainer(resume_from_checkpoint=...)</code>).【F:train.py†L34-L48】</li>
+<li><code>in_bands</code>: number of channels consumed by the generator and discriminator. This value is forwarded directly when models are instantiated.</li>
+<li><code>load_checkpoint</code>: path to a Lightning checkpoint whose weights should initialise the model before training begins.</li>
+<li><code>continue_training</code>: checkpoint to resume including optimiser states and scheduler counters (mapped to <code>Trainer(resume_from_checkpoint=...)</code>).</li>
 </ul>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="training-block">Training block<a class="headerlink" href="#training-block" title="Permanent link">&para;</a></h2>
 <p>Training-related switches are consumed inside the Lightning module:</p>
 <ul>
-<li><code>pretrain_g_only</code>: number of initial steps where only generator updates run (adversarial term disabled).【F:model/SRGAN.py†L34-L43】</li>
-<li><code>g_pretrain_steps</code>: length of the generator-only warm-up window.【F:model/SRGAN.py†L34-L43】</li>
-<li><code>adv_loss_ramp_steps</code>: number of iterations over which the adversarial loss weight ramps to its target. The schedule shape is controlled by <code>Losses.adv_loss_schedule</code>.【F:model/SRGAN.py†L34-L43】【F:configs/config_10m.yaml†L35-L70】</li>
-<li><code>label_smoothing</code>: enables 0.9 real labels in the discriminator to reduce overconfidence.【F:model/SRGAN.py†L34-L43】</li>
+<li><code>pretrain_g_only</code>: number of initial steps where only generator updates run (adversarial term disabled).</li>
+<li><code>g_pretrain_steps</code>: length of the generator-only warm-up window.</li>
+<li><code>adv_loss_ramp_steps</code>: number of iterations over which the adversarial loss weight ramps to its target. The schedule shape is controlled by <code>Losses.adv_loss_schedule</code>.</li>
+<li><code>label_smoothing</code>: enables 0.9 real labels in the discriminator to reduce overconfidence.</li>
 </ul>
-<p>The nested <code>Losses</code> dictionary is passed to <code>GeneratorContentLoss</code>, which mixes pixel-space (<code>l1_weight</code>), spectral (<code>sam_weight</code>), perceptual (<code>perceptual_weight</code> with <code>perceptual_metric</code>), and total-variation (<code>tv_weight</code>) losses. The final adversarial weight after ramp-up is <code>adv_loss_beta</code>. 【F:model/SRGAN.py†L44-L58】【F:configs/config_10m.yaml†L35-L70】</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<p>The nested <code>Losses</code> dictionary is passed to <code>GeneratorContentLoss</code>, which mixes pixel-space (<code>l1_weight</code>), spectral (<code>sam_weight</code>), perceptual (<code>perceptual_weight</code> with <code>perceptual_metric</code>), and total-variation (<code>tv_weight</code>) losses. The final adversarial weight after ramp-up is <code>adv_loss_beta</code>.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="generator-and-discriminator-blocks">Generator and Discriminator blocks<a class="headerlink" href="#generator-and-discriminator-blocks" title="Permanent link">&para;</a></h2>
 <p>Generator parameters control the backbone constructed in <code>SRGAN_model.get_models</code>:</p>
 <ul>
-<li><code>model_type</code>: choose among <code>SRResNet</code>, <code>res</code>, <code>rcab</code>, <code>rrdb</code>, <code>lka</code>, or conditional GAN variants (<code>conditional_cgan</code>/<code>cgan</code>). Each path maps to a dedicated class under <code>model/generators/</code>.【F:model/SRGAN.py†L59-L101】</li>
-<li><code>n_channels</code>, <code>n_blocks</code>: width and depth of the residual trunk. These values are forwarded verbatim to the generator constructors.【F:model/SRGAN.py†L64-L101】</li>
-<li><code>scaling_factor</code>: upsampling factor (2×, 4×, or 8×). Passed into the generator to configure pixel-shuffle stages.【F:model/SRGAN.py†L64-L101】</li>
-<li><code>large_kernel_size</code>, <code>small_kernel_size</code>: head/tail and residual block kernel sizes to shape receptive field.【F:model/SRGAN.py†L64-L101】</li>
+<li><code>model_type</code>: choose among <code>SRResNet</code>, <code>res</code>, <code>rcab</code>, <code>rrdb</code>, <code>lka</code>, or conditional GAN variants (<code>conditional_cgan</code>/<code>cgan</code>). Each path maps to a dedicated class under <code>model/generators/</code>.</li>
+<li><code>n_channels</code>, <code>n_blocks</code>: width and depth of the residual trunk. These values are forwarded verbatim to the generator constructors.</li>
+<li><code>scaling_factor</code>: upsampling factor (2×, 4×, or 8×). Passed into the generator to configure pixel-shuffle stages.</li>
+<li><code>large_kernel_size</code>, <code>small_kernel_size</code>: head/tail and residual block kernel sizes to shape receptive field.</li>
 </ul>
-<p>The discriminator section selects either the classic SRGAN CNN (<code>standard</code>) or a PatchGAN variant and optionally specifies convolutional depth via <code>n_blocks</code>. 【F:model/SRGAN.py†L102-L130】</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<p>The discriminator section selects either the classic SRGAN CNN (<code>standard</code>) or a PatchGAN variant and optionally specifies convolutional depth via <code>n_blocks</code>.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="optimisers-and-schedulers">Optimisers and schedulers<a class="headerlink" href="#optimisers-and-schedulers" title="Permanent link">&para;</a></h2>
-<p>Both the generator and discriminator use Adam optimisers with learning rates read from <code>Optimizers.optim_g_lr</code> and <code>Optimizers.optim_d_lr</code>. The Lightning module instantiates <code>ReduceLROnPlateau</code> schedulers using the parameters provided under <code>Schedulers</code> (<code>metric</code>, <code>patience_*</code>, <code>factor_*</code>, <code>verbose</code>).【F:model/SRGAN.py†L5-L12】【F:configs/config_10m.yaml†L103-L132】</p>
+<p>Both the generator and discriminator use Adam optimisers with learning rates read from <code>Optimizers.optim_g_lr</code> and <code>Optimizers.optim_d_lr</code>. The Lightning module instantiates <code>ReduceLROnPlateau</code> schedulers using the parameters provided under <code>Schedulers</code> (<code>metric</code>, <code>patience_*</code>, <code>factor_*</code>, <code>verbose</code>).</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="logging">Logging<a class="headerlink" href="#logging" title="Permanent link">&para;</a></h2>
-<p>The <code>Logging</code> section controls qualitative outputs. During validation the model logs <code>num_val_images</code> panels via TensorBoard and Weights &amp; Biases. The training script also wires in Weights &amp; Biases, TensorBoard, and learning-rate monitors; edit this block if you want fewer images per epoch. 【F:configs/config_10m.yaml†L128-L132】【F:train.py†L59-L93】</p>
+<p>The <code>Logging</code> section controls qualitative outputs. During validation the model logs <code>num_val_images</code> panels via TensorBoard and Weights &amp; Biases. The training script also wires in Weights &amp; Biases, TensorBoard, and learning-rate monitors; edit this block if you want fewer images per epoch.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="tips-for-custom-configs">Tips for custom configs<a class="headerlink" href="#tips-for-custom-configs" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Keep configs under version control alongside experiment results — MkDocs can render them for quick reference.</li>

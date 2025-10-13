@@ -21,3 +21,8 @@ logs/
 SISR_WW/
 data/SEN2NAIP_custom/
 data/SEN2NAIP_custom/*
+
+# stuff from docs
+/site/
+.mkdocs/
+.cache/

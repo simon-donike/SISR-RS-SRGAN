@@ -7,7 +7,7 @@ import torchvision
 class TruncatedVGG19(nn.Module):
     """A truncated VGG19 network used for perceptual loss computation."""
 
-    def __init__(self, i: int, j: int) -> None:
+    def __init__(self, i: int = 5, j: int = 4) -> None:
         super().__init__()
 
         vgg19 = torchvision.models.vgg19(weights=torchvision.models.VGG19_Weights.DEFAULT)

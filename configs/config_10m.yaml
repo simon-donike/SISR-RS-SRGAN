@@ -17,7 +17,7 @@ Data:
   prefetch_factor: 2          # Samples prefetched per worker (2 is stable default)
 
   # Dataset configuration
-  dataset_type: 'S2_6b'       # Choose dataset type: ['cv', 'SPOT6', 'S2_6b']
+  dataset_type: 'SISR_WW'       # Choose dataset type: ['cv', 'SPOT6', 'S2_6b', 'SISR_WW']
 
 
 # ============================================================================ #

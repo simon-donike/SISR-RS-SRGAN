@@ -29,6 +29,7 @@ markdown_extensions:
       permalink: true
   - pymdownx.details
   - pymdownx.highlight
+  - pymdownx.snippets
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true

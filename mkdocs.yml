@@ -38,16 +38,13 @@ markdown_extensions:
   - pymdownx.snippets:
       base_path:
         - .
+        - ./docs
         - ..
       check_paths: true
       encoding: utf-8
-
 nav:
   - Overview: index.md
-  - Quickstart: quickstart.md
-  - Models & Blocks: models.md
-  - Config Reference: config.md
-  - Training: training.md
-  - Evaluation: evaluation.md
-  - FAQ: faq.md
-  - Changelog: changelog.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - Configuration: configuration.md
+  - Data: data.md

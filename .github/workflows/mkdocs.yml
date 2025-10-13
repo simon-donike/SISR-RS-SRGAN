@@ -1,8 +1,9 @@
 name: docs
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    tags:
+      - 'v*'          # v1, v1.0.1, v2.3.4, etc.
+  workflow_dispatch:    # still allow manual runs
 
 permissions:
   contents: read
@@ -18,28 +19,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      # Install doc tooling + extensions explicitly
-      - name: Install doc dependencies
-        run: |
+        with: { python-version: "3.11" }
+      - run: |
           pip install --upgrade pip
           pip install mkdocs-material mkdocstrings[python] pymdown-extensions
-
-      # Make your package importable for mkdocstrings (ok if no setup.py/pyproject)
-      - name: Make repo importable
-        run: |
+      - run: |
           pip install -e . || true
-
-      # Build docs (strict fails fast on missing links/snippets)
       - name: Build MkDocs site
         run: |
           PYTHONPATH=. mkdocs build --strict
-
-      # Upload built site as Pages artifact
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./site

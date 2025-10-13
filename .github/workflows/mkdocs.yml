@@ -1,44 +1,56 @@
-name: docs
-on:
-  push:
-    tags:
-      - 'v*'          # v1, v1.0.1, v2.3.4, etc.
-  workflow_dispatch:    # still allow manual runs
+# mkdocs.yml  (place at repo root)
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+site_name: SRGAN for Remote Sensing
+site_description: Flexible super-resolution GANs for satellite imagery
+site_url: https://simon-donike.github.io/SISR-RS-SRGAN/
+repo_url: https://github.com/simon-donike/SISR-RS-SRGAN
+repo_name: simon-donike/SISR-RS-SRGAN
+edit_uri: edit/main/docs/     # "Edit this page" links
 
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
+docs_dir: docs
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
-      - run: |
-          pip install --upgrade pip
-          pip install mkdocs-material mkdocstrings[python] pymdown-extensions
-      - run: |
-          pip install -e . || true
-      - name: Build MkDocs site
-        run: |
-          PYTHONPATH=. mkdocs build --strict
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./site
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.sections
+    - content.code.copy
+    - toc.integrate
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            docstring_style: google  # or "numpy"
+            show_source: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tasklist
+  # Enable code snippet includes:  --8<-- "path:lines=a-b"
+  - pymdownx.snippets:
+      base_path:
+        - .      # repo root
+        - ..     # parent (safe fallback on CI)
+      check_paths: true
+      encoding: utf-8
+
+nav:
+  - Overview: index.md
+  - Quickstart: quickstart.md
+  - Models & Blocks: models.md
+  - Config Reference: config.md
+  - Training: training.md
+  - Evaluation: evaluation.md
+  - FAQ: faq.md
+  - Changelog: changelog.md

@@ -1,0 +1,52 @@
+name: docs
+on:
+  push:
+    tags: ['v*']        # deploy only when pushing a tag like v1.0.1
+  workflow_dispatch:     # allow manual runs
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install doc dependencies
+        run: |
+          pip install --upgrade pip
+          pip install mkdocs-material mkdocstrings[python] pymdown-extensions
+
+      # Make your package importable for mkdocstrings (ok if no setup.py/pyproject)
+      - name: Make repo importable
+        run: |
+          pip install -e . || true
+
+      - name: Build MkDocs site (strict)
+        run: |
+          PYTHONPATH=. mkdocs build --strict
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

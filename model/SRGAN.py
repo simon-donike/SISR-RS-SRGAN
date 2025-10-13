@@ -1,4 +1,6 @@
 # Package Imports
+import math
+
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
@@ -297,6 +299,10 @@ class SRGAN_model(pl.LightningModule):
             self._log_generator_content_loss(content_loss)                             # log content loss for G (consistent args)
             for key, value in metrics.items():
                 self.log(f"train_metrics/{key}", value)                               # reuse computed metrics for logging
+
+            # Ensure adversarial weight is logged even when not used during pretraining
+            adv_weight = self._compute_adv_loss_weight()
+            self._log_adv_loss_weight(adv_weight)
             return content_loss                                                        # return loss for optimizer step (G only)
 
         # ======================================================================
@@ -466,18 +472,51 @@ class SRGAN_model(pl.LightningModule):
             return False  # false once pretrain steps are exceeded
 
         
-    def _adv_loss_weight(self):
-        # linearly ramp up adversarial loss weight over adv_loss_ramp_steps steps
-        if self.global_step >= self.g_pretrain_steps + self.adv_loss_ramp_steps:  # after ramp period
-            adv_weight = self.config.Training.Losses.adv_loss_beta                # use full weight
-        elif self.global_step < self.g_pretrain_steps:                            # during pretrain phase
-            adv_weight = 0.0                                                      # no adversarial loss
-        else:
-            # linear ramp between 0 and full weight
-            progress = (self.global_step - self.g_pretrain_steps) / self.adv_loss_ramp_steps  # normalize ramp progress
-            adv_weight = progress * self.config.Training.Losses.adv_loss_beta     # scale by beta
+    def _compute_adv_loss_weight(self) -> float:
+        """Compute the current adversarial loss weight using the configured ramp schedule."""
+        beta = float(self.config.Training.Losses.adv_loss_beta)
+        schedule = getattr(
+            self.config.Training.Losses,
+            "adv_loss_schedule",
+            "sigmoid",
+        ).lower()
 
-        self.log("training/adv_loss_weight", adv_weight)  # log current adv loss weight
+        # Handle pretraining and edge cases early
+        if self.global_step < self.g_pretrain_steps:
+            return 0.0
+
+        if self.adv_loss_ramp_steps <= 0 or self.global_step >= self.g_pretrain_steps + self.adv_loss_ramp_steps:
+            return beta
+
+        # Normalize progress to [0, 1]
+        progress = (self.global_step - self.g_pretrain_steps) / self.adv_loss_ramp_steps
+        progress = max(0.0, min(progress, 1.0))
+
+        if schedule == "linear":
+            return progress * beta
+
+        if schedule == "sigmoid":
+            # Sigmoid ramp with adjustable steepness for smooth transition
+            slope = 12.0
+            sigmoid_value = 1.0 / (1.0 + math.exp(-(progress - 0.5) * slope))
+            low = 1.0 / (1.0 + math.exp(slope / 2.0))
+            high = 1.0 / (1.0 + math.exp(-slope / 2.0))
+            normalized_sigmoid = (sigmoid_value - low) / (high - low)
+            normalized_sigmoid = max(0.0, min(normalized_sigmoid, 1.0))
+
+            return normalized_sigmoid * beta
+
+        raise ValueError(
+            f"Unknown adversarial loss schedule '{schedule}'. Expected 'linear' or 'sigmoid'."
+        )
+
+    def _log_adv_loss_weight(self, adv_weight: float) -> None:
+        """Log the current adversarial loss weight."""
+        self.log("training/adv_loss_weight", adv_weight)
+
+    def _adv_loss_weight(self):
+        adv_weight = self._compute_adv_loss_weight()
+        self._log_adv_loss_weight(adv_weight)
         return adv_weight                                 # return weight for generator loss
 
 

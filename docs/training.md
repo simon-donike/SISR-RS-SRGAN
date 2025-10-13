@@ -10,13 +10,11 @@ Remote-Sensing-SRGAN uses PyTorch Lightning to manage training loops, logging, a
 4. **Training loop:** `Trainer.fit` launches GPU-accelerated training with callbacks for checkpointing, early stopping, and LR monitoring.
 
 ```python
---8<-- "train.py"
---8<-- {"lines": "19-113"}
+--8<-- {"file": "train.py", "lines": "19-113"}
 ```
 
 ```python
---8<-- "data/data_utils.py"
---8<-- {"lines": "1-150"}
+--8<-- {"file": "data/data_utils.py", "lines": "1-150"}
 ```
 
 ## Lightning hooks inside `SRGAN_model`
@@ -27,13 +25,11 @@ Remote-Sensing-SRGAN uses PyTorch Lightning to manage training loops, logging, a
 * `on_validation_epoch_end`: Uses `utils.logging_helpers.plot_tensors` to push LR/SR/HR panels to TensorBoard and Weights & Biases.
 
 ```python
---8<-- "model/SRGAN.py"
---8<-- {"lines": "195-443"}
+--8<-- {"file": "model/SRGAN.py", "lines": "195-443"}
 ```
 
 ```python
---8<-- "utils/logging_helpers.py"
---8<-- {"lines": "1-72"}
+--8<-- {"file": "utils/logging_helpers.py", "lines": "1-72"}
 ```
 
 Inspect `model/SRGAN.py` for detailed comments describing each step of the training loop and logging behaviour.
@@ -49,8 +45,7 @@ Inspect `model/SRGAN.py` for detailed comments describing each step of the train
 | `EarlyStopping` | Monitors the same validation metric with large patience (250 epochs) to guard against divergence.|
 
 ```python
---8<-- "train.py"
---8<-- {"lines": "59-110"}
+--8<-- {"file": "train.py", "lines": "59-110"}
 ```
 
 Weights & Biases is configured with `project="SRGAN_6bands"` and entity `opensr`. Set the `WANDB_PROJECT` or edit the script if you need per-experiment projects. TensorBoard logs are stored in `logs/` alongside W&B run data.
@@ -64,13 +59,11 @@ GAN training is stabilised through three mechanisms:
 * **Label smoothing:** When `Training.label_smoothing=True`, real labels are reduced to 0.9 to prevent discriminator overconfidence.
 
 ```python
---8<-- "model/SRGAN.py"
---8<-- {"lines": "34-58"}
+--8<-- {"file": "model/SRGAN.py", "lines": "34-58"}
 ```
 
 ```yaml
---8<-- "configs/config_10m.yaml"
---8<-- {"lines": "35-70"}
+--8<-- {"file": "configs/config_10m.yaml", "lines": "35-70"}
 ```
 
 These heuristics reduce mode collapse and stabilise training on multi-spectral inputs where illumination and texture vary drastically between bands.
@@ -81,8 +74,7 @@ These heuristics reduce mode collapse and stabilise training on multi-spectral i
 * Use moderate `train_batch_size` values (8–16) to balance GPU utilisation and dataset variety. Increase `Data.prefetch_factor` when `num_workers > 0` to keep GPUs busy.
 
 ```python
---8<-- "data/data_utils.py"
---8<-- {"lines": "97-150"}
+--8<-- {"file": "data/data_utils.py", "lines": "97-150"}
 ```
 * To benchmark architectures quickly, reuse trained generators by setting `Model.load_checkpoint` and adjusting only the discriminator or loss weights.
 * Keep an eye on GPU memory when scaling `Generator.n_blocks` and `n_channels`; RRDB and LKA variants are heavier than SRResNet.

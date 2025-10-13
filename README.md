@@ -126,7 +126,7 @@ All key knobs are exposed via YAML in the `configs` folder:
 
 ---
 
-## 🎚️ Training Sstabilization Strategies
+## 🎚️ Training Stabilization Strategies
 
 * **G‑only pretraining:** Train with content/perceptual losses while the adversarial term is held at zero during the first `g_pretrain_steps`.
 * **Adversarial ramp‑up:** Increase the BCE adversarial weight **linearly** over `adv_loss_ramp_steps` until it reaches `adv_loss_beta`.

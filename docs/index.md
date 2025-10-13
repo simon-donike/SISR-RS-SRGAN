@@ -13,7 +13,8 @@ Remote-Sensing-SRGAN is a research-grade training stack for single-image super-r
 Choose between SRResNet, residual, RCAB, RRDB, large-kernel attention, or conditional GAN backbones with scale factors from 2×–8×.
 
 ```python
---8<-- "model/SRGAN.py:lines=72-118"
+--8<-- "model/SRGAN.py"
+--8<-- {"lines": "72-118"}
 ```
 
 ### Pluggable losses
@@ -21,11 +22,13 @@ Choose between SRResNet, residual, RCAB, RRDB, large-kernel attention, or condit
 Pixel, spectral, perceptual, adversarial, and total-variation terms can be mixed with independent weights and activation schedules.
 
 ```python
---8<-- "model/SRGAN.py:lines=34-58"
+--8<-- "model/SRGAN.py"
+--8<-- {"lines": "34-58"}
 ```
 
 ```yaml
---8<-- "configs/config_10m.yaml:lines=35-70"
+--8<-- "configs/config_10m.yaml"
+--8<-- {"lines": "35-70"}
 ```
 
 ### Remote-sensing ready datasets
@@ -33,7 +36,8 @@ Pixel, spectral, perceptual, adversarial, and total-variation terms can be mixed
 Sentinel-2 SAFE windowing and the SEN2NAIP worldwide pairs are built in, with Lightning datamodules created on the fly from the configuration.
 
 ```python
---8<-- "data/data_utils.py:lines=1-95"
+--8<-- "data/data_utils.py"
+--8<-- {"lines": "1-95"}
 ```
 
 ### Stabilised training flow
@@ -41,7 +45,8 @@ Sentinel-2 SAFE windowing and the SEN2NAIP worldwide pairs are built in, with Li
 Generator-only warm-up, adversarial ramp-up, discriminator scheduling, and Lightning callbacks are wired into the training script.
 
 ```python
---8<-- "train.py:lines=19-93"
+--8<-- "train.py"
+--8<-- {"lines": "19-93"}
 ```
 
 ### Comprehensive logging
@@ -49,11 +54,13 @@ Generator-only warm-up, adversarial ramp-up, discriminator scheduling, and Light
 TensorBoard visualisations, Weights & Biases tracking, and qualitative inspection panels are emitted during training.
 
 ```python
---8<-- "model/SRGAN.py:lines=12-16"
+--8<-- "model/SRGAN.py"
+--8<-- {"lines": "12-16"}
 ```
 
 ```python
---8<-- "train.py:lines=59-93"
+--8<-- "train.py"
+--8<-- {"lines": "59-93"}
 ```
 
 ## Repository layout

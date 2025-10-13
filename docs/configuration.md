@@ -7,7 +7,7 @@ Remote-Sensing-SRGAN is intentionally configuration-first. Every YAML file under
 Each config follows the same structure as `configs/config_10m.yaml`:
 
 ```yaml
---8<-- "configs/config_10m.yaml:lines=12-132"
+--8<-- "../configs/config_10m.yaml:lines=12-132"
 ```
 
 ## Data block
@@ -15,7 +15,7 @@ Each config follows the same structure as `configs/config_10m.yaml`:
 The data section controls loader throughput and selects the dataset implementation. The `dataset_type` key is forwarded to `data.data_utils.select_dataset`, which instantiates the proper dataset class and wraps it into a Lightning `DataModule` with the requested batch sizes and worker settings.
 
 ```python
---8<-- "data/data_utils.py:lines=1-150"
+--8<-- "../data/data_utils.py:lines=1-150"
 ```
 
 ### Available dataset types
@@ -37,11 +37,11 @@ The `Model` section captures properties that affect both training and checkpoint
 * `continue_training`: checkpoint to resume including optimiser states and scheduler counters (mapped to `Trainer(resume_from_checkpoint=...)`).
 
 ```python
---8<-- "model/SRGAN.py:lines=62-118"
+--8<-- "../model/SRGAN.py:lines=62-118"
 ```
 
 ```python
---8<-- "train.py:lines=34-48"
+--8<-- "../train.py:lines=34-48"
 ```
 
 ## Training block
@@ -54,17 +54,17 @@ Training-related switches are consumed inside the Lightning module:
 * `label_smoothing`: enables 0.9 real labels in the discriminator to reduce overconfidence.
 
 ```python
---8<-- "model/SRGAN.py:lines=34-58"
+--8<-- "../model/SRGAN.py:lines=34-58"
 ```
 
 The nested `Losses` dictionary is passed to `GeneratorContentLoss`, which mixes pixel-space (`l1_weight`), spectral (`sam_weight`), perceptual (`perceptual_weight` with `perceptual_metric`), and total-variation (`tv_weight`) losses. The final adversarial weight after ramp-up is `adv_loss_beta`.
 
 ```yaml
---8<-- "configs/config_10m.yaml:lines=35-70"
+--8<-- "../configs/config_10m.yaml:lines=35-70"
 ```
 
 ```python
---8<-- "model/loss/loss.py:lines=1-210"
+--8<-- "../model/loss/loss.py:lines=1-210"
 ```
 
 ## Generator and Discriminator blocks
@@ -77,13 +77,13 @@ Generator parameters control the backbone constructed in `SRGAN_model.get_models
 * `large_kernel_size`, `small_kernel_size`: head/tail and residual block kernel sizes to shape receptive field.
 
 ```python
---8<-- "model/SRGAN.py:lines=72-150"
+--8<-- "../model/SRGAN.py:lines=72-150"
 ```
 
 The discriminator section selects either the classic SRGAN CNN (`standard`) or a PatchGAN variant and optionally specifies convolutional depth via `n_blocks`.
 
 ```python
---8<-- "model/descriminators/srgan_discriminator.py:lines=1-71"
+--8<-- "../model/descriminators/srgan_discriminator.py:lines=1-71"
 ```
 
 ## Optimisers and schedulers
@@ -91,11 +91,11 @@ The discriminator section selects either the classic SRGAN CNN (`standard`) or a
 Both the generator and discriminator use Adam optimisers with learning rates read from `Optimizers.optim_g_lr` and `Optimizers.optim_d_lr`. The Lightning module instantiates `ReduceLROnPlateau` schedulers using the parameters provided under `Schedulers` (`metric`, `patience_*`, `factor_*`, `verbose`).
 
 ```python
---8<-- "model/SRGAN.py:lines=408-443"
+--8<-- "../model/SRGAN.py:lines=408-443"
 ```
 
 ```yaml
---8<-- "configs/config_10m.yaml:lines=103-132"
+--8<-- "../configs/config_10m.yaml:lines=103-132"
 ```
 
 ## Logging
@@ -103,11 +103,11 @@ Both the generator and discriminator use Adam optimisers with learning rates rea
 The `Logging` section controls qualitative outputs. During validation the model logs `num_val_images` panels via TensorBoard and Weights & Biases. The training script also wires in Weights & Biases, TensorBoard, and learning-rate monitors; edit this block if you want fewer images per epoch.
 
 ```yaml
---8<-- "configs/config_10m.yaml:lines=128-132"
+--8<-- "../configs/config_10m.yaml:lines=128-132"
 ```
 
 ```python
---8<-- "train.py:lines=59-93"
+--8<-- "../train.py:lines=59-93"
 ```
 
 ## Tips for custom configs

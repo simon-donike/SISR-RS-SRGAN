@@ -1,3 +1,4 @@
+
 # Remote-Sensing SRGAN
 
 Remote-Sensing-SRGAN is a research-grade training stack for single-image super-resolution (SISR) of multispectral satellite imagery. It wraps a flexible generator/discriminator design, configurable loss suite, and remote-sensing specific data pipelines behind a configuration-first workflow. The implementation is optimised for Sentinel-2 but can be adapted to other sensors that provide paired low-/high-resolution observations.

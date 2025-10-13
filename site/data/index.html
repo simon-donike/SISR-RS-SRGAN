@@ -547,7 +547,9 @@
 <h1 id="data-pipelines">Data Pipelines<a class="headerlink" href="#data-pipelines" title="Permanent link">&para;</a></h1>
 <p>Remote-Sensing-SRGAN ships with dataset loaders tailored to Sentinel-2 SAFE products and the SEN2NAIP worldwide corpus. All loaders produce <code>(lr, hr)</code> tensor pairs suitable for Lightning training and plug into the config-driven selector in <code>data/data_utils.py</code>.</p>
 <h2 id="dataset-selector">Dataset selector<a class="headerlink" href="#dataset-selector" title="Permanent link">&para;</a></h2>
-<p><code>data.data_utils.select_dataset(config)</code> reads <code>config.Data.dataset_type</code> and constructs the appropriate dataset instances. The helper then wraps them into a minimal Lightning <code>DataModule</code> with configurable batch sizes, worker counts, and prefetch factors.【F:data/data_utils.py†L1-L150】</p>
+<p><code>data.data_utils.select_dataset(config)</code> reads <code>config.Data.dataset_type</code> and constructs the appropriate dataset instances. The helper then wraps them into a minimal Lightning <code>DataModule</code> with configurable batch sizes, worker counts, and prefetch factors.</p>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <div class="highlight"><pre><span></span><code><span class="n">pl_datamodule</span> <span class="o">=</span> <span class="n">select_dataset</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 <span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl_datamodule</span><span class="o">.</span><span class="n">train_dataloader</span><span class="p">()</span>
 <span class="n">val_loader</span> <span class="o">=</span> <span class="n">pl_datamodule</span><span class="o">.</span><span class="n">val_dataloader</span><span class="p">()</span>
@@ -556,36 +558,46 @@
 <h3 id="sentinel-2-safe-6-band-s2_6b">Sentinel-2 SAFE 6-band (<code>S2_6b</code>)<a class="headerlink" href="#sentinel-2-safe-6-band-s2_6b" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Goal:</strong> Train on six 20 m Sentinel-2 bands (B05, B06, B07, B8A, B11, B12) stacked into a single tensor.</li>
-<li><strong>Implementation:</strong> Uses <code>data/SEN2_SAFE/S2_6b_ds.py::S2SAFEDataset</code> to read a manifest of pre-windowed chips. The dataset handles normalisation, band ordering, LR synthesis via anti-aliased downsampling, and invalid chip filtering.【F:data/data_utils.py†L17-L48】</li>
-<li><strong>Configuration hooks:</strong> <code>Generator.scaling_factor</code> determines the SR scale (2×/4×/8×). Hard-coded manifest path and band order can be promoted to config keys if you need to vary them frequently.</li>
+<li><strong>Implementation:</strong> Uses <code>data/SEN2_SAFE/S2_6b_ds.py::S2SAFEDataset</code> to read a manifest of pre-windowed chips. The dataset handles normalisation, band ordering, LR synthesis via anti-aliased downsampling, and invalid chip filtering.</li>
 </ul>
+<p><div class="highlight"><pre><span></span><code>
+</code></pre></div>
+* <strong>Configuration hooks:</strong> <code>Generator.scaling_factor</code> determines the SR scale (2×/4×/8×). Hard-coded manifest path and band order can be promoted to config keys if you need to vary them frequently.</p>
 <h3 id="sentinel-2-safe-4-band-s2_4b">Sentinel-2 SAFE 4-band (<code>S2_4b</code>)<a class="headerlink" href="#sentinel-2-safe-4-band-s2_4b" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Goal:</strong> Focus on RGB+NIR super-resolution using four 10 m bands (B05, B04, B03, B02).</li>
-<li><strong>Implementation:</strong> Reuses <code>S2SAFEDataset</code> with an alternative band list. Despite the 10 m intent, the manifest path currently points to the 20 m JSON; adjust it if you curate a dedicated 10 m manifest.【F:data/data_utils.py†L50-L82】</li>
-<li><strong>Configuration hooks:</strong> Same as <code>S2_6b</code>; update band order and manifest in the dataset branch if you require different inputs.</li>
+<li><strong>Implementation:</strong> Reuses <code>S2SAFEDataset</code> with an alternative band list. Despite the 10 m intent, the manifest path currently points to the 20 m JSON; adjust it if you curate a dedicated 10 m manifest.</li>
 </ul>
+<p><div class="highlight"><pre><span></span><code>
+</code></pre></div>
+* <strong>Configuration hooks:</strong> Same as <code>S2_6b</code>; update band order and manifest in the dataset branch if you require different inputs.</p>
 <h3 id="sen2naip-worldwide-sisr_ww">SEN2NAIP Worldwide (<code>SISR_WW</code>)<a class="headerlink" href="#sen2naip-worldwide-sisr_ww" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Goal:</strong> Leverage Taco Foundation’s SEN2NAIP pairs where Sentinel-2 observations are paired with NAIP aerial imagery at 4× resolution.</li>
-<li><strong>Implementation:</strong> The <code>SISRWorldWide</code> dataset (under <code>data/SISR_WW/</code>) reads the dataset root, honours <code>split</code> arguments (<code>train</code>/<code>val</code>), and returns aligned <code>(lr, hr)</code> samples. The data selector simply instantiates train/val splits pointing to <code>/data3/SEN2NAIP_global</code> by default.【F:data/data_utils.py†L84-L95】</li>
-<li><strong>Configuration hooks:</strong> Update the root path or expose it through the config to point at your local dataset copy.</li>
+<li><strong>Implementation:</strong> The <code>SISRWorldWide</code> dataset (under <code>data/SISR_WW/</code>) reads the dataset root, honours <code>split</code> arguments (<code>train</code>/<code>val</code>), and returns aligned <code>(lr, hr)</code> samples. The data selector simply instantiates train/val splits pointing to <code>/data3/SEN2NAIP_global</code> by default.</li>
 </ul>
+<p><div class="highlight"><pre><span></span><code>
+</code></pre></div>
+* <strong>Configuration hooks:</strong> Update the root path or expose it through the config to point at your local dataset copy.</p>
 <h2 id="building-new-datasets">Building new datasets<a class="headerlink" href="#building-new-datasets" title="Permanent link">&para;</a></h2>
 <p>Adding a dataset follows three simple steps:</p>
 <ol>
 <li><strong>Implement the dataset class</strong> under <code>data/&lt;name&gt;/</code> with <code>__len__</code> and <code>__getitem__</code> returning <code>(lr, hr)</code> arrays or tensors.</li>
 <li><strong>Register the selector</strong> by adding a new <code>elif</code> branch in <code>select_dataset</code> that instantiates your dataset and passes the config values you need.</li>
-<li><strong>Expose configuration keys</strong> under <code>Data</code> (e.g., <code>manifest_path</code>, <code>bands_keep</code>) so experiments remain reproducible without code edits.【F:data/data_utils.py†L1-L95】</li>
+<li><strong>Expose configuration keys</strong> under <code>Data</code> (e.g., <code>manifest_path</code>, <code>bands_keep</code>) so experiments remain reproducible without code edits.</li>
 </ol>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <h2 id="dataloader-configuration">DataLoader configuration<a class="headerlink" href="#dataloader-configuration" title="Permanent link">&para;</a></h2>
 <p><code>datamodule_from_datasets</code> handles DataLoader construction and mirrors config values to PyTorch Lightning:</p>
 <ul>
-<li><code>train_batch_size</code> / <code>val_batch_size</code>: separate sizes for each split, falling back to <code>Data.batch_size</code> if provided.【F:data/data_utils.py†L107-L130】</li>
-<li><code>num_workers</code>: enables multi-process loading; when set to zero the helper disables persistent workers and prefetch factors.【F:data/data_utils.py†L108-L140】</li>
-<li><code>prefetch_factor</code>: forwarded when workers &gt; 0 to balance host-device throughput.【F:data/data_utils.py†L110-L140】</li>
-<li><code>shuffle</code>: enabled for both train and validation to improve spatial diversity in evaluation batches (intentional design choice).【F:data/data_utils.py†L125-L140】</li>
+<li><code>train_batch_size</code> / <code>val_batch_size</code>: separate sizes for each split, falling back to <code>Data.batch_size</code> if provided.</li>
+<li><code>num_workers</code>: enables multi-process loading; when set to zero the helper disables persistent workers and prefetch factors.</li>
+<li><code>prefetch_factor</code>: forwarded when workers &gt; 0 to balance host-device throughput.</li>
+<li><code>shuffle</code>: enabled for both train and validation to improve spatial diversity in evaluation batches (intentional design choice).</li>
 </ul>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
 <p>Because the <code>DataModule</code> is assembled dynamically, you can plug in custom datasets without changing the training loop — just add a branch and update your YAML.</p>
 
 

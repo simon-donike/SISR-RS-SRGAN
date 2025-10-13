@@ -34,11 +34,9 @@ def print_model_summary(self):
     # ------------------------------------------------------------------
     scale_factor = getattr(self.config.Generator, "scaling_factor", getattr(self.generator, "scale", None))
     if scale_factor is not None:
-        input_res = 128
-        output_res = input_res * scale_factor
-        res_str = f"{input_res}×{input_res} → {output_res}×{output_res}  (×{scale_factor})"
+        res_str = f"Super-Resolution Factor: ×{scale_factor}"
     else:
-        res_str = "Unknown (scale not specified)"
+        res_str = "Super-Resolution Factor: Unknown"
 
     # ------------------------------------------------------------------
     # Retrieve loss weights if available

@@ -77,7 +77,9 @@ class SRGAN_model(pl.LightningModule):
         # SECTION: Initialize Generator
         # Purpose: Build generator network depending on selected architecture.
         # ======================================================================
-        if self.config.Generator.model_type == 'SRResNet':
+        generator_type = self.config.Generator.model_type
+
+        if generator_type == 'SRResNet':
             # Standard SRResNet generator
             from model.generators.srresnet import Generator
             self.generator = Generator(
@@ -88,8 +90,7 @@ class SRGAN_model(pl.LightningModule):
                 n_blocks=self.config.Generator.n_blocks,
                 scaling_factor=self.config.Generator.scaling_factor
             )
-
-        elif self.config.Generator.model_type in ['res', 'rcab', 'rrdb', 'lka']:
+        elif generator_type in ['res', 'rcab', 'rrdb', 'lka']:
             # Advanced generator variants (ResNet, RCAB, RRDB, etc.)
             from model.generators.flexible_generator import FlexibleGenerator
             self.generator = FlexibleGenerator(
@@ -100,6 +101,19 @@ class SRGAN_model(pl.LightningModule):
                 large_kernel=self.config.Generator.large_kernel_size,
                 scale=self.config.Generator.scaling_factor,
                 block_type=self.config.Generator.model_type
+            )
+        elif generator_type.lower() in ['conditional_cgan', 'cgan']:
+            from model.generators import ConditionalGANGenerator
+
+            self.generator = ConditionalGANGenerator(
+                in_channels=self.config.Model.in_bands,
+                n_channels=self.config.Generator.n_channels,
+                n_blocks=self.config.Generator.n_blocks,
+                small_kernel=self.config.Generator.small_kernel_size,
+                large_kernel=self.config.Generator.large_kernel_size,
+                scale=self.config.Generator.scaling_factor,
+                noise_dim=getattr(self.config.Generator, "noise_dim", 128),
+                res_scale=getattr(self.config.Generator, "res_scale", 0.2),
             )
 
         else:
@@ -468,4 +482,5 @@ class SRGAN_model(pl.LightningModule):
 
 
 if __name__=="__main__":       
-    model = SRGAN_model(config_file_path="config.yaml")
+    model = SRGAN_model(config_file_path="configs/config_20m.yaml")
+    model.forward(torch.randn(1,6,32,32))

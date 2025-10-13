@@ -26,15 +26,6 @@ plugins:
             show_source: true
 
 markdown_extensions:
-  - admonition
-  - attr_list
-  - md_in_html
-  - toc:
-      permalink: true
-  - pymdownx.highlight
-  - pymdownx.superfences
-  - pymdownx.details
-  - pymdownx.tasklist
   - pymdownx.snippets:
       base_path:
         - .
@@ -42,6 +33,16 @@ markdown_extensions:
         - ..
       check_paths: true
       encoding: utf-8
+
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.details
+  - pymdownx.tasklist
+  - pymdownx.superfences
 nav:
   - Overview: index.md
   - Getting Started: getting-started.md

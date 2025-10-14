@@ -668,7 +668,7 @@ class SRGAN_model(pl.LightningModule):
         schedule = getattr(
             self.config.Training.Losses,
             "adv_loss_schedule",
-            "sigmoid",
+            "cosine",
         ).lower()
 
         # Handle pretraining and edge cases early
@@ -685,19 +685,12 @@ class SRGAN_model(pl.LightningModule):
         if schedule == "linear":
             return progress * beta
 
-        if schedule == "sigmoid":
-            # Sigmoid ramp with adjustable steepness for smooth transition
-            slope = 12.0
-            sigmoid_value = 1.0 / (1.0 + math.exp(-(progress - 0.5) * slope))
-            low = 1.0 / (1.0 + math.exp(slope / 2.0))
-            high = 1.0 / (1.0 + math.exp(-slope / 2.0))
-            normalized_sigmoid = (sigmoid_value - low) / (high - low)
-            normalized_sigmoid = max(0.0, min(normalized_sigmoid, 1.0))
-
-            return normalized_sigmoid * beta
+        if schedule == "cosine":
+            # Cosine ramp to match the generator warmup behaviour
+            return 0.5 * (1.0 - math.cos(math.pi * progress)) * beta
 
         raise ValueError(
-            f"Unknown adversarial loss schedule '{schedule}'. Expected 'linear' or 'sigmoid'."
+            f"Unknown adversarial loss schedule '{schedule}'. Expected 'linear' or 'cosine'."
         )
 
     def _log_adv_loss_weight(self, adv_weight: float) -> None:

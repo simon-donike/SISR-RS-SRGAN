@@ -132,7 +132,7 @@ All key knobs are exposed via YAML in the `configs` folder:
 ## 🎚️ Training Stabilization Strategies
 
 * **G‑only pretraining:** Train with content/perceptual losses while the adversarial term is held at zero during the first `g_pretrain_steps`.
-* **Adversarial ramp‑up:** Increase the BCE adversarial weight **linearly** or smoothly (**sigmoid**) over `adv_loss_ramp_steps` until it reaches `adv_loss_beta`.
+* **Adversarial ramp‑up:** Increase the BCE adversarial weight **linearly** or smoothly (**cosine**) over `adv_loss_ramp_steps` until it reaches `adv_loss_beta`.
 * **Generator LR warmup:** Ramp the generator optimiser with a **cosine** or **linear** schedule for the first 1–5k steps via `Schedulers.g_warmup_steps`/`g_warmup_type` before switching to plateau-based reductions.
 * **EMA smoothing:** Enable `Training.EMA.enabled` to keep a shadow copy of the generator. Decay values in the 0.995–0.9999 range balance responsiveness with stability and are swapped in automatically for validation/inference.
 

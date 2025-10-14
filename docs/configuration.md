@@ -67,7 +67,7 @@ stable validation imagery. The EMA is fully optional and controlled through the 
 | Key | Default | Description |
 | --- | --- | --- |
 | `adv_loss_beta` | `1e-3` | Target weight applied to the adversarial term after ramp-up. |
-| `adv_loss_schedule` | `sigmoid` | Ramp shape (`linear` or `sigmoid`). |
+| `adv_loss_schedule` | `cosine` | Ramp shape (`linear` or `cosine`). |
 | `l1_weight` | `1.0` | Weight of the pixelwise L1 loss. |
 | `sam_weight` | `0.05` | Weight of the spectral angle mapper loss. |
 | `perceptual_weight` | `0.1` | Weight of the perceptual feature loss. |

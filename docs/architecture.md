@@ -29,7 +29,7 @@ The module is initialised from a YAML configuration file and provides the follow
 | Method | Purpose |
 | --- | --- |
 | `_pretrain_check()` | Determines whether the generator-only warm-up is active. |
-| `_compute_adv_loss_weight()` | Produces the ramped adversarial weight using `linear` or `sigmoid` schedules. |
+| `_compute_adv_loss_weight()` | Produces the ramped adversarial weight using `linear` or `cosine` schedules. |
 | `_log_generator_content_loss()` and `_log_adv_loss_weight()` | Centralise logging so metrics remain consistent across phases. |
 | `on_fit_start()` | Prints informative status messages when training begins. |
 

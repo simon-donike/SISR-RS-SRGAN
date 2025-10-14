@@ -170,7 +170,7 @@ class SRGAN_model(pl.LightningModule):
         sr_imgs = self.generator(lr_imgs)   # pass LR input through generator network
         return sr_imgs                      # return super-resolved output
 
-    
+
 
     @torch.no_grad()
     def predict_step(self, lr_imgs):

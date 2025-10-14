@@ -9,8 +9,6 @@ from multiprocessing import freeze_support
 # set visible GPUs
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-# local imports
-
 if __name__ == '__main__':
     import argparse
     from multiprocessing import freeze_support
@@ -72,6 +70,7 @@ if __name__ == '__main__':
     from pytorch_lightning.callbacks import ModelCheckpoint
     dir_save_checkpoints = os.path.join(os.path.normpath("logs/"),wandb_project,
                                                 datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    os.makedirs(dir_save_checkpoints, exist_ok=True)
     print("Experiment Path:",dir_save_checkpoints)
     with open(os.path.join(dir_save_checkpoints, "config.yaml"), 'w') as f: # save config to experiment folder
         OmegaConf.save(config, f)
@@ -81,9 +80,6 @@ if __name__ == '__main__':
                                         mode='min',
                                         save_last=True,
                                         save_top_k=2)
-
-    from pytorch_lightning.callbacks import LearningRateMonitor
-    lr_monitor = LearningRateMonitor(logging_interval='epoch')
 
     # callback to set up early stopping
     from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -100,12 +96,12 @@ if __name__ == '__main__':
                     limit_val_batches=config.Training.limit_val_batches,
                     resume_from_checkpoint=resume_from_checkpoint,
                     max_epochs=config.Training.max_epochs,
+                    log_every_n_steps=100, # log batch frequency
                     logger=[ 
                                 wandb_logger,
                             ],
                     callbacks=[ checkpoint_callback,
                                 early_stop_callback,
-                                lr_monitor
                                 ],)
 
 

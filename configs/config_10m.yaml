@@ -35,7 +35,7 @@ Model:
 # ---------------------------------------------------------------------------- #
 Training:  
   # --- Hardware Setup
-  gpus: [2,3]                    # Number of GPUs to use, individually in list form, e.g. [0] or [0,2]
+  gpus: [0,1,2,3]                    # Number of GPUs to use, individually in list form, e.g. [0] or [0,2]
   # --- General Training Setup
   max_epochs: 9999            # Maximum number of training epochs
   val_check_interval: 1.0     # Validate at x percent of epoch (float) or every N steps (int)

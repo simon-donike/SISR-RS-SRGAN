@@ -89,20 +89,20 @@ The defaults in the YAML configs intentionally balance stability and fidelity fo
 performing sweeps:
 
 * Keep `n_channels` around 96 for residual-style backbones so feature widths match the initial convolution used by the
-  flexible generator factory.【F:model/generators/flexible_generator.py†L49-L85】
+  flexible generator factory.
 * Depth drives detail. Begin with `n_blocks = 32` for flexible variants and reduce to 16 when training budgets are
-  tight or when using the conditional generator, which already injects stochasticity via latent noise.【F:model/generators/flexible_generator.py†L49-L85】【F:model/generators/cgan_generator.py†L59-L134】
+  tight or when using the conditional generator, which already injects stochasticity via latent noise.
 * Set `scaling_factor` according to your target resolution (2×/4×/8×); all bundled generators support those values out
-  of the box.【F:model/generators/flexible_generator.py†L49-L85】【F:model/generators/srresnet.py†L17-L88】【F:model/generators/cgan_generator.py†L59-L134】
+  of the box.
 
 | Generator type | Recommended `n_channels` | Recommended `n_blocks` | Typical `scaling_factor` | Notes |
 | --- | --- | --- | --- | --- |
-| `SRResNet` | 64 | 16 | 4× | Canonical baseline with batch-norm residual blocks; scale can be 2×/4×/8× as needed.【F:model/generators/srresnet.py†L17-L88】 |
-| `res` | 96 | 32 | 8× | Lightweight residual blocks without batch norm; works well for high-scale (8×) Sentinel data.【F:model/generators/flexible_generator.py†L49-L85】 |
-| `rcab` | 96 | 32 | 8× | Attention-enhanced residual blocks; keep depth high to exploit channel attention.【F:model/generators/flexible_generator.py†L21-L85】 |
-| `rrdb` | 96 | 32 | 4×–8× | Dense residual blocks expand receptive field; expect higher VRAM use at 32 blocks.【F:model/generators/flexible_generator.py†L21-L85】 |
-| `lka` | 96 | 24–32 | 4×–8× | Large-kernel attention blocks stabilise at moderate depth; drop to 24 blocks if memory bound.【F:model/generators/flexible_generator.py†L21-L85】 |
-| `conditional_cgan`/`cgan` | 96 | 16 | 4× | Latent-modulated residual stack; pair with noise_dim≈128 and res_scale≈0.2 defaults.【F:model/generators/cgan_generator.py†L59-L134】 |
+| `SRResNet` | 64 | 16 | 4× | Canonical baseline with batch-norm residual blocks; scale can be 2×/4×/8× as needed. |
+| `res` | 96 | 32 | 4×–8× | Lightweight residual blocks without batch norm; works well for high-scale (8×) Sentinel data. |
+| `rcab` | 96 | 32 | 4×–8× | Attention-enhanced residual blocks; keep depth high to exploit channel attention. |
+| `rrdb` | 96 | 32 | 4×–8× | Dense residual blocks expand receptive field; expect higher VRAM use at 32 blocks. |
+| `lka` | 96 | 24–32 | 4×–8× | Large-kernel attention blocks stabilise at moderate depth; drop to 24 blocks if memory bound. |
+| `conditional_cgan`/`cgan` | 96 | 16 | 4× | Latent-modulated residual stack; pair with noise_dim≈128 and res_scale≈0.2 defaults. |
 
 ### Discriminator presets
 
@@ -111,11 +111,11 @@ training loop destabilises. These starting points mirror the architectures bundl
 
 | Discriminator type | Recommended depth parameter | Additional notes |
 | --- | --- | --- |
-| `standard` | `n_blocks = 8` | Mirrors the original SRGAN CNN with alternating stride-1/stride-2 blocks before the dense head.【F:model/discriminators/srgan_discriminator.py†L13-L71】 |
-| `patchgan` | `n_blocks = 3` | Maps to the 3-layer PatchGAN (a.k.a. `n_layers`); increase to 4–5 for larger crops or when the generator is particularly sharp.【F:model/discriminators/patchgan.py†L32-L109】 |
+| `standard` | `n_blocks = 8` | Mirrors the original SRGAN CNN with alternating stride-1/stride-2 blocks before the dense head.】 |
+| `patchgan` | `n_blocks = 3` | Maps to the 3-layer PatchGAN (a.k.a. `n_layers`); increase to 4–5 for larger crops or when the generator is particularly sharp. |
 
 When adjusting these presets, scale generator and discriminator together and monitor adversarial loss ramps defined in
-`Training.Losses` to keep training stable.【F:model/SRGAN.py†L80-L151】
+`Training.Losses` to keep training stable.
 
 ## Optimisers
 

@@ -32,7 +32,7 @@ Whether you are reproducing published results, exploring new remote-sensing moda
 | --- | --- |
 | **Generators & discriminators** | RCAB, RRDB, residual-in-residual, large-kernel attention, PatchGAN, UNet-based discriminators, and more. |
 | **Losses** | Weighted combinations of L1/L2, perceptual (VGG/LPIPS), style, and relativistic adversarial losses. |
-| **Training utilities** | Generator warm-up phases, cosine and step learning-rate schedules, adversarial-weight ramping, EMA tracking, and mixed-precision support. |
+| **Training utilities** | Generator warm-up phases, on-plateau learning-rate schedules, adversarial-weight ramping, EMA tracking, and mixed-precision support. |
 | **Experiment management** | Configurable logging (Weights & Biases, TensorBoard), checkpointing, and experiment reproducibility hooks. |
 | **Datasets** | Sentinel-2 SAFE archives, SEN2NAIP, and pluggable dataset interfaces for custom collections. |
 

@@ -30,10 +30,10 @@ Refer to [Data](data.md) for dataset-specific requirements and how to plug in ne
 
 ## 3. Configure the experiment
 
-Copy one of the provided YAML presets and edit it to match your setup:
+Use of the provided YAML presets or copy and edit one:
 
 ```bash
-cp configs/config_20m.yaml my_experiment.yaml
+cp configs/config_10m.yaml configs/my_experiment.yaml
 ```
 
 Update at least the following fields:
@@ -50,7 +50,7 @@ See [Configuration](configuration.md) for a full breakdown of available options.
 Run the training script with your customised config:
 
 ```bash
-python train.py --config my_experiment.yaml
+python train.py --config configs/my_experiment.yaml
 ```
 
 The script will:
@@ -60,7 +60,7 @@ The script will:
 3. Configure Weights & Biases and TensorBoard loggers alongside checkpointing and learning-rate monitoring callbacks.
 4. Start alternating generator/discriminator optimisation according to your warm-start schedule.
 
-Training resumes automatically if `Model.continue_training` points to a Lightning checkpoint.
+Training resumes automatically if `Model.continue_training` points to a Lightning checkpoint. If you interrupt training, always use the `Model.continue_training` flag to pass the generated checkpoint, since that restores all optimizers, schedulers, EMA etc.
 
 ## 5. Run validation or inference
 
@@ -76,6 +76,10 @@ Training resumes automatically if `Model.continue_training` points to a Lightnin
   ```
   The helper automatically normalises Sentinel-2 ranges, applies histogram matching, and denormalises outputs for easier
   comparison with the source imagery.
+
+## 6. Create Data Pipeline
+
+* **SR Sen2 Tiles**: Use `opensr-utils` to crop, SR, patch, and overlap whole Sentinel-2 tiles. (Note: Currently only supports RGB-NIR.)
 
 ## 6. Next steps
 

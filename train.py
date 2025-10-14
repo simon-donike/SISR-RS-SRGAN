@@ -32,6 +32,9 @@ if __name__ == '__main__':
     # load config
     cfg_filepath = args.config
     config = OmegaConf.load(cfg_filepath)
+    
+    # Get devices
+    cuda_devices = config.Training.gpus
 
     #############################################################################################################
     " LOAD MODEL "
@@ -95,12 +98,11 @@ if __name__ == '__main__':
     #############################################################################################################
     
     trainer = Trainer(accelerator='cuda',
-                    devices=[0],
-                    check_val_every_n_epoch=1,
-                    #val_check_interval=1.0, # use float for fraction of epoch
-                    limit_val_batches=250,
+                    devices=cuda_devices,
+                    val_check_interval=config.Training.val_check_interval,
+                    limit_val_batches=config.Training.limit_val_batches,
                     resume_from_checkpoint=resume_from_checkpoint,
-                    max_epochs=99999,
+                    max_epochs=config.Training.max_epochs,
                     logger=[ 
                                 wandb_logger,
                             ],

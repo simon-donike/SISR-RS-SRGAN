@@ -69,6 +69,17 @@ The script builds a `Trainer` with the following notable arguments:
 Finally, `trainer.fit(model, datamodule=pl_datamodule)` launches the optimisation loop and `wandb.finish()` ensures clean shutdown
 of the W&B session.
 
+## Generator EMA lifecycle
+
+If `Training.EMA.enabled` is `True`, the Lightning module keeps a shadow copy of the generator weights using the decay set in
+`Training.EMA.decay`. The EMA state:
+
+* updates immediately after each generator optimiser step once `Training.EMA.update_after_step` has been reached,
+* lives on the device requested via `Training.EMA.device` (falling back to the generator's device), and
+* automatically swaps in for evaluation, testing, and inference before being restored for continued training.
+
+Checkpoints store both the live and EMA weights, so resuming training preserves the smoothed model.
+
 ## Practical tips
 
 * **Gradient stability.** Tune `Training.pretrain_g_only`, `g_pretrain_steps`, and `adv_loss_ramp_steps` when experimenting with
@@ -81,6 +92,8 @@ of the W&B session.
 * **Validation images.** Reduce `Logging.num_val_images` if logging slows down training, or set it to zero to disable qualitative
   logging entirely.
 * **Experiment tracking.** Use descriptive W&B run names by exporting `WANDB_NAME="S2_8x_rrdb"` before launching the script.
+* **EMA tuning.** Adjust `Training.EMA.decay` between 0.995 and 0.9999 depending on how aggressively you want to smooth the
+  generator. Lower values react faster but may track noise; higher values provide the cleanest validation swaps.
 
 With these components understood, you can safely modify the trainer arguments, replace callbacks, or integrate advanced logging
 without losing the benefits of the existing automation.

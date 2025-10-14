@@ -1,5 +1,6 @@
 # Package Imports
 import math
+from contextlib import nullcontext
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -14,6 +15,7 @@ from utils.logging_helpers import plot_tensors
 from utils.spectral_helpers import normalise_10k
 from utils.spectral_helpers import histogram as histogram_match
 from utils.model_descriptions import print_model_summary
+from model.model_blocks import ExponentialMovingAverage
 
 
 #############################################################################################################
@@ -54,6 +56,23 @@ class SRGAN_model(pl.LightningModule):
         # Purpose: Build generator network depending on selected architecture.
         # ======================================================================
         self.get_models()  # dynamically builds and attaches generator + discriminator
+
+        # Optional exponential moving average (EMA) tracking for generator weights
+        ema_cfg = getattr(self.config.Training, "EMA", None)
+        self.ema: ExponentialMovingAverage | None = None
+        self._ema_update_after_step = 0
+        self._ema_applied = False
+        if ema_cfg is not None and getattr(ema_cfg, "enabled", False):
+            ema_decay = float(getattr(ema_cfg, "decay", 0.999))
+            ema_device = getattr(ema_cfg, "device", None)
+            use_num_updates = bool(getattr(ema_cfg, "use_num_updates", True))
+            self.ema = ExponentialMovingAverage(
+                self.generator,
+                decay=ema_decay,
+                use_num_updates=use_num_updates,
+                device=ema_device,
+            )
+            self._ema_update_after_step = int(getattr(ema_cfg, "update_after_step", 0))
 
         # ======================================================================
         # SECTION: Define Loss Functions
@@ -171,8 +190,10 @@ class SRGAN_model(pl.LightningModule):
         else:
             normalized = False                                       # already normalized
 
-        # --- Perform super-resolution ---
-        sr_imgs = self.generator(lr_imgs)                            # forward pass (SR prediction)
+        # --- Perform super-resolution (optionally using EMA weights) ---
+        context = self.ema.average_parameters(self.generator) if self.ema is not None else nullcontext()
+        with context:
+            sr_imgs = self.generator(lr_imgs)                        # forward pass (SR prediction)
 
         # --- Histogram match SR to LR ---
         sr_imgs = histogram_match(lr_imgs, sr_imgs)                  # match distributions
@@ -254,7 +275,7 @@ class SRGAN_model(pl.LightningModule):
 
         # -------- Normal Train: Generator Step  --------
         if optimizer_idx==1:
-            
+
             """ 1. Get VGG space loss """
             # encode images
             content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)   # perceptual/content criterion (e.g., VGG)
@@ -262,12 +283,12 @@ class SRGAN_model(pl.LightningModule):
             for key, value in metrics.items():
                 self.log(f"train_metrics/{key}", value)                             # log detailed metrics without extra forward passes
 
-            
+
             """ 2. Get Discriminator Opinion and loss """
             # run discriminator and get loss between pred labels and true labels
             sr_discriminated = self.discriminator(sr_imgs)                             # D(SR): logits for generator outputs
             adversarial_loss = self.adversarial_loss_criterion(sr_discriminated, torch.ones_like(sr_discriminated)) # keep taargets 1.0 for G loss
-            
+
             """ 3. Weight the losses"""
             adv_weight = self._adv_loss_weight() # get adversarial weight based on current step
             adversarial_loss_weighted = (adversarial_loss * adv_weight) # weight adversarial loss
@@ -276,6 +297,26 @@ class SRGAN_model(pl.LightningModule):
 
             # return Generator loss
             return total_loss                                                         # PL will use this to step the G optimizer
+
+    def optimizer_step(
+        self,
+        epoch,
+        batch_idx,
+        optimizer,
+        optimizer_idx,
+        optimizer_closure,
+        on_tpu=False,
+        using_lbfgs=False,
+    ):
+        optimizer.step(closure=optimizer_closure)
+        optimizer.zero_grad()
+
+        ema_updated = False
+        if self.ema is not None and optimizer_idx == 1:
+            if self.global_step >= self._ema_update_after_step:
+                self.ema.update(self.generator)
+                ema_updated = True
+            self._log_ema_step_metrics(updated=ema_updated)
 
     def pretraining_training_step(self, *, lr_imgs, hr_imgs, sr_imgs, optimizer_idx):
         """
@@ -396,8 +437,21 @@ class SRGAN_model(pl.LightningModule):
                 self.log("validation/DISC_adversarial_loss",adversarial_loss)
 
 
+    def on_validation_epoch_start(self):
+        super().on_validation_epoch_start()
+        self._apply_generator_ema_weights()
+
     def on_validation_epoch_end(self):
-        pass
+        self._restore_generator_weights()
+        super().on_validation_epoch_end()
+
+    def on_test_epoch_start(self):
+        super().on_test_epoch_start()
+        self._apply_generator_ema_weights()
+
+    def on_test_epoch_end(self):
+        self._restore_generator_weights()
+        super().on_test_epoch_end()
 
     def configure_optimizers(self):
 
@@ -481,11 +535,17 @@ class SRGAN_model(pl.LightningModule):
         self._log_lrs() # log LR's on each batch end
 
     def on_fit_start(self):  # called once at the start of training
+        super().on_fit_start()
         # ======================================================================
         # SECTION: Print Model Summary
         # Purpose: Output model architecture and parameter counts.
         # ======================================================================
         print_model_summary(self)  # print model summary to console
+
+        if self.ema is not None and self.ema.device is None:
+            self.ema.to(self.device)
+
+        self._log_ema_setup_metrics()
 
     def _log_generator_content_loss(self, content_loss: torch.Tensor) -> None:
         """Helper to consistently log the generator content loss across training phases."""
@@ -495,6 +555,104 @@ class SRGAN_model(pl.LightningModule):
             prog_bar=True,
             sync_dist=True,
         )
+
+
+    def _log_ema_setup_metrics(self) -> None:
+        """Log static EMA configuration once training begins."""
+
+        if getattr(self, "trainer", None) is None:
+            return
+
+        if self.ema is None:
+            self.log(
+                "EMA/enabled",
+                0.0,
+                on_step=False,
+                on_epoch=True,
+                prog_bar=False,
+                sync_dist=True,
+            )
+            return
+
+        self.log(
+            "EMA/enabled",
+            1.0,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=False,
+            sync_dist=True,
+        )
+        self.log(
+            "EMA/decay",
+            float(self.ema.decay),
+            on_step=False,
+            on_epoch=True,
+            prog_bar=False,
+            sync_dist=True,
+        )
+        self.log(
+            "EMA/update_after_step",
+            float(self._ema_update_after_step),
+            on_step=False,
+            on_epoch=True,
+            prog_bar=False,
+            sync_dist=True,
+        )
+        self.log(
+            "EMA/use_num_updates",
+            1.0 if self.ema.num_updates is not None else 0.0,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=False,
+            sync_dist=True,
+        )
+
+    def _log_ema_step_metrics(self, *, updated: bool) -> None:
+        """Log per-step EMA activity and statistics."""
+
+        if self.ema is None:
+            return
+
+        self.log(
+            "EMA/is_active",
+            1.0 if updated else 0.0,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            sync_dist=True,
+        )
+
+        steps_until_active = max(0, self._ema_update_after_step - self.global_step)
+        self.log(
+            "EMA/steps_until_activation",
+            float(steps_until_active),
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            sync_dist=True,
+        )
+
+        if not updated:
+            return
+
+        self.log(
+            "EMA/last_decay",
+            float(self.ema.last_decay),
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            sync_dist=True,
+        )
+
+        if self.ema.num_updates is not None:
+            self.log(
+                "EMA/num_updates",
+                float(self.ema.num_updates),
+                on_step=True,
+                on_epoch=False,
+                prog_bar=False,
+                sync_dist=True,
+            )
 
 
     def _pretrain_check(self):  # helper to check if still in pretrain phase
@@ -549,8 +707,32 @@ class SRGAN_model(pl.LightningModule):
     def _adv_loss_weight(self):
         adv_weight = self._compute_adv_loss_weight()
         self._log_adv_loss_weight(adv_weight)
-        return adv_weight                         
-    
+        return adv_weight
+
+    def _apply_generator_ema_weights(self) -> None:
+        if self.ema is None or self._ema_applied:
+            return
+        if self.ema.device is None:
+            self.ema.to(self.device)
+        self.ema.apply_to(self.generator)
+        self._ema_applied = True
+
+    def _restore_generator_weights(self) -> None:
+        if self.ema is None or not self._ema_applied:
+            return
+        self.ema.restore(self.generator)
+        self._ema_applied = False
+
+    def on_save_checkpoint(self, checkpoint: dict) -> None:
+        super().on_save_checkpoint(checkpoint)
+        if self.ema is not None:
+            checkpoint["ema_state"] = self.ema.state_dict()
+
+    def on_load_checkpoint(self, checkpoint: dict) -> None:
+        super().on_load_checkpoint(checkpoint)
+        if self.ema is not None and "ema_state" in checkpoint:
+            self.ema.load_state_dict(checkpoint["ema_state"])
+
     def _log_lrs(self):
         # order matches your return: [optimizer_d, optimizer_g]
         opt_d = self.trainer.optimizers[0]

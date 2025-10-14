@@ -50,7 +50,6 @@ Training:
     enabled: True             # Maintain exponential moving average of generator weights
     decay: 0.999               # EMA decay factor (closer to 1.0 → smoother updates)
     update_after_step: 0       # Delay EMA updates until this global step (0 = immediate)
-    device: null               # Store EMA weights on a specific device (e.g. "cpu"), null → follow model
     use_num_updates: True      # Use adaptive decay warmup based on number of updates
 
   Losses:

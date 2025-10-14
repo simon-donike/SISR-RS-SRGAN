@@ -14,8 +14,12 @@ def _to_numpy_img(t: torch.Tensor):
     t = t.clamp(0, 1)
     if C == 1:
         return t[0].contiguous().numpy()               # grayscale
-    else:
-        return t.permute(1, 2, 0).contiguous().numpy() # RGB/Multichannel (first 3 shown upstream)
+
+    if C in (3, 4):
+        rgb = t[:3]                                    # enforce bands 0,1,2 as RGB for 3/4-band inputs
+        return rgb.permute(1, 2, 0).contiguous().numpy()
+
+    return t.permute(1, 2, 0).contiguous().numpy()     # Multichannel (first 3 shown upstream)
 
 def plot_tensors(lr, sr, hr, title="Train"):
     # --- denorm + stretch on whatever device you're using ---

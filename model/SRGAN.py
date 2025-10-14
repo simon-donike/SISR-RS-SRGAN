@@ -558,6 +558,104 @@ class SRGAN_model(pl.LightningModule):
         )
 
 
+    def _log_ema_setup_metrics(self) -> None:
+        """Log static EMA configuration once training begins."""
+
+        if getattr(self, "trainer", None) is None:
+            return
+
+        if self.ema is None:
+            self.log(
+                "EMA/enabled",
+                0.0,
+                on_step=False,
+                on_epoch=True,
+                prog_bar=False,
+                sync_dist=True,
+            )
+            return
+
+        self.log(
+            "EMA/enabled",
+            1.0,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=False,
+            sync_dist=True,
+        )
+        self.log(
+            "EMA/decay",
+            float(self.ema.decay),
+            on_step=False,
+            on_epoch=True,
+            prog_bar=False,
+            sync_dist=True,
+        )
+        self.log(
+            "EMA/update_after_step",
+            float(self._ema_update_after_step),
+            on_step=False,
+            on_epoch=True,
+            prog_bar=False,
+            sync_dist=True,
+        )
+        self.log(
+            "EMA/use_num_updates",
+            1.0 if self.ema.num_updates is not None else 0.0,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=False,
+            sync_dist=True,
+        )
+
+    def _log_ema_step_metrics(self, *, updated: bool) -> None:
+        """Log per-step EMA activity and statistics."""
+
+        if self.ema is None:
+            return
+
+        self.log(
+            "EMA/is_active",
+            1.0 if updated else 0.0,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            sync_dist=True,
+        )
+
+        steps_until_active = max(0, self._ema_update_after_step - self.global_step)
+        self.log(
+            "EMA/steps_until_activation",
+            float(steps_until_active),
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            sync_dist=True,
+        )
+
+        if not updated:
+            return
+
+        self.log(
+            "EMA/last_decay",
+            float(self.ema.last_decay),
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            sync_dist=True,
+        )
+
+        if self.ema.num_updates is not None:
+            self.log(
+                "EMA/num_updates",
+                float(self.ema.num_updates),
+                on_step=True,
+                on_epoch=False,
+                prog_bar=False,
+                sync_dist=True,
+            )
+
+
     def _pretrain_check(self):  # helper to check if still in pretrain phase
         if self.pretrain_g_only and self.global_step < self.g_pretrain_steps:  # true if pretraining active
             return True

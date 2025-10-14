@@ -7,7 +7,7 @@ import os, datetime
 from multiprocessing import freeze_support
 
 # set visible GPUs
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 if __name__ == '__main__':
     import argparse
@@ -33,6 +33,7 @@ if __name__ == '__main__':
     
     # Get devices
     cuda_devices = config.Training.gpus
+    cuda_strategy = 'ddp' if len(cuda_devices) > 1 else None
 
     #############################################################################################################
     " LOAD MODEL "
@@ -91,6 +92,7 @@ if __name__ == '__main__':
     #############################################################################################################
     
     trainer = Trainer(accelerator='cuda',
+                    strategy=cuda_strategy,
                     devices=cuda_devices,
                     val_check_interval=config.Training.val_check_interval,
                     limit_val_batches=config.Training.limit_val_batches,

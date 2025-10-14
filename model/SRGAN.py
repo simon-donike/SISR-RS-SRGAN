@@ -227,7 +227,7 @@ class SRGAN_model(pl.LightningModule):
         # -------- DETERMINE PRETRAINING --------
         pretrain_phase = self._pretrain_check()                  # check schedule: True => content-only pretraining
         if optimizer_idx == 1:  # log whether pretraining is active or not
-            self.log("training/pretrain_phase", float(pretrain_phase), prog_bar=False)  # log once per G step to track phase state
+            self.log("training/pretrain_phase", float(pretrain_phase), prog_bar=False,sync_dist=True)  # log once per G step to track phase state
 
         # ======================================================================
         # SECTION: Pretraining branch (delegated)
@@ -283,7 +283,7 @@ class SRGAN_model(pl.LightningModule):
             content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)   # perceptual/content criterion (e.g., VGG)
             self._log_generator_content_loss(content_loss)                             # log content loss for G (consistent args)
             for key, value in metrics.items():
-                self.log(f"train_metrics/{key}", value)                             # log detailed metrics without extra forward passes
+                self.log(f"train_metrics/{key}", value,sync_dist=True)                             # log detailed metrics without extra forward passes
 
 
             """ 2. Get Discriminator Opinion and loss """
@@ -335,7 +335,7 @@ class SRGAN_model(pl.LightningModule):
             content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)  # compute perceptual/content loss (e.g., VGG or L1)
             self._log_generator_content_loss(content_loss)                             # log content loss for G (consistent args)
             for key, value in metrics.items():
-                self.log(f"train_metrics/{key}", value)                               # reuse computed metrics for logging
+                self.log(f"train_metrics/{key}", value,sync_dist=True)                               # reuse computed metrics for logging
 
             # Ensure adversarial weight is logged even when not used during pretraining
             adv_weight = self._compute_adv_loss_weight()
@@ -384,7 +384,7 @@ class SRGAN_model(pl.LightningModule):
         del metrics_hr_img, metrics_sr_img                   # free cloned tensors from GPU memory
 
         for key, value in metrics.items():                   # iterate over metrics dict
-            self.log(f"{key}", value)                        # log each metric to logger (e.g., W&B, TensorBoard)
+            self.log(f"{key}", value,sync_dist=True)                        # log each metric to logger (e.g., W&B, TensorBoard)
 
         # ======================================================================
         # SECTION: Optional visualization — Log example SR/HR/LR images
@@ -436,7 +436,7 @@ class SRGAN_model(pl.LightningModule):
                 adversarial_loss = self.adversarial_loss_criterion(sr_discriminated,
                                                                 torch.zeros_like(sr_discriminated)) + self.adversarial_loss_criterion(hr_discriminated,
                                                                                                                                         torch.ones_like(hr_discriminated))
-                self.log("validation/DISC_adversarial_loss",adversarial_loss)
+                self.log("validation/DISC_adversarial_loss",adversarial_loss,sync_dist=True)
 
 
     def on_validation_epoch_start(self):
@@ -695,7 +695,7 @@ class SRGAN_model(pl.LightningModule):
 
     def _log_adv_loss_weight(self, adv_weight: float) -> None:
         """Log the current adversarial loss weight."""
-        self.log("training/adv_loss_weight", adv_weight)
+        self.log("training/adv_loss_weight", adv_weight,sync_dist=True)
 
     def _adv_loss_weight(self):
         adv_weight = self._compute_adv_loss_weight()
@@ -731,9 +731,9 @@ class SRGAN_model(pl.LightningModule):
         opt_d = self.trainer.optimizers[0]
         opt_g = self.trainer.optimizers[1]
         self.log("lr_discriminator", opt_d.param_groups[0]["lr"],
-                on_step=True, on_epoch=True, prog_bar=False, logger=True)
+                on_step=True, on_epoch=True, prog_bar=False, logger=True,sync_dist=True)
         self.log("lr_generator", opt_g.param_groups[0]["lr"],
-                on_step=True, on_epoch=True, prog_bar=False, logger=True)
+                on_step=True, on_epoch=True, prog_bar=False, logger=True,sync_dist=True)
     
     def load_from_checkpoint(self,ckpt_path):
         # load ckpt

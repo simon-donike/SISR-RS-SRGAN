@@ -49,6 +49,19 @@ Each section maps directly to parameters consumed inside `model/SRGAN.py`, the d
 | `adv_loss_ramp_steps` | `5000` | Duration of the adversarial weight ramp after the warm-up. |
 | `label_smoothing` | `True` | Replaces target value 1.0 with 0.9 for real examples to stabilise discriminator training. |
 
+### Generator EMA (`Training.EMA`)
+
+Maintaining an exponential moving average (EMA) of the generator smooths out sharp weight updates and usually yields sharper yet
+stable validation imagery. The EMA is fully optional and controlled through the `Training.EMA` block:
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `enabled` | `False` | Turns EMA tracking on/off. When enabled, the EMA weights automatically replace the live generator during evaluation/inference. |
+| `decay` | `0.999` | Smoothing factor applied at every update. Values closer to 1.0 retain longer history. |
+| `update_after_step` | `0` | Defers EMA updates until the given optimiser step. Useful when you want the generator to warm up before tracking. |
+| `device` | `null` | Stores EMA weights on a dedicated device (`"cpu"`, `"cuda:1"`, …). `null` keeps the weights on the same device as the generator. |
+| `use_num_updates` | `True` | Enables PyTorch’s bias correction so the EMA ramps in smoothly during the first few updates. |
+
 ### Generator content loss (`Training.Losses`)
 
 | Key | Default | Description |

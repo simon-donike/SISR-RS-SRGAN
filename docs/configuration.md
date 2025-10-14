@@ -1,119 +1,119 @@
-# Configuration Guide
+# Configuration
 
-Remote-Sensing-SRGAN is intentionally configuration-first. Every YAML file under `configs/` controls the entire experiment lifecycle — from dataset selection to optimiser schedules. This page documents the key sections and explains how they map to the Python implementation.
+ESA OpenSR relies on YAML files to control every aspect of the training pipeline. This page documents the available keys and how
+they influence the underlying code. Use `configs/config_20m.yaml` and `configs/config_10m.yaml` as starting points.
 
-## Anatomy of a config file
+## File structure
 
-Each config follows the same structure as `configs/config_10m.yaml`:
+A typical configuration contains the following top-level sections:
 
-```yaml
---8<-- {"file": "configs/config_10m.yaml", "lines": "12-132"}
+```
+Data:
+Model:
+Training:
+Generator:
+Discriminator:
+Optimizers:
+Schedulers:
+Logging:
 ```
 
-## Data block
+Each section maps directly to parameters consumed inside `model/SRGAN.py`, the dataset factory, or the training script.
 
-The data section controls loader throughput and selects the dataset implementation. The `dataset_type` key is forwarded to `data.data_utils.select_dataset`, which instantiates the proper dataset class and wraps it into a Lightning `DataModule` with the requested batch sizes and worker settings.
+## Data
 
-```python
---8<-- {"file": "data/data_utils.py", "lines": "1-150"}
-```
+| Key | Default | Description |
+| --- | --- | --- |
+| `train_batch_size` | 12 | Mini-batch size for the training dataloader. Falls back to `batch_size` if set. |
+| `val_batch_size` | 8 | Batch size for validation. |
+| `num_workers` | 6 | Number of worker processes for both dataloaders. |
+| `prefetch_factor` | 2 | Additional batches prefetched by each worker. Ignored when `num_workers == 0`. |
+| `dataset_type` | `S2_6b` | Dataset selector consumed by `data.data_utils.select_dataset`. |
 
-### Available dataset types
+## Model
 
-| Key | Description |
-|-----|-------------|
-| `S2_6b` | Loads Sentinel-2 SAFE chips with six 20 m bands (B05, B06, B07, B8A, B11, B12). Histogram-matched low-resolution inputs are synthesised on-the-fly. |
-| `S2_4b` | Reuses the SAFE pipeline for four 10 m bands (B05, B04, B03, B02). Useful for RGB+NIR 4× tasks. |
-| `SISR_WW` | Wraps the SEN2NAIP worldwide dataset for 4× cross-sensor training. Training/validation splits are constructed from a root directory. |
+| Key | Default | Description |
+| --- | --- | --- |
+| `in_bands` | 6 | Number of input channels expected by the generator and discriminator. |
+| `continue_training` | `False` | Path to a Lightning checkpoint for resuming training (`Trainer.fit(resume_from_checkpoint=...)`). |
+| `load_checkpoint` | `False` | Path to a checkpoint used solely for weight initialisation (no training state restored). |
 
-If you introduce a new dataset class, register it by adding another branch to `select_dataset` and exposing a new `dataset_type` value.
+## Training
 
-## Model block
+### Warm-up and adversarial scheduling
 
-The `Model` section captures properties that affect both training and checkpoint management:
+| Key | Default | Description |
+| --- | --- | --- |
+| `pretrain_g_only` | `True` | Enable generator-only warm-up before adversarial updates. |
+| `g_pretrain_steps` | `10000` | Number of optimiser steps spent in the warm-up phase. |
+| `adv_loss_ramp_steps` | `5000` | Duration of the adversarial weight ramp after the warm-up. |
+| `label_smoothing` | `True` | Replaces target value 1.0 with 0.9 for real examples to stabilise discriminator training. |
 
-* `in_bands`: number of channels consumed by the generator and discriminator. This value is forwarded directly when models are instantiated.
-* `load_checkpoint`: path to a Lightning checkpoint whose weights should initialise the model before training begins.
-* `continue_training`: checkpoint to resume including optimiser states and scheduler counters (mapped to `Trainer(resume_from_checkpoint=...)`).
+### Generator content loss (`Training.Losses`)
 
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "62-118"}
-```
+| Key | Default | Description |
+| --- | --- | --- |
+| `adv_loss_beta` | `1e-3` | Target weight applied to the adversarial term after ramp-up. |
+| `adv_loss_schedule` | `sigmoid` | Ramp shape (`linear` or `sigmoid`). |
+| `l1_weight` | `1.0` | Weight of the pixelwise L1 loss. |
+| `sam_weight` | `0.05` | Weight of the spectral angle mapper loss. |
+| `perceptual_weight` | `0.1` | Weight of the perceptual feature loss. |
+| `perceptual_metric` | `vgg` | Backbone used for perceptual features (`vgg` or `lpips`). |
+| `tv_weight` | `0.0` | Total variation regularisation strength. |
+| `max_val` | `1.0` | Peak value assumed by PSNR/SSIM computations. |
+| `ssim_win` | `11` | Window size for SSIM metrics. Must be an odd integer. |
 
-```python
---8<-- {"file": "train.py", "lines": "34-48"}
-```
+## Generator
 
-## Training block
+| Key | Default | Description |
+| --- | --- | --- |
+| `model_type` | `cgan` | Generator architecture (`SRResNet`, `res`, `rcab`, `rrdb`, `lka`, `conditional_cgan`, `cgan`). |
+| `large_kernel_size` | `9` | Kernel size for input/output convolution layers. |
+| `small_kernel_size` | `3` | Kernel size for residual/attention blocks. |
+| `n_channels` | `96` | Base number of feature channels. |
+| `n_blocks` | `32` | Number of residual/attention blocks. |
+| `scaling_factor` | `8` | Super-resolution scale factor (2, 4, 8, ...). |
 
-Training-related switches are consumed inside the Lightning module:
+## Discriminator
 
-* `pretrain_g_only`: number of initial steps where only generator updates run (adversarial term disabled).
-* `g_pretrain_steps`: length of the generator-only warm-up window.
-* `adv_loss_ramp_steps`: number of iterations over which the adversarial loss weight ramps to its target. The schedule shape is controlled by `Losses.adv_loss_schedule`.
-* `label_smoothing`: enables 0.9 real labels in the discriminator to reduce overconfidence.
+| Key | Default | Description |
+| --- | --- | --- |
+| `model_type` | `standard` | Discriminator architecture (`standard` SRGAN or `patchgan`). |
+| `n_blocks` | `8` | Number of convolutional blocks. PatchGAN defaults to 3 when unspecified. |
 
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "34-58"}
-```
+## Optimisers
 
-The nested `Losses` dictionary is passed to `GeneratorContentLoss`, which mixes pixel-space (`l1_weight`), spectral (`sam_weight`), perceptual (`perceptual_weight` with `perceptual_metric`), and total-variation (`tv_weight`) losses. The final adversarial weight after ramp-up is `adv_loss_beta`.
+| Key | Default | Description |
+| --- | --- | --- |
+| `optim_g_lr` | `1e-4` | Learning rate for the generator Adam optimiser. |
+| `optim_d_lr` | `1e-4` | Learning rate for the discriminator Adam optimiser. |
 
-```yaml
---8<-- {"file": "configs/config_10m.yaml", "lines": "35-70"}
-```
+## Schedulers
 
-```python
---8<-- {"file": "model/loss/loss.py", "lines": "1-210"}
-```
+Both optimisers share the same configuration keys because they use `torch.optim.lr_scheduler.ReduceLROnPlateau`.
 
-## Generator and Discriminator blocks
-
-Generator parameters control the backbone constructed in `SRGAN_model.get_models`:
-
-* `model_type`: choose among `SRResNet`, `res`, `rcab`, `rrdb`, `lka`, or conditional GAN variants (`conditional_cgan`/`cgan`). Each path maps to a dedicated class under `model/generators/`.
-* `n_channels`, `n_blocks`: width and depth of the residual trunk. These values are forwarded verbatim to the generator constructors.
-* `scaling_factor`: upsampling factor (2×, 4×, or 8×). Passed into the generator to configure pixel-shuffle stages.
-* `large_kernel_size`, `small_kernel_size`: head/tail and residual block kernel sizes to shape receptive field.
-
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "72-150"}
-```
-
-The discriminator section selects either the classic SRGAN CNN (`standard`) or a PatchGAN variant and optionally specifies convolutional depth via `n_blocks`.
-
-```python
---8<-- {"file": "model/descriminators/srgan_discriminator.py", "lines": "1-71"}
-```
-
-## Optimisers and schedulers
-
-Both the generator and discriminator use Adam optimisers with learning rates read from `Optimizers.optim_g_lr` and `Optimizers.optim_d_lr`. The Lightning module instantiates `ReduceLROnPlateau` schedulers using the parameters provided under `Schedulers` (`metric`, `patience_*`, `factor_*`, `verbose`).
-
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "408-443"}
-```
-
-```yaml
---8<-- {"file": "configs/config_10m.yaml", "lines": "103-132"}
-```
+| Key | Default | Description |
+| --- | --- | --- |
+| `metric` | `val_metrics/l1` | Validation metric monitored for plateau detection. |
+| `patience_g` | `100` | Epochs with no improvement before reducing the generator LR. |
+| `patience_d` | `100` | Epochs with no improvement before reducing the discriminator LR. |
+| `factor_g` | `0.5` | Multiplicative factor applied to the generator LR upon plateau. |
+| `factor_d` | `0.5` | Multiplicative factor applied to the discriminator LR upon plateau. |
+| `verbose` | `True` | Enables scheduler logging messages. |
 
 ## Logging
 
-The `Logging` section controls qualitative outputs. During validation the model logs `num_val_images` panels via TensorBoard and Weights & Biases. The training script also wires in Weights & Biases, TensorBoard, and learning-rate monitors; edit this block if you want fewer images per epoch.
+| Key | Default | Description |
+| --- | --- | --- |
+| `num_val_images` | `5` | Number of validation batches visualised and logged to Weights & Biases each epoch. |
 
-```yaml
---8<-- {"file": "configs/config_10m.yaml", "lines": "128-132"}
-```
+## Tips for managing configurations
 
-```python
---8<-- {"file": "train.py", "lines": "59-93"}
-```
+* **Version control your YAML files.** Tracking them alongside experiment logs makes it easy to reproduce results.
+* **Leverage OmegaConf interpolation.** You can reference other fields (e.g., reuse a base path) to avoid duplication.
+* **Use descriptive filenames.** Include dataset, scale, and generator type in the config name to keep experiments organised.
+* **Override selectively.** When launching through scripts or notebooks, you can load a base config and override specific fields at
+  runtime using `OmegaConf.merge`.
 
-## Tips for custom configs
-
-* Keep configs under version control alongside experiment results — MkDocs can render them for quick reference.
-* Use OmegaConf variable interpolation if you need to reuse values across sections.
-* When experimenting with new datasets, add dataset-specific parameters (paths, band lists) under `Data` and consume them inside your dataset branch.
-* Prefer creating new YAML files rather than editing defaults; the training script accepts any path via `--config`.
-
+With a clear understanding of these fields, you can rapidly iterate on architectures, datasets, and training strategies without
+modifying the underlying code.

@@ -46,6 +46,12 @@ Training:
   adv_loss_ramp_steps: 5000   # Gradual adversarial weight ramp steps
   label_smoothing: True        # Discriminator target smoothing (1.0 → 0.9)
 
+  EMA:
+    enabled: False             # Maintain exponential moving average of generator weights
+    decay: 0.999               # EMA decay factor (closer to 1.0 → smoother updates)
+    update_after_step: 0       # Delay EMA updates until this global step (0 = immediate)
+    use_num_updates: True      # Use adaptive decay warmup based on number of updates
+
   Losses:
     # --- GAN term ---
     adv_loss_beta: 1e-3        # Final adversarial loss weight after ramp-up

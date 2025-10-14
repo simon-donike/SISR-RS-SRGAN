@@ -42,7 +42,7 @@ Training:
   
   # --- Pretraining and adversarial setup ---
   pretrain_g_only: True        # Train generator only for initial phase
-  g_pretrain_steps: 5000     # Number of generator-only warmup steps
+  g_pretrain_steps: 15000     # Number of generator-only warmup steps
   adv_loss_ramp_steps: 2500   # Gradual adversarial weight ramp steps
   label_smoothing: True        # Discriminator target smoothing (1.0 → 0.9)
 
@@ -66,6 +66,7 @@ Training:
 # ============================================================================ #
 # 🧩 ARCHITECTURAL PARAMETERS
 # ---------------------------------------------------------------------------- #
+# See Docs for archtecture details and suggestions
 Generator:
   model_type: 'rcab'           # Block type: ['SRResNet', 'res', 'rcab', 'rrdb', 'lka', 'conditional_cgan'/'cgan']
   large_kernel_size: 9         # Kernel for head and tail conv layers
@@ -90,7 +91,7 @@ Optimizers:
 # 📉 SCHEDULERS AND EARLY STOPPING
 # ---------------------------------------------------------------------------- #
 Schedulers:
-  g_warmup_steps: 1000         # Generator warmup duration in steps (0 disables warmup)
+  g_warmup_steps: 5000        # Generator warmup duration in steps (0 disables warmup)
   g_warmup_type: 'cosine'      # Generator warmup curve: ['cosine', 'linear']
   metric: 'val_metrics/l1'     # Metric monitored for both schedulers
   patience_g: 100              # Patience (epochs) for Generator LR scheduler

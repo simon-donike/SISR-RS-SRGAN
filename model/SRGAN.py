@@ -57,7 +57,11 @@ class SRGAN_model(pl.LightningModule):
         # ======================================================================
         self.get_models()  # dynamically builds and attaches generator + discriminator
 
-        # Optional exponential moving average (EMA) tracking for generator weights
+
+        # ======================================================================
+        # SECTION: Initialize EMA
+        # Purpose: Optional exponential moving average (EMA) tracking for generator weights
+        # ======================================================================
         ema_cfg = getattr(self.config.Training, "EMA", None)
         self.ema: ExponentialMovingAverage | None = None
         self._ema_update_after_step = 0
@@ -70,7 +74,6 @@ class SRGAN_model(pl.LightningModule):
                 self.generator,
                 decay=ema_decay,
                 use_num_updates=use_num_updates,
-                device=ema_device,
             )
             self._ema_update_after_step = int(getattr(ema_cfg, "update_after_step", 0))
 

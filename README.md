@@ -25,6 +25,7 @@ This repository provides:
 * 🛰️ **Flexible inputs**: train on **any band layout** (e.g., S2 RGB‑NIR, 6‑band stacks, or custom multispectral sets). Normalization/denorm utilities provided.
 * ⚖️ **Flexible losses & weights**: combine L1, Spectral Angle Mapper, VGG19 or LPIPS perceptual distances, Total Variation, and a BCE adversarial term with **per‑loss weights**.
 * 🧪 **Robust training strategy**: generator **pretraining**, **linear adversarial loss ramp**, **cosine/linear LR warmup**, and **discriminator update schedules/curves**.
+* 🌀 **Generator EMA tracking**: optional exponential moving average weights for sharper validation and inference results.
 * 📊 **Clear monitoring**: PSNR, SSIM, LPIPS, qualitative panels, and Weights & Biases logging.
 
 ---
@@ -133,6 +134,7 @@ All key knobs are exposed via YAML in the `configs` folder:
 * **G‑only pretraining:** Train with content/perceptual losses while the adversarial term is held at zero during the first `g_pretrain_steps`.
 * **Adversarial ramp‑up:** Increase the BCE adversarial weight **linearly** or smoothly (**sigmoid**) over `adv_loss_ramp_steps` until it reaches `adv_loss_beta`.
 * **Generator LR warmup:** Ramp the generator optimiser with a **cosine** or **linear** schedule for the first 1–5k steps via `Schedulers.g_warmup_steps`/`g_warmup_type` before switching to plateau-based reductions.
+* **EMA smoothing:** Enable `Training.EMA.enabled` to keep a shadow copy of the generator. Decay values in the 0.995–0.9999 range balance responsiveness with stability and are swapped in automatically for validation/inference.
 
 The schedule and ramp make training **easier, safer, and more reproducible**.
 

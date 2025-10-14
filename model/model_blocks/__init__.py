@@ -6,6 +6,8 @@ import math
 import torch
 from torch import nn
 
+from .EMA import ExponentialMovingAverage
+
 __all__ = [
     "ConvolutionalBlock",
     "SubPixelConvolutionalBlock",
@@ -17,6 +19,7 @@ __all__ = [
     "LKA",
     "LKAResBlock",
     "make_upsampler",
+    "ExponentialMovingAverage",
 ]
 
 

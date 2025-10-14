@@ -70,6 +70,7 @@ if __name__ == '__main__':
     from pytorch_lightning.callbacks import ModelCheckpoint
     dir_save_checkpoints = os.path.join(os.path.normpath("logs/"),wandb_project,
                                                 datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    os.makedirs(dir_save_checkpoints, exist_ok=True)
     print("Experiment Path:",dir_save_checkpoints)
     with open(os.path.join(dir_save_checkpoints, "config.yaml"), 'w') as f: # save config to experiment folder
         OmegaConf.save(config, f)

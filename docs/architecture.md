@@ -1,142 +1,99 @@
-# Model Components
+# Architecture
 
-Remote-Sensing-SRGAN builds on a modular Lightning implementation that lets you swap generator and discriminator backbones as well as plug in new loss terms. This section describes the main components and how they interact during training.
+This document outlines how ESA OpenSR organises its super-resolution GAN, the major components that make up the model, and how
+each piece interacts during training and inference.
 
-## Lightning module
+## SRGAN Lightning module
 
-The central `SRGAN_model` class orchestrates the entire training loop.
+`model/SRGAN.py` defines `SRGAN_model`, a `pytorch_lightning.LightningModule` that encapsulates the full adversarial workflow.
+The module is initialised from a YAML configuration file and provides the following responsibilities:
 
-### Initialisation
+* **Configuration ingestion.** Uses OmegaConf to load hyperparameters, dataset choices, and logging options. Convenience helpers
+  such as `_pretrain_check()` and `_compute_adv_loss_weight()` translate config values into runtime behaviour.
+* **Model factory.** `get_models()` builds the generator and discriminator at runtime based on `Generator.model_type` and
+  `Discriminator.model_type`. Unsupported combinations fail fast with clear error messages.
+* **Loss construction.** `GeneratorContentLoss` (from `model.loss`) provides L1, spectral angle mapper (SAM), perceptual, and
+  total-variation terms. Adversarial supervision uses `torch.nn.BCEWithLogitsLoss` with optional label smoothing.
+* **Optimiser scheduling.** `configure_optimizers()` returns paired Adam optimisers (generator + discriminator) with
+  `ReduceLROnPlateau` schedulers that monitor a configurable validation metric.
+* **Training orchestration.** `training_step()` alternates discriminator (`optimizer_idx == 0`) and generator (`optimizer_idx ==
+  1`) updates. During the warm-up period configured by `Training.pretrain_g_only`, discriminator weights are frozen via
+  `on_train_batch_start()` and a dedicated `pretraining_training_step()` computes purely content-driven updates.
+* **Validation and logging.** `validation_step()` computes the same content metrics, logs discriminator diagnostics, and pushes
+  qualitative image panels to Weights & Biases according to `Logging.num_val_images`.
+* **Inference pipeline.** `predict_step()` automatically normalises Sentinel-2 style 0–10000 inputs, runs the generator,
+  histogram matches the result to the low-resolution source, and denormalises if necessary.
 
-Configuration values are loaded through OmegaConf, losses are configured, and a model summary is printed for quick inspection.
+### Key helper methods
 
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "25-71"}
-```
+| Method | Purpose |
+| --- | --- |
+| `_pretrain_check()` | Determines whether the generator-only warm-up is active. |
+| `_compute_adv_loss_weight()` | Produces the ramped adversarial weight using `linear` or `sigmoid` schedules. |
+| `_log_generator_content_loss()` and `_log_adv_loss_weight()` | Centralise logging so metrics remain consistent across phases. |
+| `on_fit_start()` | Prints informative status messages when training begins. |
 
-### Model wiring
+## Generator options
 
-`get_models()` attaches the generator and discriminator variants requested in the YAML configuration.
+The generator zoo lives under `model/generators/` and can be selected via `Generator.model_type` in the configuration.
 
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "72-150"}
-```
+* **`SRResNet` (`srresnet.py`).** Classic residual blocks with pixel shuffle upsampling. Ideal for baseline experiments or when a
+  lightweight architecture is required.
+* **Flexible residual families (`flexible_generator.py`).** Parameterised factory that instantiates residual, RCAB, RRDB, or
+  large-kernel attention blocks while reusing the same interface. Channel counts, block depth, kernel sizes, and scaling factor
+  are all read from the YAML file.
+* **Conditional GAN generator (`cgan_generator.py`).** Extends the flexible generator with conditioning inputs and latent noise,
+  enabling experiments where auxiliary metadata influences the super-resolution output.
+* **Advanced variants (`SRGAN_advanced.py`).** Provides additional block implementations and compatibility aliases exposed in
+  `__init__.py` for backwards compatibility.
 
-### Inference helpers
+Common traits across generators include configurable input channel counts (`Model.in_bands`), support for upscaling factors from
+2× to 8×, and residual scaling to stabilise deeper networks.
 
-`forward` and `predict_step` wrap generator inference with automatic normalisation and histogram matching so predictions align with Sentinel-2 statistics.
+## Discriminator options
 
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "151-192"}
-```
+`model/descriminators/` exposes two complementary discriminators:
 
-### Training hooks
+* **Standard SRGAN discriminator (`srgan_discriminator.py`).** Deep convolutional stack tailored for multispectral imagery. The
+  number of convolutional blocks is configurable through `Discriminator.n_blocks`.
+* **PatchGAN discriminator (`patchgan.py`).** Operates on local patches, which can improve high-frequency fidelity when training
+  with large images. The depth is controlled by `n_blocks` and defaults to three layers.
 
-Lightning hooks drive generator-only pretraining, adversarial ramp-up, and detailed metric logging.
+Both discriminators use LeakyReLU activations and strided convolutions to progressively downsample the input until a real/fake
+logit map is produced.
 
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "195-320"}
-```
+## Loss suite and metrics
 
-## Generator zoo
+`model/loss` contains the perceptual and pixel-based criteria applied to the generator outputs. The primary entry point is
+`GeneratorContentLoss`, which supports:
 
-Pick the generator backbone by setting `Generator.model_type` in the config. The options map to classes under `model/generators/`:
+* **L1 reconstruction** over all spectral bands.
+* **Spectral Angle Mapper (SAM)** to preserve spectral signatures.
+* **Perceptual similarity** via VGG or LPIPS feature spaces, depending on `Training.Losses.perceptual_metric`.
+* **Total variation regularisation** for smoothing when `tv_weight` is non-zero.
 
-| Type | Description |
-|------|-------------|
-| `SRResNet` | Classic SRResNet with residual blocks sans batch norm; a strong baseline for content pretraining.|
-| `res` | Flexible residual blocks with configurable depth/width defined in `FlexibleGenerator` (supports residual scaling).|
-| `rcab` | Residual channel attention blocks for finer texture modelling using the same flexible generator with RCAB building blocks.|
-| `rrdb` | Residual-in-residual dense blocks (ESRGAN-style) for deeper receptive fields, enabled through the flexible generator registry.|
-| `lka` | Large kernel attention variant approximating global receptive fields, useful for broad RS structures.|
-| `conditional_cgan` / `cgan` | Conditional GAN generator that injects latent noise and conditional embeddings in addition to the spectral input.|
+The same module exposes `return_metrics()` so validation can log PSNR/SSIM-style diagnostics without recomputing forward passes.
 
-Each generator consumes `Model.in_bands` channels, expands to `Generator.n_channels` features, and upsamples by `Generator.scaling_factor` using pixel shuffle stages. Kernel sizes (`large_kernel_size`, `small_kernel_size`) tailor the receptive field for remote-sensing textures.
+## Data flow and normalisation
 
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "82-118"}
-```
+The Lightning module expects batches of `(lr_imgs, hr_imgs)` tensors supplied by the `LightningDataModule` returned from
+`data/data_utils.py`. `predict_step()` and the validation hooks rely on two utilities from `utils.spectral_helpers`:
 
-```python
---8<-- {"file": "model/generators/flexible_generator.py", "lines": "1-96"}
-```
+* `normalise_10k`: Converts Sentinel-2 style reflectance values between `[0, 10000]` and `[0, 1]`.
+* `histogram`: Matches the SR histogram to the LR reference to minimise domain gaps during inference.
 
-Specialised blocks (RRDB, RCAB, large-kernel attention) are registered in `model/model_blocks` and consumed by the flexible generator.
+These helpers allow the generator to operate in a normalised space while still reporting outputs in physical units when needed.
 
-```python
---8<-- {"file": "model/model_blocks/__init__.py", "lines": "144-249"}
-```
+## Putting it together
 
-Conditional GAN support routes through the dedicated generator class, which injects noise vectors and optional conditional embeddings.
+1. `train.py` loads the YAML configuration and instantiates `SRGAN_model`.
+2. The model initialises the selected generator/discriminator, prepares losses, and prints a summary via
+   `utils.model_descriptions.print_model_summary`.
+3. During each training batch, the discriminator receives real HR crops and fake SR predictions, while the generator combines
+   content loss and a ramped adversarial term.
+4. Validation reuses the same modules to compute quantitative metrics and log qualitative examples.
+5. When exported, `predict_step()` can be called directly or wrapped in a Lightning `Trainer.predict()` loop for large-scale
+   inference.
 
-```python
---8<-- {"file": "model/generators/cgan_generator.py", "lines": "15-137"}
-```
-
-## Discriminators
-
-Discriminator selection lives under `Discriminator.model_type`. The Lightning module wires either the standard SRGAN CNN or a PatchGAN variant and forwards multi-band inputs without assuming RGB ordering.
-
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "102-150"}
-```
-
-The PatchGAN implementation and supporting building blocks live under `model/descriminators/`.
-
-```python
---8<-- {"file": "model/descriminators/srgan_discriminator.py", "lines": "1-71"}
-```
-
-Because both discriminators receive multi-band inputs, the repo avoids hard-coding RGB assumptions and allows training on arbitrary spectral stacks.
-
-## Losses
-
-Generator training minimises a combination of content and adversarial losses. The Lightning module instantiates both criteria and scales them according to the YAML configuration.
-
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "34-64"}
-```
-
-`GeneratorContentLoss` mixes L1, spectral angle mapper, perceptual metrics, and total variation into a single callable.
-
-```python
---8<-- {"file": "model/loss/loss.py", "lines": "1-210"}
-```
-
-Training warm-ups and adversarial ramp schedules are defined directly in the configuration.
-
-```yaml
---8<-- {"file": "configs/config_10m.yaml", "lines": "35-70"}
-```
-
-## Normalisation and inference helpers
-
-Remote-sensing imagery often arrives as 0–10,000 scaled reflectance. `utils.spectral_helpers` provides `normalise_10k` for scaling to 0–1 and `histogram` for histogram matching. `predict_step` calls both utilities to ensure outputs match the statistical distribution of inputs before returning CPU tensors.
-
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "160-192"}
-```
-
-```python
---8<-- {"file": "utils/spectral_helpers.py", "lines": "53-200"}
-```
-
-## Logging utilities
-
-Qualitative logging is handled via `utils.logging_helpers.plot_tensors`, which renders low-/super-/high-resolution panels for TensorBoard and Weights & Biases. The Lightning module invokes these helpers inside validation hooks so you can monitor spectral fidelity and artefacts during training.
-
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "12-16"}
-```
-
-```python
---8<-- {"file": "utils/logging_helpers.py", "lines": "1-72"}
-```
-
-## Extending the model
-
-* Add new generator families by creating a file under `model/generators/` and wiring it into `SRGAN_model.get_models` plus `model/generators/__init__.py`.
-* Introduce alternative discriminators under `model/descriminators/` and add a new branch in `get_models`.
-* Extend content loss by editing `model/loss/loss.py`; the `GeneratorContentLoss` class already parses weights from the config.
-* For additional logging (e.g., metrics beyond PSNR/SSIM/LPIPS), modify the validation hooks inside `model/SRGAN.py`.
-
+This modular design keeps the research workflow flexible: swap components with configuration changes, extend the factories with
+new architectures, or plug in custom losses without touching the training loop itself.

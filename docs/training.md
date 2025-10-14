@@ -1,81 +1,83 @@
-# Training Workflow
+# Training workflow
 
-Remote-Sensing-SRGAN uses PyTorch Lightning to manage training loops, logging, and checkpointing. This guide explains the runtime workflow, callbacks, and practical tips for stable training on large remote-sensing datasets.
+`train.py` is the canonical entry point for ESA OpenSR experiments. It ties together configuration loading, model instantiation,
+dataset selection, logging, and callbacks. This page explains how the script is organised and how to customise the training loop.
 
-## End-to-end flow
+## Command-line interface
 
-1. **Configuration load:** `train.py` reads the YAML file supplied via `--config` and passes it to `SRGAN_model`.
-2. **Dataset selection:** `select_dataset` constructs train/validation datasets and wraps them into a Lightning `DataModule`. Dataset statistics are printed for sanity.
-3. **Logger setup:** Weights & Biases, TensorBoard, and a learning-rate monitor are initialised. Checkpoints are saved under `logs/<project>/<timestamp>/`.
-4. **Training loop:** `Trainer.fit` launches GPU-accelerated training with callbacks for checkpointing, early stopping, and LR monitoring.
+Run the script with a single optional argument:
 
-```python
---8<-- {"file": "train.py", "lines": "19-113"}
+```bash
+python train.py --config path/to/config.yaml
 ```
 
-```python
---8<-- {"file": "data/data_utils.py", "lines": "1-150"}
-```
+* `--config / -c`: Path to a YAML file describing the experiment. Defaults to `configs/config_20m.yaml`.
 
-## Lightning hooks inside `SRGAN_model`
+The script sets `CUDA_VISIBLE_DEVICES="0"` by default. Override this environment variable before launching if you want to select
+a different GPU or enable multi-GPU training.
 
-* `training_step`: Receives both generator and discriminator optimisers (Lightning’s GAN pattern). Handles generator-only pretraining, adversarial ramp-up, and logging of scalar losses/metrics.
-* `validation_step`: Generates super-resolved outputs for qualitative logging, computes metrics (PSNR, SSIM, LPIPS if configured), and stores them for epoch-level aggregation.
-* `configure_optimizers`: Creates two Adam optimisers plus `ReduceLROnPlateau` schedulers based on config values.
-* `on_validation_epoch_end`: Uses `utils.logging_helpers.plot_tensors` to push LR/SR/HR panels to TensorBoard and Weights & Biases.
+## Initialisation steps
 
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "195-443"}
-```
+1. **Import dependencies.** Torch, PyTorch Lightning, OmegaConf, and logging backends are loaded up-front.
+2. **Parse arguments.** `argparse` reads the configuration path and ensures the file exists.
+3. **Load configuration.** `OmegaConf.load()` parses the YAML file into an object used throughout the run.
+4. **Construct the model.**
+   * If `Model.load_checkpoint` is set, the script calls `SRGAN_model.load_from_checkpoint()` to reuse learned weights while
+     respecting the new configuration values.
+    * Otherwise, it initialises a fresh `SRGAN_model`, which immediately builds the generator/discriminator and prints a
+      parameter summary.
+5. **Resume training (optional).** If `Model.continue_training` points to a Lightning checkpoint, the resulting path is passed to
+   `Trainer(..., resume_from_checkpoint=...)` so optimiser states and schedulers resume where they left off.
 
-```python
---8<-- {"file": "utils/logging_helpers.py", "lines": "1-72"}
-```
+## Data module construction
 
-Inspect `model/SRGAN.py` for detailed comments describing each step of the training loop and logging behaviour.
+`select_dataset(config)` decides which dataset pair to use and wraps them in a `LightningDataModule`. The module inherits batch
+sizes, worker counts, and prefetching parameters from the configuration and prints a summary including dataset size.
 
-## Callbacks and logging
+## Logging setup
 
-`train.py` wires in several Lightning callbacks out of the box:
+* **Weights & Biases.** `WandbLogger` records scalar metrics, adversarial diagnostics, and validation image panels.
+* **TensorBoard.** `TensorBoardLogger` writes the same scalar metrics locally under `logs/<project>/<timestamp>`.
+* **Manual SummaryWriter.** A temporary TensorBoard writer (`logs/tmp`) remains available for quick custom logging if needed.
+
+To disable W&B logging, either remove the logger from the list or unset your API key before launching the script.
+
+## Callbacks
+
+The following callbacks are registered with the Lightning trainer:
 
 | Callback | Purpose |
-|----------|---------|
-| `ModelCheckpoint` | Saves `last.ckpt` and top-2 checkpoints based on `Schedulers.metric` (default: `val_metrics/l1`).|
-| `LearningRateMonitor` | Logs generator/discriminator learning rates each epoch to W&B/TensorBoard.|
-| `EarlyStopping` | Monitors the same validation metric with large patience (250 epochs) to guard against divergence.|
+| --- | --- |
+| `ModelCheckpoint` | Saves the top two checkpoints according to `Schedulers.metric` and always keeps the last epoch. |
+| `LearningRateMonitor` | Logs learning rates for both optimisers every epoch. |
+| `EarlyStopping` | Monitors the same metric as the schedulers with a patience of 250 epochs and finite-check enabled. |
 
-```python
---8<-- {"file": "train.py", "lines": "59-110"}
-```
+Checkpoint directories are nested under the TensorBoard log folder using the W&B project name and a timestamp, making it easy to
+correlate files across tooling.
 
-Weights & Biases is configured with `project="SRGAN_6bands"` and entity `opensr`. Set the `WANDB_PROJECT` or edit the script if you need per-experiment projects. TensorBoard logs are stored in `logs/` alongside W&B run data.
+## Trainer configuration
 
-## Adversarial training schedule
+The script builds a `Trainer` with the following notable arguments:
 
-GAN training is stabilised through three mechanisms:
+* `accelerator='cuda'` and `devices=[0]` for single-GPU runs. Adjust to `devices=[0,1,...]` or use `devices='auto'` for multi-GPU
+  training.
+* `check_val_every_n_epoch=1` to evaluate after every epoch.
+* `limit_val_batches=250` as a safeguard against excessive validation time on large datasets.
+* `logger=[wandb_logger]` to register external logging backends (add `tb_logger` if you prefer TensorBoard-driven monitoring).
+* `callbacks=[checkpoint_callback, early_stop_callback, lr_monitor]` to activate the components described above.
 
-* **Generator pretraining:** For the first `Training.g_pretrain_steps`, only the generator optimiser runs; the discriminator is skipped. This lets the generator learn a strong content prior before adversarial updates start.
-* **Adversarial ramp-up:** After pretraining, the adversarial loss weight increases linearly or sigmoidally over `Training.adv_loss_ramp_steps` until it reaches `Losses.adv_loss_beta`.
-* **Label smoothing:** When `Training.label_smoothing=True`, real labels are reduced to 0.9 to prevent discriminator overconfidence.
-
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "34-58"}
-```
-
-```yaml
---8<-- {"file": "configs/config_10m.yaml", "lines": "35-70"}
-```
-
-These heuristics reduce mode collapse and stabilise training on multi-spectral inputs where illumination and texture vary drastically between bands.
+Finally, `trainer.fit(model, datamodule=pl_datamodule)` launches the optimisation loop and `wandb.finish()` ensures clean shutdown
+of the W&B session.
 
 ## Practical tips
 
-* Monitor PSNR/SSIM/LPIPS in W&B to detect spectral artefacts early. If LPIPS diverges while PSNR improves, consider increasing `Losses.perceptual_weight`.
-* Use moderate `train_batch_size` values (8–16) to balance GPU utilisation and dataset variety. Increase `Data.prefetch_factor` when `num_workers > 0` to keep GPUs busy.
+* **Gradient stability.** Tune `Training.pretrain_g_only`, `g_pretrain_steps`, and `adv_loss_ramp_steps` when experimenting with
+  new generator architectures. Longer warm-ups often help deeper networks converge.
+* **Checkpoint hygiene.** Periodically prune the timestamped checkpoint directories to reclaim disk space, especially after
+  exploratory runs.
+* **Validation images.** Reduce `Logging.num_val_images` if logging slows down training, or set it to zero to disable qualitative
+  logging entirely.
+* **Experiment tracking.** Use descriptive W&B run names by exporting `WANDB_NAME="S2_8x_rrdb"` before launching the script.
 
-```python
---8<-- {"file": "data/data_utils.py", "lines": "97-150"}
-```
-* To benchmark architectures quickly, reuse trained generators by setting `Model.load_checkpoint` and adjusting only the discriminator or loss weights.
-* Keep an eye on GPU memory when scaling `Generator.n_blocks` and `n_channels`; RRDB and LKA variants are heavier than SRResNet.
-
+With these components understood, you can safely modify the trainer arguments, replace callbacks, or integrate advanced logging
+without losing the benefits of the existing automation.

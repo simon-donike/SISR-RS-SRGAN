@@ -1,77 +1,53 @@
+# ESA OpenSR
 
-# Remote-Sensing SRGAN
+![Super-resolved Sentinel-2 example](../resources/x8_6band_example_1.png)
 
-Remote-Sensing-SRGAN is a research-grade training stack for single-image super-resolution (SISR) of multispectral satellite imagery. It wraps a flexible generator/discriminator design, configurable loss suite, and remote-sensing specific data pipelines behind a configuration-first workflow. The implementation is optimised for Sentinel-2 but can be adapted to other sensors that provide paired low-/high-resolution observations.
+ESA OpenSR is an end-to-end research stack for single-image super-resolution (SISR) of multispectral Earth observation data. The
+project packages a robust SRGAN implementation together with remote-sensing focused preprocessing, evaluation, and experiment
+management utilities. It grew out of production work on Sentinel-2 imagery and is designed to be easily adapted to other satellites
+and aerial sensors that provide paired low- and high-resolution observations.
 
-!!! info "Why another SRGAN?"
-    Training GANs on multi-band Earth observation data is notoriously brittle. This project codifies the training heuristics that have proven stable in production — generator pretraining, adversarial weight ramp-up, and configurable discriminator cadence — while exposing every knob through YAML. The goal is to make it easy to reproduce remote-sensing SR experiments without rewriting boilerplate.
+## What makes ESA OpenSR different?
 
-## Project highlights
+* **Remote-sensing aware design.** Normalisation, histogram matching, and band handling are all tuned for common Sentinel-2 value
+  ranges and spectral characteristics so you can train without rewriting boilerplate.
+* **Config-driven experimentation.** Every major architectural or training choice is exposed through YAML. Switching between
+  generator backbones, loss weights, or datasets is a matter of editing a few fields.
+* **Production-ready training loop.** PyTorch Lightning wraps the adversarial optimisation, warm-start schedules, checkpointing,
+  logging, and multi-GPU friendly data loading.
+* **Extensible generator and discriminator zoo.** Choose from SRResNet, residual channel attention (RCAB), RRDB, large-kernel
+  attention, and conditional GAN variants, with matching discriminators ranging from classic SRGAN to PatchGAN.
 
-### Flexible generator zoo
+## Repository tour
 
-Choose between SRResNet, residual, RCAB, RRDB, large-kernel attention, or conditional GAN backbones with scale factors from 2×–8×.
+| Path | Description |
+| --- | --- |
+| `model/` | Lightning module, generator and discriminator implementations, and loss definitions. |
+| `data/` | Dataset wrappers and helper utilities for Sentinel-2 SAFE archives and the SEN2NAIP world-wide corpus. |
+| `configs/` | Ready-to-run YAML presets for 10 m and 20 m Sentinel-2 training configurations. |
+| `utils/` | Logging helpers, spectral normalisation utilities, and model summary functions used across the stack. |
+| `train.py` | Command-line entry point that wires configuration, data module, loggers, and the Lightning trainer together. |
 
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "72-118"}
-```
+## Typical workflow
 
-### Pluggable losses
+1. **Pick a configuration.** Start from `configs/config_20m.yaml` or `configs/config_10m.yaml` and adjust dataset paths, scale,
+   and architecture selections to match your experiment.
+2. **Prepare datasets.** Point the config to a Sentinel-2 SAFE manifest or the SEN2NAIP worldwide dataset and verify that the
+   required bands exist on disk (see [Data](data.md)).
+3. **Launch training.** Run `python train.py --config <path>` to instantiate the Lightning module, configure optimisers and
+   callbacks, and start adversarial training (see [Training](training.md)).
+4. **Monitor progress.** Use the included Weights & Biases and TensorBoard logging to track perceptual losses, adversarial
+   metrics, and validation imagery.
+5. **Deploy or evaluate.** The Lightning module exposes `predict_step` for batched inference, automatically normalising inputs and
+   matching output histograms to the low-resolution source.
 
-Pixel, spectral, perceptual, adversarial, and total-variation terms can be mixed with independent weights and activation schedules.
+## Learn more
 
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "34-58"}
-```
+* [Architecture](architecture.md) explains how the Lightning module orchestrates generators, discriminators, and losses.
+* [Configuration](configuration.md) documents every YAML field and how it influences training.
+* [Data](data.md) details the supported datasets and how to integrate your own.
+* [Getting started](getting-started.md) walks through environment setup and the first training run.
+* [Training](training.md) covers logging, callbacks, and practical tips for stable optimisation.
 
-```yaml
---8<-- {"file": "configs/config_10m.yaml", "lines": "35-70"}
-```
-
-### Remote-sensing ready datasets
-
-Sentinel-2 SAFE windowing and the SEN2NAIP worldwide pairs are built in, with Lightning datamodules created on the fly from the configuration.
-
-```python
---8<-- {"file": "data/data_utils.py", "lines": "1-95"}
-```
-
-### Stabilised training flow
-
-Generator-only warm-up, adversarial ramp-up, discriminator scheduling, and Lightning callbacks are wired into the training script.
-
-```python
---8<-- {"file": "train.py", "lines": "19-93"}
-```
-
-### Comprehensive logging
-
-TensorBoard visualisations, Weights & Biases tracking, and qualitative inspection panels are emitted during training.
-
-```python
---8<-- {"file": "model/SRGAN.py", "lines": "12-16"}
-```
-
-```python
---8<-- {"file": "train.py", "lines": "59-93"}
-```
-
-## Repository layout
-
-```
-SISR-RS-SRGAN/
-├── configs/              # YAML experiment definitions
-├── data/                 # Dataset implementations and helpers
-├── model/                # LightningModule, generators, discriminators, losses
-├── utils/                # Logging and spectral utilities
-├── train.py              # Training entry point
-└── docs/                 # MkDocs site (you are here)
-```
-
-## Next steps
-
-* Head to [Getting Started](getting-started.md) for environment setup and the minimal training command.
-* Review the [Configuration Guide](configuration.md) to understand every YAML switch.
-* Dive into [Model Components](architecture.md) for generator and discriminator details.
-* Explore [Data Pipelines](data.md) for dataset specifics and extension tips.
-
+Whether you are reproducing published results or exploring new remote-sensing modalities, ESA OpenSR gives you a clear and
+extensible foundation for multispectral super-resolution research.

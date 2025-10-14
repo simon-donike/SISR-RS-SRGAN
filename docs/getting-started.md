@@ -70,8 +70,9 @@ Training resumes automatically if `Model.continue_training` points to a Lightnin
 * **Inference** on new low-resolution tiles can reuse the Lightning module:
   ```python
   from model.SRGAN import SRGAN_model
-  model = SRGAN_model.load_from_checkpoint("path/to/checkpoint.ckpt")
-  sr_tiles = model.predict_step(lr_tiles)
+  model = SRGAN_model("your_config.yaml") # instanciate model
+  model.load_from_checkpoint("path/to/checkpoint.ckpt") # load weights
+  sr_tiles = model.predict_step(lr_tiles) # run SR on LR
   ```
   The helper automatically normalises Sentinel-2 ranges, applies histogram matching, and denormalises outputs for easier
   comparison with the source imagery.

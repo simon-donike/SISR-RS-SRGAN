@@ -9,7 +9,7 @@
 ---
 
 ## 📖 Documentation
-New: (documentation)[srgan.opensr.eu/].
+New: [documentation](srgan.opensr.eu/).
 
 ## 🧠 Overview
 

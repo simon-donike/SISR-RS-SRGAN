@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import kornia.metrics as km
 
-from utils.spectral_helpers import sen2_stretch
+from data.utils import Normalizer
 
 def _cfg_get(cfg, keys, default=None):
     cur = cfg
@@ -64,6 +64,9 @@ class GeneratorContentLoss(nn.Module):
         for p in self.perceptual_model.parameters():
             p.requires_grad = False
         self.perceptual_model.eval()
+
+        # Shared normalizer for computing evaluation metrics
+        self.normalizer = Normalizer(cfg)
 
     # ---------- public API ----------
     def return_loss(
@@ -182,8 +185,8 @@ class GeneratorContentLoss(nn.Module):
 
         # --- Quality metrics ---
         with torch.no_grad():
-            sr_metric = sen2_stretch(sr)
-            hr_metric = sen2_stretch(hr)
+            sr_metric = self.normalizer.normalize(sr)
+            hr_metric = self.normalizer.normalize(hr)
             psnr = km.psnr(sr_metric, hr_metric, max_val=self.max_val)
             ssim = km.ssim(
                 sr_metric,

@@ -30,7 +30,6 @@ class ExponentialMovingAverage:
 
         self.decay = float(decay)
         self.num_updates = 0 if use_num_updates else None
-        self.last_decay = float(decay)
         self.device = torch.device(device) if device is not None else None
 
         self.shadow_params: Dict[str, torch.Tensor] = {}
@@ -63,8 +62,6 @@ class ExponentialMovingAverage:
             decay = min(self.decay, (1 + self.num_updates) / (10 + self.num_updates))
         else:
             decay = self.decay
-
-        self.last_decay = float(decay)
 
         one_minus_decay = 1.0 - decay
 
@@ -158,7 +155,6 @@ class ExponentialMovingAverage:
 
         return {
             "decay": self.decay,
-            "last_decay": self.last_decay,
             "num_updates": self.num_updates,
             "device": str(self.device) if self.device is not None else None,
             "shadow_params": {k: v.detach().cpu() for k, v in self.shadow_params.items()},
@@ -169,7 +165,6 @@ class ExponentialMovingAverage:
         """Load EMA statistics from ``state_dict``."""
 
         self.decay = float(state_dict["decay"])
-        self.last_decay = float(state_dict.get("last_decay", self.decay))
         self.num_updates = state_dict["num_updates"]
         device_str = state_dict.get("device", None)
         self.device = torch.device(device_str) if device_str is not None else None

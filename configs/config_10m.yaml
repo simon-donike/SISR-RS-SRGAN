@@ -90,6 +90,8 @@ Optimizers:
 # 📉 SCHEDULERS AND EARLY STOPPING
 # ---------------------------------------------------------------------------- #
 Schedulers:
+  g_warmup_steps: 2000         # Generator warmup duration in steps (0 disables warmup)
+  g_warmup_type: 'cosine'      # Generator warmup curve: ['cosine', 'linear']
   metric: 'val_metrics/l1'     # Metric monitored for both schedulers
   patience_g: 100              # Patience (epochs) for Generator LR scheduler
   patience_d: 100              # Patience (epochs) for Discriminator LR scheduler

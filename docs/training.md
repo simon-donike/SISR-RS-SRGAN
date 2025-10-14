@@ -73,6 +73,9 @@ of the W&B session.
 
 * **Gradient stability.** Tune `Training.pretrain_g_only`, `g_pretrain_steps`, and `adv_loss_ramp_steps` when experimenting with
   new generator architectures. Longer warm-ups often help deeper networks converge.
+* **Learning-rate warmup.** `Schedulers.g_warmup_steps` and `Schedulers.g_warmup_type` apply a step-wise warmup (cosine or linear)
+  to the generator LR before handing control back to the plateau scheduler. Start with 1–5k steps to avoid shocking freshly
+  initialised weights.
 * **Checkpoint hygiene.** Periodically prune the timestamped checkpoint directories to reclaim disk space, especially after
   exploratory runs.
 * **Validation images.** Reduce `Logging.num_val_images` if logging slows down training, or set it to zero to disable qualitative

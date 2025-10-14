@@ -25,6 +25,7 @@ This repository provides:
 * 🛰️ **Flexible inputs**: train on **any band layout** (e.g., S2 RGB‑NIR, 6‑band stacks, or custom multispectral sets). Normalization/denorm utilities provided.
 * ⚖️ **Flexible losses & weights**: combine L1, Spectral Angle Mapper, VGG19 or LPIPS perceptual distances, Total Variation, and a BCE adversarial term with **per‑loss weights**.
 * 🧪 **Robust training strategy**: generator **pretraining**, **linear adversarial loss ramp**, **cosine/linear LR warmup**, and **discriminator update schedules/curves**.
+* ⚡ **Multi-GPU acceleration**: run Lightning's DDP backend out of the box by listing multiple GPU IDs in `Training.gpus` for dramatically faster epochs on capable machines.
 * 🌀 **Generator EMA tracking**: optional exponential moving average weights for sharper validation and inference results.
 * 📊 **Clear monitoring**: PSNR, SSIM, LPIPS, qualitative panels, and Weights & Biases logging.
 
@@ -99,6 +100,8 @@ Train the GAN model.
 ```bash
 python train.py --config configs/config.yaml
 ```
+
+Multi-GPU training is enabled by setting `Training.gpus` in your config to a list of device indices (e.g. `[0, 1, 2, 3]`). The trainer automatically switches to Distributed Data Parallel (DDP), yielding significantly faster wall-clock times when scaling out across multiple GPUs.
 
 ### 2) Inference on Large Scenes
 

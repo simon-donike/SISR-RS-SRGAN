@@ -9,16 +9,16 @@
 ---
 
 ## 📖 Documentation
-New: [documentation](srgan.opensr.eu/).
+*New*: [Documentation!](https://www.srgan.opensr.eu/)
 
 ## 🧠 Overview
 
 This repository provides:
 
 * **Training code** for SRGAN‑style models tailored to remote sensing.
-* A **flexible generator** with multiple block implementations and pluggable depths/widths.
+* A **flexible generator and discriminator** with multiple block implementations and pluggable depths/widths.
 * **Configurable losses** (content/perceptual/adversarial) with fully exposed **loss weights**.
-* A **stabilized GAN procedure** (G‑only pretraining → adversarial ramp‑up → scheduled D updates) that makes RS‑SR training more reliable.
+* A **stabilized GAN procedure** (G‑only pretraining → adversarial ramp‑up → scheduled D , EMA weights) that makes RS‑SR training more reliable.
 * Smooth integration with the **OpenSR** ecosystem for data handling, evaluation, and large‑scene inference.
 * **Configuration‑first workflow**: everything — from generator/discriminator choices to loss weights and warmup length — is selectable in `configs/config.yaml`.
 

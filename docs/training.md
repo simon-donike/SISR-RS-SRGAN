@@ -41,6 +41,45 @@ sizes, worker counts, and prefetching parameters from the configuration and prin
 
 To disable W&B logging, either remove the logger from the list or unset your API key before launching the script.
 
+## Metrics
+
+The Lightning module pushes the same scalar streams to both TensorBoard and W&B so you can monitor convergence from either
+interface. Generator-only pretraining, adversarial training, and the EMA helper each contribute their own indicators, so the
+dashboard quickly reveals which subsystem is active at any given step.
+
+| Metric | Description | Expected behaviour |
+| --- | --- | --- |
+| `training/pretrain_phase` | Flag indicating whether the generator-only warm-up is running. | Stays at `1` until `g_pretrain_steps` elapses, then remains `0`. |
+| `discriminator/adversarial_loss` | Binary cross-entropy loss of the discriminator on real vs. fake batches. | Drops below ~0.7 as the discriminator learns; continues trending down when D keeps up. |
+| `discriminator/D(y)_prob` | Mean discriminator confidence that HR inputs are real. | Rises toward 0.8–1.0 during stable training. |
+| `discriminator/D(G(x))_prob` | Mean discriminator confidence that SR predictions are real. | Starts low (~0.0–0.2) and climbs toward 0.5 as the generator improves. |
+| `train_metrics/l1` | Mean absolute error between SR and HR tensors. | Decreases toward 0 as reconstructions sharpen. |
+| `train_metrics/sam` | Spectral angle mapper (radians) averaged over pixels. | Falls toward 0; values <0.1 indicate strong spectral fidelity. |
+| `train_metrics/perceptual` | Perceptual distance (VGG or LPIPS) on selected RGB bands. | Decreases as textures align; exact range depends on the chosen metric. |
+| `train_metrics/tv` | Total variation penalty capturing SR smoothness. | Remains small; near-zero means little high-frequency noise. |
+| `train_metrics/psnr` | Peak signal-to-noise ratio (dB) on normalised tensors. | Climbs above 20 dB early; mature models reach 25–35 dB depending on data. |
+| `train_metrics/ssim` | Structural Similarity Index (0–1). | Increases toward 1.0; >0.8 is typical for converged runs. |
+| `generator/content_loss` | Weighted content portion of the generator objective. | Mirrors the trend of `train_metrics/*` losses and should steadily decline. |
+| `generator/total_loss` | Sum of content and adversarial terms used to update the generator. | Tracks `generator/content_loss` early, then stabilises once adversarial weight ramps in. |
+| `val_metrics/l1` | Validation MAE. | Should roughly match `train_metrics/l1`; lower is better. |
+| `val_metrics/sam` | Validation SAM. | Mirrors the training trend; values <0.1 rad indicate good spectra. |
+| `val_metrics/perceptual` | Validation perceptual distance. | Declines as validation textures improve. |
+| `val_metrics/tv` | Validation total variation. | Stays low; spikes may signal noisy SR outputs. |
+| `val_metrics/psnr` | Validation PSNR. | Rises with image quality; plateaus signal convergence. |
+| `val_metrics/ssim` | Validation SSIM. | Increases toward 1.0; >0.85 suggests good structural reconstructions. |
+| `validation/DISC_adversarial_loss` | Discriminator loss evaluated on validation batches. | Tracks the training discriminator loss; large swings may hint at instability. |
+| `training/adv_loss_weight` | Instantaneous adversarial weight applied to the generator loss. | Sits at 0 during pretrain and ramps to `Training.Losses.adv_loss_beta`. |
+| `lr_discriminator` | Learning rate used for the discriminator optimiser. | Starts at `Optimizers.optim_d_lr` and changes only when schedulers trigger. |
+| `lr_generator` | Learning rate used for the generator optimiser. | Starts at `Optimizers.optim_g_lr` and follows warm-up/plateau scheduling. |
+| `EMA/enabled` | Indicates whether the exponential moving average helper is active. | Constant `1` when EMA is configured, otherwise `0`. |
+| `EMA/decay` | EMA decay coefficient applied to generator weights. | Fixed to the configured decay (e.g. 0.995–0.9999). |
+| `EMA/update_after_step` | Step index after which EMA updates start. | Constant equal to `Training.EMA.update_after_step`. |
+| `EMA/use_num_updates` | Flag showing whether the EMA tracks the number of applied updates. | `1` when `use_num_updates=True`, else `0`. |
+| `EMA/is_active` | Per-step indicator that the EMA performed an update. | `0` until the warm-up expires, then `1` on steps where EMA applies. |
+| `EMA/steps_until_activation` | Countdown of steps remaining before EMA activation. | Decrements to 0 and stays there once active. |
+| `EMA/last_decay` | Effective decay used on the latest EMA update. | Matches the configured decay whenever the EMA updates. |
+| `EMA/num_updates` | Total count of EMA updates applied so far. | Monotonically increases after activation when `use_num_updates=True`. |
+
 ## Callbacks
 
 The following callbacks are registered with the Lightning trainer:

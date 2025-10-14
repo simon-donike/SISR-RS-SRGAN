@@ -4,13 +4,20 @@ def print_model_summary(self):
     Includes architecture info, resolution scale, training parameters, loss weights, and model sizes.
     """
 
-    # --- helper to count parameters (in millions) ---
-    def count_params(model):
+    # --- helpers to count parameters (in millions) ---
+    def count_trainable_params(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6
 
-    g_params = count_params(self.generator)
-    d_params = count_params(self.discriminator)
-    total_params = g_params + d_params
+    def count_total_params(model):
+        return sum(p.numel() for p in model.parameters()) / 1e6
+
+    g_trainable = count_trainable_params(self.generator)
+    g_total = count_total_params(self.generator)
+    d_trainable = count_trainable_params(self.discriminator)
+    d_total = count_total_params(self.discriminator)
+
+    total_trainable = g_trainable + d_trainable
+    total_all = g_total + d_total
 
     # ------------------------------------------------------------------
     # Derive human-readable generator description
@@ -113,7 +120,7 @@ def print_model_summary(self):
     # Summary
     # ------------------------------------------------------------------
     print(f"📊 Model Summary")
-    print(f"   • Total Trainable Params: {total_params:.2f} M")
+    print(f"   • Total Params:           {total_all:.2f} M")
+    print(f"   • Total Trainable Params: {total_trainable:.2f} M")
     print(f"   • Device:                 {self.device if hasattr(self, 'device') else 'Not set'}")
-    print(f"   • Config File:            {getattr(self.config, '_metadata', 'YAML file')}")
     print("=" * 90 + "\n")

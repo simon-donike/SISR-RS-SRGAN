@@ -129,7 +129,7 @@ class SRGAN_model(pl.LightningModule):
         n_blocks = getattr(self.config.Discriminator, 'n_blocks', None)
 
         if discriminator_type == 'standard':
-            from model.descriminators.srgan_discriminator import Discriminator
+            from model.discriminators.srgan_discriminator import Discriminator
 
             discriminator_kwargs = {
                 "in_channels": self.config.Model.in_bands,
@@ -139,7 +139,7 @@ class SRGAN_model(pl.LightningModule):
 
             self.discriminator = Discriminator(**discriminator_kwargs)
         elif discriminator_type == 'patchgan':
-            from model.descriminators.patchgan import PatchGANDiscriminator
+            from model.discriminators.patchgan import PatchGANDiscriminator
 
             patchgan_layers = n_blocks if n_blocks is not None else 3
             self.discriminator = PatchGANDiscriminator(

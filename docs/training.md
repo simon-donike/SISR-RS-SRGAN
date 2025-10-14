@@ -13,8 +13,7 @@ python train.py --config path/to/config.yaml
 
 * `--config / -c`: Path to a YAML file describing the experiment. Defaults to `configs/config_20m.yaml`.
 
-The script sets `CUDA_VISIBLE_DEVICES="0"` by default. Override this environment variable before launching if you want to select
-a different GPU or enable multi-GPU training.
+GPU assignment is handled directly in the configuration. Set `Training.gpus` to a list of device indices (for example `[0, 1, 2, 3]`) to enable multi-GPU training; a single value such as `[0]` keeps the run on one card. When more than one device is listed the trainer automatically activates PyTorch Lightning's Distributed Data Parallel (DDP) backend for significantly faster epochs.
 
 ## Initialisation steps
 
@@ -59,8 +58,8 @@ correlate files across tooling.
 
 The script builds a `Trainer` with the following notable arguments:
 
-* `accelerator='cuda'` and `devices=[0]` for single-GPU runs. Adjust to `devices=[0,1,...]` or use `devices='auto'` for multi-GPU
-  training.
+* `accelerator='cuda'` with `devices=config.Training.gpus`. When more than one device index is provided the script selects the
+  `ddp` strategy automatically, so scaling across multiple GPUs is as simple as enumerating them in the config.
 * `check_val_every_n_epoch=1` to evaluate after every epoch.
 * `limit_val_batches=250` as a safeguard against excessive validation time on large datasets.
 * `logger=[wandb_logger]` to register external logging backends (add `tb_logger` if you prefer TensorBoard-driven monitoring).

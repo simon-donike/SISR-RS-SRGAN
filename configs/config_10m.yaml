@@ -18,7 +18,7 @@ Data:
 
   # Dataset configuration
   dataset_type: 'SISR_WW'       # Choose dataset type: ['cv', 'SPOT6', 'S2_6b', 'SISR_WW']
-  normalization: 'sen2_stretch' # Normalization strategy for data processing
+  normalization: 'normalise_10k' # Normalization strategy for data processing
 
 
 # ============================================================================ #

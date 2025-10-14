@@ -7,7 +7,7 @@ from typing import Any
 
 import torch
 
-from utils.spectral_helpers import sen2_stretch
+from utils.spectral_helpers import normalise_10k, sen2_stretch
 
 
 @dataclass
@@ -31,11 +31,12 @@ class Normalizer:
     helpers that downstream components can reuse without importing
     :mod:`utils.spectral_helpers` directly.
 
-    Only ``"sen2_stretch"`` is supported at the moment which maps Sentinel-2
-    reflectance data to an expanded contrast range.
+    Supported methods include Sentinel-2 specific helpers such as
+    ``"sen2_stretch"`` (contrast stretch) and ``"normalise_10k"`` (scale
+    reflectance-like values stored in the ``[0, 10000]`` range).
     """
 
-    _SUPPORTED_METHODS = {"sen2_stretch"}
+    _SUPPORTED_METHODS = {"normalise_10k", "sen2_stretch"}
 
     def __init__(self, config: Any):
         data_cfg = getattr(config, "Data", None)
@@ -48,6 +49,8 @@ class Normalizer:
             method = "sen2_stretch"
 
         method = str(method).strip().lower()
+        if method == "normalize_10k":
+            method = "normalise_10k"
         if method not in self._SUPPORTED_METHODS:
             supported = ", ".join(sorted(self._SUPPORTED_METHODS))
             raise ValueError(
@@ -67,6 +70,8 @@ class Normalizer:
 
         if self.method == "sen2_stretch":
             return sen2_stretch(tensor)
+        if self.method == "normalise_10k":
+            return normalise_10k(tensor, stage="norm")
         raise RuntimeError(f"Unhandled normalization method: {self.method}")
 
     def denormalize(self, tensor: torch.Tensor) -> torch.Tensor:
@@ -74,4 +79,6 @@ class Normalizer:
 
         if self.method == "sen2_stretch":
             return torch.clamp(tensor * (3.0 / 10.0), 0.0, 1.0)
+        if self.method == "normalise_10k":
+            return normalise_10k(tensor, stage="denorm")
         raise RuntimeError(f"Unhandled normalization method: {self.method}")

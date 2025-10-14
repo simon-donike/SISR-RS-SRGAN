@@ -57,7 +57,11 @@ class SRGAN_model(pl.LightningModule):
         # ======================================================================
         self.get_models()  # dynamically builds and attaches generator + discriminator
 
-        # Optional exponential moving average (EMA) tracking for generator weights
+
+        # ======================================================================
+        # SECTION: Initialize EMA
+        # Purpose: Optional exponential moving average (EMA) tracking for generator weights
+        # ======================================================================
         ema_cfg = getattr(self.config.Training, "EMA", None)
         self.ema: ExponentialMovingAverage | None = None
         self._ema_update_after_step = 0
@@ -70,7 +74,6 @@ class SRGAN_model(pl.LightningModule):
                 self.generator,
                 decay=ema_decay,
                 use_num_updates=use_num_updates,
-                device=ema_device,
             )
             self._ema_update_after_step = int(getattr(ema_cfg, "update_after_step", 0))
 
@@ -254,7 +257,7 @@ class SRGAN_model(pl.LightningModule):
 
             # Binary Cross-Entropy loss
             loss_real = self.adversarial_loss_criterion(hr_discriminated, real_target)   # BCEWithLogitsLoss for D(G(x))
-            loss_fake = self.adversarial_loss_criterion(sr_discriminated, fake_target)  # BCEWithLogitsLoss for D(x)
+            loss_fake = self.adversarial_loss_criterion(sr_discriminated, fake_target)  # BCEWithLogitsLoss for D(y)
             adversarial_loss = loss_real + loss_fake # Sum up losses
             self.log("discriminator/adversarial_loss",adversarial_loss,sync_dist=True) # log weighted loss
 
@@ -262,8 +265,8 @@ class SRGAN_model(pl.LightningModule):
             with torch.no_grad():
                 d_real_prob = torch.sigmoid(hr_discriminated).mean()   # estimate mean real probability
                 d_fake_prob = torch.sigmoid(sr_discriminated).mean()   # estimate mean fake probability
-            self.log("discriminator/D(x)_prob_mean", d_real_prob, prog_bar=True,sync_dist=True)      # log D(real) confidence
-            self.log("discriminator/D(G(z))_prob_mean", d_fake_prob, prog_bar=True,sync_dist=True)   # log D(fake) confidence
+            self.log("discriminator/D(y)_prob", d_real_prob, prog_bar=True,sync_dist=True)      # log D(real) confidence
+            self.log("discriminator/D(G(x))_prob", d_fake_prob, prog_bar=True,sync_dist=True)   # log D(fake) confidence
 
             # return weighted discriminator loss
             return adversarial_loss                                # PL will use this to step the D optimizer
@@ -311,12 +314,12 @@ class SRGAN_model(pl.LightningModule):
         optimizer.step(closure=optimizer_closure)
         optimizer.zero_grad()
 
-        ema_updated = False
-        if self.ema is not None and optimizer_idx == 1:
-            if self.global_step >= self._ema_update_after_step:
-                self.ema.update(self.generator)
-                ema_updated = True
-            self._log_ema_step_metrics(updated=ema_updated)
+        if (
+            self.ema is not None
+            and optimizer_idx == 1
+            and self.global_step >= self._ema_update_after_step
+        ):
+            self.ema.update(self.generator)
 
     def pretraining_training_step(self, *, lr_imgs, hr_imgs, sr_imgs, optimizer_idx):
         """
@@ -349,8 +352,8 @@ class SRGAN_model(pl.LightningModule):
             zero = torch.tensor(0.0, device=device, dtype=dtype)                       # define reusable zero tensor
 
             # --- Log dummy discriminator "opinions" (always zero during pretrain) ---
-            self.log("discriminator/D(x)_prob_mean",    zero, prog_bar=True,  sync_dist=True)  # fake real-prob (always 0)
-            self.log("discriminator/D(G(z))_prob_mean", zero, prog_bar=True,  sync_dist=True)  # fake fake-prob (always 0)
+            self.log("discriminator/D(y)_prob",    zero, prog_bar=True,  sync_dist=True)  # fake real-prob (always 0)
+            self.log("discriminator/D(G(x))_prob", zero, prog_bar=True,  sync_dist=True)  # fake fake-prob (always 0)
 
             # --- Create dummy scalar loss (ensures PL closure runs) ---
             dummy = torch.zeros((), device=device, dtype=dtype, requires_grad=True)    # dummy value with grad for optimizer compatibility
@@ -544,8 +547,6 @@ class SRGAN_model(pl.LightningModule):
 
         if self.ema is not None and self.ema.device is None:
             self.ema.to(self.device)
-
-        self._log_ema_setup_metrics()
 
     def _log_generator_content_loss(self, content_loss: torch.Tensor) -> None:
         """Helper to consistently log the generator content loss across training phases."""

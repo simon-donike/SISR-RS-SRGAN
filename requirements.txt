@@ -15,6 +15,7 @@ rasterio
 scikit-image
 Pillow
 
-# Optional extras (enable additional metrics/data loaders)
-# lpips
-# tacoreader
+# Optional extras (enable additional metrics/data loaders,inference)
+#lpips
+#tacoreader
+#opensr_utils

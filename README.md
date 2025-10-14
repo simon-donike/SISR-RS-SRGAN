@@ -1,5 +1,7 @@
 <img src="https://github.com/ESAOpenSR/opensr-model/blob/main/resources/opensr_logo.png?raw=true" width="250"/>
 
+![banner](docs/assets/6band_banner.png)
+
 # 🌍 Single Image Super-Resolution Remote Sensing 'SRGAN'
 
 **Description:** **Remote-Sensing-SRGAN** is a flexible, research‑grade GAN framework for **super‑resolution (SR) of Sentinel‑2 and other remote‑sensing imagery**. It supports **arbitrary input band counts**, **configurable architectures**, **scalable depth/width**, and a **modular loss system**—with a robust training strategy (generator pretraining, adversarial ramp‑up, and discriminator schedules) that **stabilizes traditionally sensitive GAN training on EO data**.
@@ -129,10 +131,9 @@ All key knobs are exposed via YAML in the `configs` folder:
 ## 🎚️ Training Stabilization Strategies
 
 * **G‑only pretraining:** Train with content/perceptual losses while the adversarial term is held at zero during the first `g_pretrain_steps`.
-* **Adversarial ramp‑up:** Increase the BCE adversarial weight **linearly** over `adv_loss_ramp_steps` until it reaches `adv_loss_beta`.
-* **Discriminator schedule:** Optionally update D with a **step curve** (e.g., 1:1, 1:2, or warm‑up skips) to avoid early D domination.
+* **Adversarial ramp‑up:** Increase the BCE adversarial weight **linearly** or smoothly (**sigmoid**) over `adv_loss_ramp_steps` until it reaches `adv_loss_beta`.
 
-These choices are **purpose‑built for remote sensing**, where GANs are prone to hallucinations and optimization instabilities due to multi‑band inputs and domain shifts. The schedule and ramp make training **easier, safer, and more reproducible**.
+The schedule and ramp make training **easier, safer, and more reproducible**.
 
 ---
 
@@ -217,7 +218,8 @@ coming soon...
 Developed by **Simon Donike** (IPL–UV) within the **ESA Φ‑lab / OpenSR** initiative. 
 
 ## 📒 Notes
-This repo has been extensively reworked using Codex since I wanted to see if/how well it works. The AI changes wer concerned almost exclusively with structuring, commenting, and documentation. The GAN workflow itself was adapted from my previous implementations and the resulting experience with training these models: ([Remote-Sensing-SRGAN](https://github.com/simon-donike/Remote-Sensing-SRGAN)) and [NIR-GAN](https://github.com/simon-donike/NIR-GAN). The only exceptions are the loss class and the .SAFE dataset class, even though its AI slop it works for now so I won't touch them again.
+This repo has been extensively reworked using Codex since I wanted to see if/how well it works. The AI changes were mostly about structuring, commenting, documentation, and small-scale features. The GAN workflow itself was adapted from my previous implementations and the resulting experience with training these models: ([Remote-Sensing-SRGAN](https://github.com/simon-donike/Remote-Sensing-SRGAN)) and [NIR-GAN](https://github.com/simon-donike/NIR-GAN).  
+Only the SEN2 dataset class has been generated from scratch and can be considered AI slop. But since it works, I wont touch it again.
 
 ## 🧑‍🚀 ToDOs  
 - [ ] create inference.py  (interface with opensr-test)

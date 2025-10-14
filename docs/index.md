@@ -1,22 +1,37 @@
-# ESA OpenSR
+# SISR-RS-SRGAN
 
 ![Super-resolved Sentinel-2 example](assets/6band_banner.png)
 
-ESA OpenSR is an end-to-end research stack for single-image super-resolution (SISR) of multispectral Earth observation data. The
-project packages a robust SRGAN implementation together with remote-sensing focused preprocessing, evaluation, and experiment
-management utilities. It grew out of production work on Sentinel-2 imagery and is designed to be easily adapted to other satellites
-and aerial sensors that provide paired low- and high-resolution observations.
+SISR-RS-SRGAN is a comprehensive toolkit for training and evaluating super-resolution GANs on remote-sensing imagery. It
+packages a flexible generator/discriminator zoo, composable perceptual and reconstruction losses, and the training heuristics
+that make adversarial optimisation tractable—generator warm-up phases, learning-rate scheduling, adversarial-weight ramping, and
+more. All options are driven by concise YAML configuration files so you can explore new architectures or datasets without
+rewriting pipelines.
 
-## What makes ESA OpenSR different?
+> This repository powers the GAN component of the ESA OpenSR project, delivering the reusable training core for its
+> multispectral benchmarks.
 
-* **Remote-sensing aware design.** Normalisation, histogram matching, and band handling are all tuned for common Sentinel-2 value
-  ranges and spectral characteristics so you can train without rewriting boilerplate.
-* **Config-driven experimentation.** Every major architectural or training choice is exposed through YAML. Switching between
-  generator backbones, loss weights, or datasets is a matter of editing a few fields.
-* **Production-ready training loop.** PyTorch Lightning wraps the adversarial optimisation, warm-start schedules, checkpointing,
-  logging, and multi-GPU friendly data loading.
-* **Extensible generator and discriminator zoo.** Choose from SRResNet, residual channel attention (RCAB), RRDB, large-kernel
-  attention, and conditional GAN variants, with matching discriminators ranging from classic SRGAN to PatchGAN.
+## Why this repository?
+
+* **One configuration, many models.** Swap between RCAN-style residual channel attention, RRDB, SRResNet, SwinIR-inspired
+  backbones, and matching discriminators ranging from classic SRGAN to PatchGAN by editing a single config block.
+* **Loss combinations that just work.** Mix pixel, perceptual, style, and adversarial objectives with sensible defaults for
+  weights, schedules, and warm-up durations.
+* **Battle-tested training loop.** PyTorch Lightning handles mixed precision, gradient accumulation, multi-GPU training, and
+  restartable checkpoints while the repo layers in GAN-specific tweaks such as adversarial weight ramping and learning-rate
+  restarts.
+* **Remote-sensing aware defaults.** Normalisation, histogram matching, spectral-band handling, and Sentinel-2 SAFE ingestion are
+  ready-made for 10 m and 20 m bands and easily extendable to other sensors.
+
+## What you get out of the box
+
+| Capability | Highlights |
+| --- | --- |
+| **Generators & discriminators** | RCAB, RRDB, residual-in-residual, large-kernel attention, PatchGAN, UNet-based discriminators, and more. |
+| **Losses** | Weighted combinations of L1/L2, perceptual (VGG/LPIPS), style, and relativistic adversarial losses. |
+| **Training utilities** | Generator warm-up phases, cosine and step learning-rate schedules, adversarial-weight ramping, EMA tracking, and mixed-precision support. |
+| **Experiment management** | Configurable logging (Weights & Biases, TensorBoard), checkpointing, and experiment reproducibility hooks. |
+| **Datasets** | Sentinel-2 SAFE archives, SEN2NAIP, and pluggable dataset interfaces for custom collections. |
 
 ## Repository tour
 
@@ -24,14 +39,14 @@ and aerial sensors that provide paired low- and high-resolution observations.
 | --- | --- |
 | `model/` | Lightning module, generator and discriminator implementations, and loss definitions. |
 | `data/` | Dataset wrappers and helper utilities for Sentinel-2 SAFE archives and the SEN2NAIP world-wide corpus. |
-| `configs/` | Ready-to-run YAML presets for 10 m and 20 m Sentinel-2 training configurations. |
+| `configs/` | Ready-to-run YAML presets covering common scale factors, band selections, and architecture pairings. |
 | `utils/` | Logging helpers, spectral normalisation utilities, and model summary functions used across the stack. |
 | `train.py` | Command-line entry point that wires configuration, data module, loggers, and the Lightning trainer together. |
 
 ## Typical workflow
 
-1. **Pick a configuration.** Start from `configs/config_20m.yaml` or `configs/config_10m.yaml` and adjust dataset paths, scale,
-   and architecture selections to match your experiment.
+1. **Pick a configuration.** Start from a preset in `configs/` and adapt dataset paths, scale, generator, discriminator, and loss
+   options to match your experiment.
 2. **Prepare datasets.** Point the config to a Sentinel-2 SAFE manifest or the SEN2NAIP worldwide dataset and verify that the
    required bands exist on disk (see [Data](data.md)).
 3. **Launch training.** Run `python train.py --config <path>` to instantiate the Lightning module, configure optimisers and
@@ -48,6 +63,7 @@ and aerial sensors that provide paired low- and high-resolution observations.
 * [Data](data.md) details the supported datasets and how to integrate your own.
 * [Getting started](getting-started.md) walks through environment setup and the first training run.
 * [Training](training.md) covers logging, callbacks, and practical tips for stable optimisation.
+* [Results](results.md) showcases ready-to-run configurations for common generator/discriminator pairs.
 
-Whether you are reproducing published results or exploring new remote-sensing modalities, ESA OpenSR gives you a clear and
+Whether you are reproducing published results or exploring new remote-sensing modalities, SISR-RS-SRGAN gives you a clear and
 extensible foundation for multispectral super-resolution research.

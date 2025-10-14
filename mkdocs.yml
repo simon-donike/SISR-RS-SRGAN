@@ -43,9 +43,12 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.tasklist
   - pymdownx.superfences
+
 nav:
   - Overview: index.md
   - Getting Started: getting-started.md
   - Architecture: architecture.md
   - Configuration: configuration.md
   - Data: data.md
+  - Training: training.md
+  - Results: results.md

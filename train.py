@@ -81,9 +81,6 @@ if __name__ == '__main__':
                                         save_last=True,
                                         save_top_k=2)
 
-    from pytorch_lightning.callbacks import LearningRateMonitor
-    lr_monitor = LearningRateMonitor(logging_interval='epoch')
-
     # callback to set up early stopping
     from pytorch_lightning.callbacks.early_stopping import EarlyStopping
     early_stop_callback = EarlyStopping(monitor=config.Schedulers.metric, min_delta=0.00, patience=250, verbose=True,
@@ -99,12 +96,12 @@ if __name__ == '__main__':
                     limit_val_batches=config.Training.limit_val_batches,
                     resume_from_checkpoint=resume_from_checkpoint,
                     max_epochs=config.Training.max_epochs,
+                    log_every_n_steps=100, # log batch frequency
                     logger=[ 
                                 wandb_logger,
                             ],
                     callbacks=[ checkpoint_callback,
                                 early_stop_callback,
-                                lr_monitor
                                 ],)
 
 

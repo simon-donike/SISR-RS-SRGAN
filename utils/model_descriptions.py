@@ -4,20 +4,22 @@ def print_model_summary(self):
     Includes architecture info, resolution scale, training parameters, loss weights, and model sizes.
     """
 
-    # --- helpers to count parameters (in millions) ---
-    def count_trainable_params(model):
-        return sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6
+    # --- helpers (millions) ---
+    def count_trainable_params(m): return sum(p.numel() for p in m.parameters() if p.requires_grad) / 1e6
+    def count_total_params(m):     return sum(p.numel() for p in m.parameters()) / 1e6
 
-    def count_total_params(model):
-        return sum(p.numel() for p in model.parameters()) / 1e6
-
+    # --- counts ---
     g_trainable = count_trainable_params(self.generator)
-    g_total = count_total_params(self.generator)
+    g_total     = count_total_params(self.generator)
     d_trainable = count_trainable_params(self.discriminator)
-    d_total = count_total_params(self.discriminator)
+    d_total     = count_total_params(self.discriminator)
+
+    # expose the exact names you want to use elsewhere
+    g_params = g_trainable   # alias for “trainable G params (M)”
+    d_params = d_trainable   # alias for “trainable D params (M)”
 
     total_trainable = g_trainable + d_trainable
-    total_all = g_total + d_total
+    total_all       = g_total + d_total
 
     # ------------------------------------------------------------------
     # Derive human-readable generator description

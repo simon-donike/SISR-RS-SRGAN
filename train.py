@@ -9,8 +9,6 @@ from multiprocessing import freeze_support
 # set visible GPUs
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-# local imports
-
 if __name__ == '__main__':
     import argparse
     from multiprocessing import freeze_support

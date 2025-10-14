@@ -111,6 +111,25 @@ def print_model_summary(self):
     print(f"   • Adv. Target Label:  {self.adv_target}\n")
 
     # ------------------------------------------------------------------
+    # EMA Configuration (if present)
+    # ------------------------------------------------------------------
+    ema_cfg = getattr(getattr(self.config.Training, "EMA", None), "__dict__", None)
+    if ema_cfg or hasattr(self.config.Training, "EMA"):
+        ema = self.config.Training.EMA
+        enabled = getattr(ema, "enabled", False)
+        decay = getattr(ema, "decay", None)
+        update_after = getattr(ema, "update_after_step", None)
+        use_num_updates = getattr(ema, "use_num_updates", None)
+
+        print(f"🔁 Exponential Moving Average (EMA)")
+        print(f"   • Enabled:           {enabled}")
+        if enabled:
+            print(f"   • Decay:             {decay}")
+            print(f"   • Update After Step: {update_after}")
+            print(f"   • Use Num Updates:   {use_num_updates}")
+        print()  # newline for spacing
+
+    # ------------------------------------------------------------------
     # Loss Functions
     # ------------------------------------------------------------------
     print(f"📉 Loss Functions")

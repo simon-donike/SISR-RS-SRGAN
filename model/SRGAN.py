@@ -57,7 +57,6 @@ class SRGAN_model(pl.LightningModule):
         # ======================================================================
         self.get_models()  # dynamically builds and attaches generator + discriminator
 
-
         # ======================================================================
         # SECTION: Initialize EMA
         # Purpose: Optional exponential moving average (EMA) tracking for generator weights

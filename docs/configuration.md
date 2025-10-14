@@ -81,6 +81,42 @@ Each section maps directly to parameters consumed inside `model/SRGAN.py`, the d
 | `model_type` | `standard` | Discriminator architecture (`standard` SRGAN or `patchgan`). |
 | `n_blocks` | `8` | Number of convolutional blocks. PatchGAN defaults to 3 when unspecified. |
 
+## Suggested settings
+
+### Generator presets
+
+The defaults in the YAML configs intentionally balance stability and fidelity for Sentinel-2 data. Start here before
+performing sweeps:
+
+* Keep `n_channels` around 96 for residual-style backbones so feature widths match the initial convolution used by the
+  flexible generator factory.
+* Depth drives detail. Begin with `n_blocks = 32` for flexible variants and reduce to 16 when training budgets are
+  tight or when using the conditional generator, which already injects stochasticity via latent noise.
+* Set `scaling_factor` according to your target resolution (2×/4×/8×); all bundled generators support those values out
+  of the box.
+
+| Generator type | Recommended `n_channels` | Recommended `n_blocks` | Typical `scaling_factor` | Notes |
+| --- | --- | --- | --- | --- |
+| `SRResNet` | 64 | 16 | 4× | Canonical baseline with batch-norm residual blocks; scale can be 2×/4×/8× as needed. |
+| `res` | 96 | 32 | 4×–8× | Lightweight residual blocks without batch norm; works well for high-scale (8×) Sentinel data. |
+| `rcab` | 96 | 32 | 4×–8× | Attention-enhanced residual blocks; keep depth high to exploit channel attention. |
+| `rrdb` | 96 | 32 | 4×–8× | Dense residual blocks expand receptive field; expect higher VRAM use at 32 blocks. |
+| `lka` | 96 | 24–32 | 4×–8× | Large-kernel attention blocks stabilise at moderate depth; drop to 24 blocks if memory bound. |
+| `conditional_cgan`/`cgan` | 96 | 16 | 4× | Latent-modulated residual stack; pair with noise_dim≈128 and res_scale≈0.2 defaults. |
+
+### Discriminator presets
+
+Tune discriminator depth to match the generator capacity—too shallow and adversarial loss underfits, too deep and the
+training loop destabilises. These starting points mirror the architectures bundled with the repo:
+
+| Discriminator type | Recommended depth parameter | Additional notes |
+| --- | --- | --- |
+| `standard` | `n_blocks = 8` | Mirrors the original SRGAN CNN with alternating stride-1/stride-2 blocks before the dense head.】 |
+| `patchgan` | `n_blocks = 3` | Maps to the 3-layer PatchGAN (a.k.a. `n_layers`); increase to 4–5 for larger crops or when the generator is particularly sharp. |
+
+When adjusting these presets, scale generator and discriminator together and monitor adversarial loss ramps defined in
+`Training.Losses` to keep training stable.
+
 ## Optimisers
 
 | Key | Default | Description |
@@ -100,6 +136,12 @@ Both optimisers share the same configuration keys because they use `torch.optim.
 | `factor_g` | `0.5` | Multiplicative factor applied to the generator LR upon plateau. |
 | `factor_d` | `0.5` | Multiplicative factor applied to the discriminator LR upon plateau. |
 | `verbose` | `True` | Enables scheduler logging messages. |
+| `g_warmup_steps` | `2000` | Number of optimiser steps used for generator LR warmup. Set to `0` to disable. |
+| `g_warmup_type` | `cosine` | Warmup curve for the generator LR (`cosine` or `linear`). |
+
+`g_warmup_steps` applies a step-wise warmup through `torch.optim.lr_scheduler.LambdaLR` before resuming the standard
+`ReduceLROnPlateau` schedule. Cosine warmup is smoother for most runs, but a linear ramp (especially for 1–5k steps) remains
+available for experiments that prefer a steady rise.
 
 ## Logging
 

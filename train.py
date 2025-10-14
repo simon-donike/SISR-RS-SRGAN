@@ -69,15 +69,12 @@ if __name__ == '__main__':
         log_model=False
     )
 
-    from pytorch_lightning import loggers as pl_loggers
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.normpath("logs/"))
-    from torch.utils.tensorboard import SummaryWriter
-    writer = SummaryWriter(os.path.normpath('logs/tmp'))
-
     from pytorch_lightning.callbacks import ModelCheckpoint
-    dir_save_checkpoints = os.path.join(tb_logger.save_dir,wandb_project,
+    dir_save_checkpoints = os.path.join(os.path.normpath("logs/"),wandb_project,
                                                 datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
     print("Experiment Path:",dir_save_checkpoints)
+    with open(os.path.join(dir_save_checkpoints, "config.yaml"), 'w') as f: # save config to experiment folder
+        OmegaConf.save(config, f)
 
     checkpoint_callback = ModelCheckpoint(dirpath=dir_save_checkpoints,
                                             monitor=config.Schedulers.metric,
@@ -114,6 +111,5 @@ if __name__ == '__main__':
 
     trainer.fit(model, datamodule=pl_datamodule)
     wandb.finish()
-    writer.close()
 
 

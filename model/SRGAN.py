@@ -518,8 +518,16 @@ class SRGAN_model(pl.LightningModule):
         adv_weight = self._compute_adv_loss_weight()
         self._log_adv_loss_weight(adv_weight)
         return adv_weight                                 # return weight for generator loss
-
+    
+    def load_from_checkpoint(self,ckpt_path):
+        # load ckpt
+        ckpt = torch.load(ckpt_path, map_location=self.device)
+        self.load_state_dict(ckpt['state_dict'])
+        print(f"Loaded checkpoint from {ckpt_path}")
+        
 
 if __name__=="__main__":       
     model = SRGAN_model(config_file_path="configs/config_20m.yaml")
     model.forward(torch.randn(1,6,32,32))
+    
+    model.load_from_checkpoint("logs/SRGAN_6bands/2025-10-11_23-53-20/last.ckpt")

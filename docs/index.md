@@ -1,6 +1,6 @@
 # ESA OpenSR
 
-![Super-resolved Sentinel-2 example](../resources/x8_6band_example_1.png)
+![Super-resolved Sentinel-2 example](assets/x8_6band_example_1.png)
 
 ESA OpenSR is an end-to-end research stack for single-image super-resolution (SISR) of multispectral Earth observation data. The
 project packages a robust SRGAN implementation together with remote-sensing focused preprocessing, evaluation, and experiment

@@ -24,7 +24,7 @@ This repository provides:
 * 🧩 **Flexible generator**: choose block type `res`, `rcab`, `rrdb`, or `lka`; set `n_blocks`, `n_channels`, and `scale ∈ {2,4,8}`.
 * 🛰️ **Flexible inputs**: train on **any band layout** (e.g., S2 RGB‑NIR, 6‑band stacks, or custom multispectral sets). Normalization/denorm utilities provided.
 * ⚖️ **Flexible losses & weights**: combine L1, Spectral Angle Mapper, VGG19 or LPIPS perceptual distances, Total Variation, and a BCE adversarial term with **per‑loss weights**.
-* 🧪 **Robust training strategy**: generator **pretraining**, **linear adversarial loss ramp**, and **discriminator update schedules/curves**.
+* 🧪 **Robust training strategy**: generator **pretraining**, **linear adversarial loss ramp**, **cosine/linear LR warmup**, and **discriminator update schedules/curves**.
 * 📊 **Clear monitoring**: PSNR, SSIM, LPIPS, qualitative panels, and Weights & Biases logging.
 
 ---
@@ -123,7 +123,7 @@ All key knobs are exposed via YAML in the `configs` folder:
 
 * **Model**: `in_channels`, `n_channels`, `n_blocks`, `scale`, `block_type ∈ {SRResNet, res, rcab, rrdb, lka}`
 * **Losses**: `l1_weight`, `sam_weight`, `perceptual_weight`, `tv_weight`, `adv_loss_beta`
-* **Training**: `pretrain_g_only`, `g_pretrain_steps`, `adv_loss_ramp_steps`, `label_smoothing`, discriminator cadence controls
+* **Training**: `pretrain_g_only`, `g_pretrain_steps`, `adv_loss_ramp_steps`, `label_smoothing`, generator LR warmup (`Schedulers.g_warmup_steps`, `Schedulers.g_warmup_type`), discriminator cadence controls
 * **Data**: band order, normalization stats, crop sizes, augmentations
 
 ---
@@ -132,6 +132,7 @@ All key knobs are exposed via YAML in the `configs` folder:
 
 * **G‑only pretraining:** Train with content/perceptual losses while the adversarial term is held at zero during the first `g_pretrain_steps`.
 * **Adversarial ramp‑up:** Increase the BCE adversarial weight **linearly** or smoothly (**sigmoid**) over `adv_loss_ramp_steps` until it reaches `adv_loss_beta`.
+* **Generator LR warmup:** Ramp the generator optimiser with a **cosine** or **linear** schedule for the first 1–5k steps via `Schedulers.g_warmup_steps`/`g_warmup_type` before switching to plateau-based reductions.
 
 The schedule and ramp make training **easier, safer, and more reproducible**.
 

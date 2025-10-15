@@ -13,6 +13,7 @@ lightning_logs/
 lightning_logs/*
 lightning_logs
 wandb/
+tmp/
 
 # local folders
 other/

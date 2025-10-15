@@ -538,14 +538,16 @@ class SRGAN_model(pl.LightningModule):
 
     def on_fit_start(self):  # called once at the start of training
         super().on_fit_start()
-        # ======================================================================
-        # SECTION: Print Model Summary
-        # Purpose: Output model architecture and parameter counts.
-        # ======================================================================
-        print_model_summary(self)  # print model summary to console
-
-        if self.ema is not None and self.ema.device is None:
+        if self.ema is not None and self.ema.device is None: # move ema weights
             self.ema.to(self.device)
+            
+            # ======================================================================
+        # SECTION: Print Model Summary
+        # Purpose: Output model architecture and parameter counts (only once).
+        # ======================================================================
+        from utils.gpu_rank import _is_global_zero
+        if _is_global_zero():
+            print_model_summary(self)  # print model summary to console
 
     def _log_generator_content_loss(self, content_loss: torch.Tensor) -> None:
         """Helper to consistently log the generator content loss across training phases."""

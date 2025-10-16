@@ -47,6 +47,3 @@ package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
 include = ["opensr_srgan", "model", "model.*", "utils"]
-
-[tool.setuptools.package-data]
-"opensr_srgan" = ["configs/*.yaml"]

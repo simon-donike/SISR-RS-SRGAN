@@ -69,9 +69,9 @@ After installation you have two options for model creation:
 1. **Instantiate directly from a config + weights** when you manage checkpoints yourself.
 
    ```python
-   from opensr_srgan import instantiate_from_config
+   from opensr_srgan import load_from_config
 
-   model = instantiate_from_config(
+   model = load_from_config(
        config_path="configs/config_10m.yaml",
        checkpoint_uri="https://example.com/checkpoints/srgan.ckpt",
        map_location="cpu",  # optional
@@ -80,8 +80,10 @@ After installation you have two options for model creation:
 
 2. **Load the packaged inference presets** (either `"RGB-NIR"` or `"SWIR"`).
 
-   The helper fetches the appropriate configuration and pretrained weights from
-   the Hugging Face Hub and caches them locally for reuse.
+   The helper fetches the appropriate configuration (e.g., `config_RGB-NIR.yaml`)
+   and pretrained checkpoint (e.g., `RGB-NIR_4band_inference.ckpt`) from the
+   [`simon-donike/SR-GAN`](https://huggingface.co/simon-donike/SR-GAN) repository
+   on the Hugging Face Hub and caches them locally for reuse.
 
    ```python
    from opensr_srgan import load_inference_model

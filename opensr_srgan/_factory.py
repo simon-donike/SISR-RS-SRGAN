@@ -5,7 +5,6 @@ from __future__ import annotations
 import dataclasses
 import tempfile
 from contextlib import contextmanager
-from importlib import resources
 from pathlib import Path
 from typing import Iterator, Optional, Union
 
@@ -14,28 +13,28 @@ from pytorch_lightning import LightningModule
 
 from model.SRGAN import SRGAN_model
 
-__all__ = ["instantiate_from_config", "load_inference_model"]
+__all__ = ["load_from_config", "load_inference_model"]
 
 
 @dataclasses.dataclass(frozen=True)
 class _Preset:
     """Metadata describing an inference-ready configuration."""
 
-    config_resource: resources.abc.Traversable
     repo_id: str
-    filename: str
+    config_filename: str
+    checkpoint_filename: str
 
 
 _PRESETS = {
     "RGB-NIR": _Preset(
-        config_resource=resources.files("opensr_srgan.configs").joinpath("rgb_nir.yaml"),
-        repo_id="ESAOpenSR/opensr-srgan-rgb-nir",
-        filename="srgan_rgb-nir.ckpt",
+        repo_id="simon-donike/SR-GAN",
+        config_filename="config_RGB-NIR.yaml",
+        checkpoint_filename="RGB-NIR_4band_inference.ckpt",
     ),
     "SWIR": _Preset(
-        config_resource=resources.files("opensr_srgan.configs").joinpath("swir.yaml"),
-        repo_id="ESAOpenSR/opensr-srgan-swir",
-        filename="srgan_swir.ckpt",
+        repo_id="simon-donike/SR-GAN",
+        config_filename="config_SWIR.yaml",
+        checkpoint_filename="SWIR_6band_inference.ckpt",
     ),
 }
 
@@ -63,7 +62,7 @@ def _maybe_download(checkpoint_uri: Union[str, Path]) -> Iterator[Path]:
     )
 
 
-def instantiate_from_config(
+def load_from_config(
     config_path: Union[str, Path],
     checkpoint_uri: Optional[Union[str, Path]] = None,
     *,
@@ -132,15 +131,19 @@ def load_inference_model(
             "Install the project extras or run 'pip install huggingface-hub'."
         ) from exc
 
-    with resources.as_file(preset_meta.config_resource) as config_path:
-        checkpoint_path = hf_hub_download(
-            repo_id=preset_meta.repo_id,
-            filename=preset_meta.filename,
-            cache_dir=None if cache_dir is None else str(cache_dir),
-        )
+    config_path = hf_hub_download(
+        repo_id=preset_meta.repo_id,
+        filename=preset_meta.config_filename,
+        cache_dir=None if cache_dir is None else str(cache_dir),
+    )
+    checkpoint_path = hf_hub_download(
+        repo_id=preset_meta.repo_id,
+        filename=preset_meta.checkpoint_filename,
+        cache_dir=None if cache_dir is None else str(cache_dir),
+    )
 
-        return instantiate_from_config(
-            config_path,
-            checkpoint_path,
-            map_location=map_location,
-        )
+    return load_from_config(
+        config_path,
+        checkpoint_path,
+        map_location=map_location,
+    )

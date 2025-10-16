@@ -8,6 +8,9 @@
 .vscode
 __pycache__/
 
+# local files
+playground.py
+
 # Logs
 lightning_logs/
 lightning_logs/*

@@ -95,7 +95,7 @@ def load_from_config(
         with _maybe_download(checkpoint_uri) as resolved_path:
             checkpoint = torch.load(str(resolved_path), map_location=map_location)
         state_dict = checkpoint.get("state_dict", checkpoint)
-        model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict,strict=False)
 
         if model.ema is not None and "ema_state" in checkpoint:
             model.ema.load_state_dict(checkpoint["ema_state"])

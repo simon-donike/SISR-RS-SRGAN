@@ -47,6 +47,7 @@ markdown_extensions:
 nav:
   - Overview: index.md
   - Getting Started: getting-started.md
+  - Inference: inference.md
   - Architecture: architecture.md
   - Configuration: configuration.md
   - Data: data.md

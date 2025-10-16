@@ -39,7 +39,7 @@ classifiers = [
 
 [project.urls]
 "Homepage" = "https://github.com/opensr-project/SISR-RS-SRGAN"
-"Documentation" = "https://github.com/opensr-project/SISR-RS-SRGAN"
+"Documentation" = "https://srgan.opensr.eu"
 "Bug Tracker" = "https://github.com/opensr-project/SISR-RS-SRGAN/issues"
 
 [tool.setuptools]

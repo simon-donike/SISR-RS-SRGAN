@@ -5,10 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "opensr-srgan"
 version = "0.1.0"
-description = "Pretrained super-resolution GAN for remote sensing imagery."
+description = "Modular Super-Resolution GAN Framework for Remote Sensing."
 readme = "README.md"
 authors = [
-  { name = "Open Super-Resolution Initiative" }
+  { name = "Simon Donike, ESAOpenSR Team" }
 ]
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
@@ -39,7 +39,7 @@ classifiers = [
 
 [project.urls]
 "Homepage" = "https://github.com/opensr-project/SISR-RS-SRGAN"
-"Documentation" = "https://github.com/opensr-project/SISR-RS-SRGAN"
+"Documentation" = "https://srgan.opensr.eu"
 "Bug Tracker" = "https://github.com/opensr-project/SISR-RS-SRGAN/issues"
 
 [tool.setuptools]

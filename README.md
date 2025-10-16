@@ -20,6 +20,7 @@ This repository provides:
 * **Configurable losses** (content/perceptual/adversarial) with fully exposed **loss weights**.
 * A **stabilized GAN procedure** (G‑only pretraining → adversarial ramp‑up → scheduled D , EMA weights) that makes RS‑SR training more reliable.
 * Smooth integration with the **OpenSR** ecosystem for data handling, evaluation, and large‑scene inference.
+* A **PyPI package (`opensr-srgan`)** with helpers to load models directly from configs or download ready-to-run inference presets from the Hugging Face Hub.
 * **Configuration‑first workflow**: everything — from generator/discriminator choices to loss weights and warmup length — is selectable in `configs/config.yaml`.
 
 ### Key Features
@@ -149,13 +150,15 @@ Multi-GPU training is enabled by setting `Training.gpus` in your config to a lis
 
 ### 2) Inference on Large Scenes
 
-Use OpenSR‑Utils for tiled processing of SAFE/S2GM/GeoTIFF inputs.
+Use OpenSR‑Utils for tiled processing of SAFE/S2GM/GeoTIFF inputs. If you installed the `opensr-srgan` package from PyPI you
+can swap in the packaged helpers to obtain weights either from a local config/ckpt pair or directly from the Hugging Face
+Hub presets.
 
 ```python
 import opensr_utils
-from opensr_utils.model_utils import get_srgan
+from opensr_srgan import load_inference_model
 
-model = get_srgan(weights="path/to/checkpoint.ckpt")
+model = load_inference_model("RGB-NIR")
 opensr_utils.large_file_processing(
     root="/path/to/S2_or_scene",
     model=model,

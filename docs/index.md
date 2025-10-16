@@ -35,6 +35,16 @@ Whether you are reproducing published results, exploring new remote-sensing moda
 | **Training utilities** | Generator warm-up phases, on-plateau learning-rate schedules, adversarial-weight ramping, EMA tracking, and mixed-precision support. |
 | **Experiment management** | Configurable logging (Weights & Biases, TensorBoard), checkpointing, and experiment reproducibility hooks. |
 | **Datasets** | Sentinel-2 SAFE archives, SEN2NAIP, and pluggable dataset interfaces for custom collections. |
+| **Deployment** | PyPI package (`opensr-srgan`) with helpers to load Lightning modules from configs or download pre-trained presets from the Hugging Face Hub. |
+
+## Install in two ways
+
+* **From PyPI for inference** – `python -m pip install opensr-srgan` installs the lightweight package that exposes
+  `load_from_config` and `load_inference_model`. The former instantiates a Lightning module from any repo config +
+  checkpoint path, while the latter fetches the published RGB-NIR and SWIR presets from the
+  [`simon-donike/SR-GAN`](https://huggingface.co/simon-donike/SR-GAN) space on Hugging Face.
+* **From source for training & development** – clone this repository when you want to modify architectures, retrain
+  models, or work on new datasets. The [Getting started](getting-started.md) guide covers environment setup.
 
 ## Repository Tour
 

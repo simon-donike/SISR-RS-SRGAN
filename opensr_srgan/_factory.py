@@ -89,15 +89,16 @@ def load_from_config(
     if not config_path.is_file():
         raise FileNotFoundError(f"Config file '{config_path}' could not be located.")
 
-    if checkpoint_uri is None:
-        model = SRGAN_model(config_file_path=str(config_path))
-    else:
+    model = SRGAN_model(config_file_path=str(config_path))
+
+    if checkpoint_uri is not None:
         with _maybe_download(checkpoint_uri) as resolved_path:
-            model = SRGAN_model.load_from_checkpoint(
-                str(resolved_path),
-                config_file_path=str(config_path),
-                map_location=map_location,
-            )
+            checkpoint = torch.load(str(resolved_path), map_location=map_location)
+        state_dict = checkpoint.get("state_dict", checkpoint)
+        model.load_state_dict(state_dict)
+
+        if model.ema is not None and "ema_state" in checkpoint:
+            model.ema.load_state_dict(checkpoint["ema_state"])
 
     model.eval()
     return model

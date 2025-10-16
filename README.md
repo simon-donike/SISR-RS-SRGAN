@@ -56,6 +56,47 @@ The YAML keeps the SRGAN flexible: swap architectures or rebalance perceptual vs
 
 ## 🧰 Installation
 
+### Option 1 — install the packaged model (recommended for inference)
+
+The project can be consumed directly from [PyPI](https://pypi.org/project/opensr-srgan/):
+
+```bash
+python -m pip install opensr-srgan
+```
+
+After installation you have two options for model creation:
+
+1. **Instantiate directly from a config + weights** when you manage checkpoints yourself.
+
+   ```python
+   from opensr_srgan import load_from_config
+
+   model = load_from_config(
+       config_path="configs/config_10m.yaml",
+       checkpoint_uri="https://example.com/checkpoints/srgan.ckpt",
+       map_location="cpu",  # optional
+   )
+   ```
+
+2. **Load the packaged inference presets** (either `"RGB-NIR"` or `"SWIR"`).
+
+   The helper fetches the appropriate configuration (e.g., `config_RGB-NIR.yaml`)
+   and pretrained checkpoint (e.g., `RGB-NIR_4band_inference.ckpt`) from the
+   [`simon-donike/SR-GAN`](https://huggingface.co/simon-donike/SR-GAN) repository
+   on the Hugging Face Hub and caches them locally for reuse.
+
+   ```python
+   from opensr_srgan import load_inference_model
+
+   rgb_model = load_inference_model("RGB-NIR", map_location="cpu")
+   swir_model = load_inference_model("SWIR")
+   ```
+
+Both helpers return a ready-to-use `pytorch_lightning.LightningModule`; access
+its `.generator` attribute for inference-ready PyTorch modules.
+
+### Option 2 — work from source
+
 > ⚠️ **Python version**: the pinned `torch==1.13.1` and `torchvision==0.14.1` wheels target
 > Python 3.10 (or earlier). Create your environment with a Python 3.10 interpreter to avoid
 > installation failures on newer runtimes (e.g., Python 3.11).

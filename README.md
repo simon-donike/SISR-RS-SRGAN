@@ -56,6 +56,30 @@ The YAML keeps the SRGAN flexible: swap architectures or rebalance perceptual vs
 
 ## 🧰 Installation
 
+### Option 1 — install the packaged model (recommended for inference)
+
+The project can be consumed directly from [PyPI](https://pypi.org/project/opensr-srgan/):
+
+```bash
+python -m pip install opensr-srgan
+```
+
+After installation, instantiate the pretrained network with a config file and checkpoint path or URL:
+
+```python
+from opensr_srgan import load_model
+
+model = load_model(
+    config_path="configs/config.yaml",
+    checkpoint_uri="https://example.com/checkpoints/srgan.ckpt",
+    map_location="cpu",  # optional
+)
+
+model.generator  # ready for inference
+```
+
+### Option 2 — work from source
+
 > ⚠️ **Python version**: the pinned `torch==1.13.1` and `torchvision==0.14.1` wheels target
 > Python 3.10 (or earlier). Create your environment with a Python 3.10 interpreter to avoid
 > installation failures on newer runtimes (e.g., Python 3.11).

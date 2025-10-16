@@ -23,6 +23,9 @@ SISR_WW/
 data/SEN2NAIP_custom/
 data/SEN2NAIP_custom/*
 
+# files
+playground.py
+
 # stuff from docs
 site/
 .mkdocs/

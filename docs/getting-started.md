@@ -3,6 +3,10 @@
 This guide walks through installing dependencies, configuring datasets, and launching your first ESA OpenSR experiment. The stack
 uses Python 3.10+, PyTorch Lightning, and Weights & Biases for experiment tracking.
 
+> 💡 **Only need inference?** Install the published package instead: `python -m pip install opensr-srgan`. It exposes
+> `load_from_config` and `load_inference_model` so you can instantiate models without cloning the repository. Continue with the
+> rest of this guide when you want to train, fine-tune, or otherwise modify the codebase.
+
 ## 1. Install the environment
 
 1. **Create a virtual environment.**
@@ -67,15 +71,31 @@ Training resumes automatically if `Model.continue_training` points to a Lightnin
 * **Validation metrics** are logged at the end of each epoch, including L1, SAM, PSNR/SSIM (from the content loss helper), and
   discriminator statistics.
 * **Qualitative monitoring** is available through Weights & Biases image panels when `Logging.num_val_images` is greater than zero.
-* **Inference** on new low-resolution tiles can reuse the Lightning module:
-  ```python
-  from model.SRGAN import SRGAN_model
-  model = SRGAN_model("your_config.yaml") # instanciate model
-  model.load_from_checkpoint("path/to/checkpoint.ckpt") # load weights
-  sr_tiles = model.predict_step(lr_tiles) # run SR on LR
-  ```
-  The helper automatically normalises Sentinel-2 ranges, applies histogram matching, and denormalises outputs for easier
-  comparison with the source imagery.
+* **Inference** on new low-resolution tiles can reuse the Lightning module.
+  * **When working from the PyPI package:**
+    ```python
+    from opensr_srgan import load_from_config, load_inference_model
+
+    # Option A – bring your own config + checkpoint (local path or URL)
+    custom_model = load_from_config(
+        config_path="configs/config_10m.yaml",
+        checkpoint_uri="https://example.com/checkpoints/srgan.ckpt",
+        map_location="cuda",  # optional
+    )
+
+    # Option B – grab the published RGB-NIR/SWIR presets from Hugging Face
+    preset_model = load_inference_model("RGB-NIR", map_location="cpu")
+    ```
+  * **When working from source:**
+    ```python
+    from model.SRGAN import SRGAN_model
+
+    model = SRGAN_model("your_config.yaml")
+    model.load_from_checkpoint("path/to/checkpoint.ckpt")
+    sr_tiles = model.predict_step(lr_tiles)
+    ```
+  In all cases the helpers automatically normalise Sentinel-2 ranges, apply histogram matching, and denormalise outputs for
+  easier comparison with the source imagery.
 
 ## 6. Create Data Pipeline
 

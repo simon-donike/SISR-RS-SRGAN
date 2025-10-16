@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opensr-srgan"
+version = "0.1.0"
+description = "Pretrained super-resolution GAN for remote sensing imagery."
+readme = "README.md"
+authors = [
+  { name = "Open Super-Resolution Initiative" }
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+dependencies = [
+  "torch>=1.13,<2.0",
+  "torchvision>=0.14,<0.15",
+  "pytorch-lightning>=1.9,<2.0",
+  "numpy",
+  "kornia",
+  "wandb",
+  "omegaconf",
+  "matplotlib",
+  "rasterio",
+  "scikit-image",
+  "Pillow",
+  "huggingface-hub",
+]
+keywords = ["super-resolution", "gan", "remote-sensing", "pytorch", "lightning"]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "License :: OSI Approved :: MIT License",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/opensr-project/SISR-RS-SRGAN"
+"Documentation" = "https://github.com/opensr-project/SISR-RS-SRGAN"
+"Bug Tracker" = "https://github.com/opensr-project/SISR-RS-SRGAN/issues"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+include = ["opensr_srgan", "model", "model.*", "utils"]

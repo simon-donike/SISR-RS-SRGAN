@@ -14,8 +14,11 @@ matplotlib
 rasterio
 scikit-image
 Pillow
+tqdm
+huggingface_hub # for loading models from the Hugging Face Hub
+
 
 # Optional extras (enable additional metrics/data loaders,inference)
-#lpips
-#tacoreader
-#opensr_utils
+#lpips # for when training with LPIPS loss
+#tacoreader # for SEN2NAIP dataset
+#opensr_utils # for inference utilities

@@ -150,15 +150,17 @@ Multi-GPU training is enabled by setting `Training.gpus` in your config to a lis
 
 ### 2) Inference on Large Scenes
 
-Use OpenSR‑Utils for tiled processing of SAFE/S2GM/GeoTIFF inputs. If you installed the `opensr-srgan` package from PyPI you
+Use OpenSR‑Utils for tiled processing of SAFE/GeoTIFF inputs. If you installed the `opensr-srgan` package from PyPI you
 can swap in the packaged helpers to obtain weights either from a local config/ckpt pair or directly from the Hugging Face
 Hub presets.
+
+For use-cases like these, we provide presets with the necessary `config.yaml` and weights that get pulled from HuggingFace.
 
 ```python
 import opensr_utils
 from opensr_srgan import load_inference_model
 
-model = load_inference_model("RGB-NIR")
+model = load_inference_model("RGB-NIR") # loads preset model straight from HF incl. weights
 opensr_utils.large_file_processing(
     root="/path/to/S2_or_scene",
     model=model,

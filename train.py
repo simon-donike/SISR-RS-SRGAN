@@ -40,14 +40,10 @@ if __name__ == '__main__':
     #############################################################################################################
     # load pretrained or instanciate new
     from model.SRGAN import SRGAN_model
-    if config.Model.load_checkpoint != False:
-        model = SRGAN_model.load_from_checkpoint(config.Model.load_checkpoint, strict=False)
-    else:
-        model = SRGAN_model(config_file_path=cfg_filepath)
-    if config.Model.continue_training != False:
-        resume_from_checkpoint = config.Model.continue_training
-    else:
-        resume_from_checkpoint = None
+    model = SRGAN_model(config_file_path=cfg_filepath)
+    if config.Model.load_checkpoint:
+        model.load_from_checkpoint(config.Model.load_checkpoint, strict=False)
+    ckpt_path = config.Model.continue_training or None
 
     #############################################################################################################
     """ GET DATA """
@@ -98,10 +94,9 @@ if __name__ == '__main__':
                     devices=cuda_devices,
                     val_check_interval=config.Training.val_check_interval,
                     limit_val_batches=config.Training.limit_val_batches,
-                    resume_from_checkpoint=resume_from_checkpoint,
                     max_epochs=config.Training.max_epochs,
                     log_every_n_steps=100, # log batch frequency
-                    logger=[ 
+                    logger=[
                                 wandb_logger,
                             ],
                     callbacks=[ checkpoint_callback,
@@ -109,7 +104,7 @@ if __name__ == '__main__':
                                 ],)
 
 
-    trainer.fit(model, datamodule=pl_datamodule)
+    trainer.fit(model, datamodule=pl_datamodule, ckpt_path=ckpt_path)
     wandb.finish()
 
 

@@ -1,5 +1,6 @@
 # Package Imports
 import math
+from collections.abc import Mapping
 from contextlib import nullcontext
 
 import torch
@@ -83,6 +84,8 @@ class SRGAN_model(pl.LightningModule):
         from model.loss import GeneratorContentLoss
         self.content_loss_criterion = GeneratorContentLoss(self.config)  # perceptual loss (VGG + pixel)
         self.adversarial_loss_criterion = torch.nn.BCEWithLogitsLoss()   # binary cross-entropy for D/G
+        self._discriminator_optimizer = None
+        self._generator_optimizer = None
 
     def get_models(self):
         """
@@ -173,7 +176,7 @@ class SRGAN_model(pl.LightningModule):
 
 
     @torch.no_grad()
-    def predict_step(self, lr_imgs):
+    def predict_step(self, batch, batch_idx, dataloader_idx: int = 0):
         """
         Prediction for deployment:
         - Automatically detects whether normalization is needed.
@@ -181,6 +184,13 @@ class SRGAN_model(pl.LightningModule):
         - If input range ≈ [0,10000] → apply normalization.
         - Handles inference, histogram matching, and denormalization.
         """
+
+        if isinstance(batch, (list, tuple)):
+            lr_imgs = batch[0]
+        elif isinstance(batch, Mapping):
+            lr_imgs = batch.get("lr") or batch.get("lr_imgs") or next(iter(batch.values()))
+        else:
+            lr_imgs = batch
 
         lr_imgs = lr_imgs.to(self.device)  # move to device (GPU or CPU)
 
@@ -305,20 +315,23 @@ class SRGAN_model(pl.LightningModule):
         epoch,
         batch_idx,
         optimizer,
-        optimizer_idx,
         optimizer_closure,
-        on_tpu=False,
-        using_lbfgs=False,
-    ):
+        on_tpu: bool = False,
+        using_native_amp: bool = False,
+        using_lbfgs: bool = False,
+    ) -> None:
         optimizer.step(closure=optimizer_closure)
         optimizer.zero_grad()
 
         if (
             self.ema is not None
-            and optimizer_idx == 1
+            and optimizer is self._generator_optimizer
             and self.global_step >= self._ema_update_after_step
         ):
             self.ema.update(self.generator)
+            self._log_ema_step_metrics(updated=True)
+        else:
+            self._log_ema_step_metrics(updated=False)
 
     def pretraining_training_step(self, *, lr_imgs, hr_imgs, sr_imgs, optimizer_idx):
         """
@@ -522,10 +535,13 @@ class SRGAN_model(pl.LightningModule):
             scheduler_configs.append(warmup_scheduler_config)
 
         # return both optimizers + schedulers for PL
-        return [
+        self._discriminator_optimizer = optimizer_d
+        self._generator_optimizer = optimizer_g
+
+        return (
             [optimizer_d, optimizer_g],  # order super important, it's [D, G] and checked in training step
             scheduler_configs,
-        ]
+        )
 
 
     def on_train_batch_start(self, batch, batch_idx):  # called before each training batch
@@ -540,6 +556,7 @@ class SRGAN_model(pl.LightningModule):
         super().on_fit_start()
         if self.ema is not None and self.ema.device is None: # move ema weights
             self.ema.to(self.device)
+        self._log_ema_setup_metrics()
             
             # ======================================================================
         # SECTION: Print Model Summary
@@ -730,17 +747,27 @@ class SRGAN_model(pl.LightningModule):
 
     def _log_lrs(self):
         # order matches your return: [optimizer_d, optimizer_g]
-        opt_d = self.trainer.optimizers[0]
-        opt_g = self.trainer.optimizers[1]
+        if self._discriminator_optimizer is None or self._generator_optimizer is None:
+            try:
+                opt_d, opt_g = self.optimizers()
+            except Exception:
+                return
+        else:
+            opt_d, opt_g = self._discriminator_optimizer, self._generator_optimizer
+
         self.log("lr_discriminator", opt_d.param_groups[0]["lr"],
                 on_step=True, on_epoch=True, prog_bar=False, logger=True,sync_dist=True)
         self.log("lr_generator", opt_g.param_groups[0]["lr"],
                 on_step=True, on_epoch=True, prog_bar=False, logger=True,sync_dist=True)
     
-    def load_from_checkpoint(self,ckpt_path):
-        # load ckpt
+    def load_from_checkpoint(self, ckpt_path: str, strict: bool = True):
+        """Load weights from a saved Lightning checkpoint into the current instance."""
+
         ckpt = torch.load(ckpt_path, map_location=self.device)
-        self.load_state_dict(ckpt['state_dict'])
+        state_dict = ckpt.get('state_dict', ckpt)
+        self.load_state_dict(state_dict, strict=strict)
+        if self.ema is not None and "ema_state" in ckpt:
+            self.ema.load_state_dict(ckpt["ema_state"])
         print(f"Loaded checkpoint from {ckpt_path}")
         
 

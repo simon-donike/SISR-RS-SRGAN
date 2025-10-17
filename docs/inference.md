@@ -5,7 +5,7 @@ This walkthrough covers the fastest path from zero to an end-to-end super-resolu
 ## 1. Install the runtime dependencies
 
 ```bash
-python -m pip install "opensr-srgan[huggingface]" opensr-utils
+pip install opensr-srgan
 ```
 
 * `opensr-srgan` exposes helpers that reconstruct Lightning checkpoints from YAML configs or download ready-to-run presets.

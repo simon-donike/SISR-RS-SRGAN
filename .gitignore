@@ -13,6 +13,7 @@ __pycache__/
 coverage.xml
 htmlcov/
 .pytest_cache/
+.pytest_cache/*
 
 # Logs
 lightning_logs/

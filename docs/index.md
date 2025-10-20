@@ -50,19 +50,19 @@ Whether you are reproducing published results, exploring new remote-sensing moda
 
 | Path | Description |
 | --- | --- |
-| `opensr_srgan/model/` | Lightning module, generator and discriminator implementations, and loss definitions. |
-| `opensr_srgan/data/` | Dataset wrappers and helper utilities for Sentinel-2 SAFE archives and the SEN2NAIP world-wide corpus. |
-| `opensr_srgan/configs/` | Ready-to-run YAML presets covering common scale factors, band selections, and architecture pairings. |
-| `opensr_srgan/utils/` | Logging helpers, spectral normalisation utilities, and model summary functions used across the stack. |
-| `opensr_srgan/train.py` | Command-line entry point that wires configuration, data module, loggers, and the Lightning trainer together. |
+| `opensr_gan/model/` | Lightning module, generator and discriminator implementations, and loss definitions. |
+| `opensr_gan/data/` | Dataset wrappers and helper utilities for Sentinel-2 SAFE archives and the SEN2NAIP world-wide corpus. |
+| `opensr_gan/configs/` | Ready-to-run YAML presets covering common scale factors, band selections, and architecture pairings. |
+| `opensr_gan/utils/` | Logging helpers, spectral normalisation utilities, and model summary functions used across the stack. |
+| `opensr_gan/train.py` | Command-line entry point that wires configuration, data module, loggers, and the Lightning trainer together. |
 
 ## Typical workflow
 
-1. **Pick a configuration.** Start from a preset in `opensr_srgan/configs/` and adapt dataset paths, scale, generator, discriminator, and loss
+1. **Pick a configuration.** Start from a preset in `opensr_gan/configs/` and adapt dataset paths, scale, generator, discriminator, and loss
    options to match your experiment.
 2. **Prepare datasets.** Point the config to a Sentinel-2 SAFE manifest or the SEN2NAIP worldwide dataset and verify that the
    required bands exist on disk (see [Data](data.md)).
-3. **Launch training.** Run `python -m opensr_srgan.train --config <path>` to instantiate the Lightning module, configure optimisers and
+3. **Launch training.** Run `python -m opensr_gan.train --config <path>` to instantiate the Lightning module, configure optimisers and
    callbacks, and start adversarial training (see [Training](training.md)).
 4. **Monitor progress.** Use the included Weights & Biases logging to track perceptual losses, adversarial
    metrics, and validation imagery.

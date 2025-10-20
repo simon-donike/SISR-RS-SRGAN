@@ -15,19 +15,19 @@ pip install opensr-srgan
 ## 2. Instantiate the pretrained RGB-NIR preset
 
 ```python
-from opensr_srgan import load_inference_model
+from opensr_gan import load_inference_model
 
 model = load_inference_model("RGB-NIR", map_location="cuda")
 ```
 
-`load_inference_model` retrieves the configuration and checkpoint that correspond to the selected preset (here the four-band RGB-NIR model), restores the Lightning module, and switches it to evaluation mode so that it is ready for inference.【F:opensr_srgan/_factory.py†L107-L150】 If you run on CPU, change `map_location="cuda"` to `map_location="cpu"`.
+`load_inference_model` retrieves the configuration and checkpoint that correspond to the selected preset (here the four-band RGB-NIR model), restores the Lightning module, and switches it to evaluation mode so that it is ready for inference.【F:opensr_gan/_factory.py†L107-L150】 If you run on CPU, change `map_location="cuda"` to `map_location="cpu"`.
 
 ## 3. Super-resolve a full tile with OpenSR-Utils
 
 ```python
 import opensr_utils
 
-sen2_path = "opensr_srgan/data/S2A_MSIL2A_20230901T104031_N0509_R137_T31TFJ_20230901T130204.SAFE"
+sen2_path = "opensr_gan/data/S2A_MSIL2A_20230901T104031_N0509_R137_T31TFJ_20230901T130204.SAFE"
 sr_runner = opensr_utils.large_file_processing(
     root=sen2_path,
     model=model,

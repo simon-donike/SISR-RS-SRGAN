@@ -1,6 +1,6 @@
 # Training workflow
 
-`opensr_srgan/train.py` is the canonical entry point for ESA OpenSR experiments. It ties together configuration loading, model instantiation,
+`opensr_gan/train.py` is the canonical entry point for ESA OpenSR experiments. It ties together configuration loading, model instantiation,
 dataset selection, logging, and callbacks. This page explains how the script is organised and how to customise the training loop.
 
 ## Command-line interface
@@ -8,10 +8,10 @@ dataset selection, logging, and callbacks. This page explains how the script is 
 Run the script with a single optional argument:
 
 ```bash
-python -m opensr_srgan.train --config path/to/config.yaml
+python -m opensr_gan.train --config path/to/config.yaml
 ```
 
-* `--config / -c`: Path to a YAML file describing the experiment. Defaults to `opensr_srgan/configs/config_20m.yaml`.
+* `--config / -c`: Path to a YAML file describing the experiment. Defaults to `opensr_gan/configs/config_20m.yaml`.
 
 GPU assignment is handled directly in the configuration. Set `Training.gpus` to a list of device indices (for example `[0, 1, 2, 3]`) to enable multi-GPU training; a single value such as `[0]` keeps the run on one card. When more than one device is listed the trainer automatically activates PyTorch Lightning's Distributed Data Parallel (DDP) backend for significantly faster epochs.
 

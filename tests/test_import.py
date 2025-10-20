@@ -9,5 +9,5 @@ pytest.importorskip("torch")
 def test_package_discovery():
     """Ensure packages listed in pyproject are discoverable."""
     packages = {name for _, name, _ in pkgutil.walk_packages(["."], onerror=lambda *_: None)}
-    expected = {"opensr_srgan"}
+    expected = {"opensr_gan"}
     assert expected.issubset(packages)

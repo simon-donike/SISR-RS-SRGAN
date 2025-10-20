@@ -46,4 +46,4 @@ classifiers = [
 package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
-include = ["opensr_srgan", "opensr_srgan.*"]
+include = ["opensr_gan", "opensr_gan.*"]

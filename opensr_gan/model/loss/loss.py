@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from opensr_srgan.data.utils import Normalizer
+from opensr_gan.data.utils import Normalizer
 
 def _cfg_get(cfg, keys, default=None):
     cur = cfg

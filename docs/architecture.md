@@ -77,7 +77,7 @@ The same module exposes `return_metrics()` so validation can log PSNR/SSIM-style
 ## Data flow and normalisation
 
 The Lightning module expects batches of `(lr_imgs, hr_imgs)` tensors supplied by the `LightningDataModule` returned from
-`opensr_srgan/data/data_utils.py`. `predict_step()` and the validation hooks rely on two utilities from `opensr_srgan.utils.spectral_helpers`:
+`opensr_gan/data/data_utils.py`. `predict_step()` and the validation hooks rely on two utilities from `opensr_gan.utils.spectral_helpers`:
 
 * `normalise_10k`: Converts Sentinel-2 style reflectance values between `[0, 10000]` and `[0, 1]`.
 * `histogram`: Matches the SR histogram to the LR reference to minimise domain gaps during inference.
@@ -86,9 +86,9 @@ These helpers allow the generator to operate in a normalised space while still r
 
 ## Putting it together
 
-1. `opensr_srgan/train.py` loads the YAML configuration and instantiates `SRGAN_model`.
+1. `opensr_gan/train.py` loads the YAML configuration and instantiates `SRGAN_model`.
 2. The model initialises the selected generator/discriminator, prepares losses, and prints a summary via
-   `opensr_srgan.utils.model_descriptions.print_model_summary`.
+   `opensr_gan.utils.model_descriptions.print_model_summary`.
 3. During each training batch, the discriminator receives real HR crops and fake SR predictions, while the generator combines
    content loss and a ramped adversarial term.
 4. Validation reuses the same modules to compute quantitative metrics and log qualitative examples.

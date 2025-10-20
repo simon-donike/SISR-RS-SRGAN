@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: SISR-RS-SRGAN
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Simon
+    family-names: Donike
+    email: accounts@donike.net
+    orcid: 'https://orcid.org/0000-0002-4440-3835'
+repository-code: 'https://github.com/simon-donike/SISR-RS-SRGAN'
+url: 'http://srgan.opensr.eu/'
+keywords:
+  - super-resolution
+  - remote sensing
+  - GAN
+license: Apache-2.0

@@ -1,9 +1,6 @@
-"""Top-level package for OpenSR SRGAN deployment helpers."""
+"""OpenSR-GAN package."""
 
-from __future__ import annotations
-
-from model.SRGAN import SRGAN_model
-
+from .model.SRGAN import SRGAN_model
 from ._factory import load_from_config, load_inference_model
 
 __all__ = [

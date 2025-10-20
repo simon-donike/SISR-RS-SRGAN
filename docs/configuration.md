@@ -1,7 +1,7 @@
 # Configuration
 
 ESA OpenSR relies on YAML files to control every aspect of the training pipeline. This page documents the available keys and how
-they influence the underlying code. Use `configs/config_20m.yaml` and `configs/config_10m.yaml` as starting points.
+they influence the underlying code. Use `opensr_gan/configs/config_20m.yaml` and `opensr_gan/configs/config_10m.yaml` as starting points.
 
 ## File structure
 
@@ -18,7 +18,7 @@ Schedulers:
 Logging:
 ```
 
-Each section maps directly to parameters consumed inside `model/SRGAN.py`, the dataset factory, or the training script.
+Each section maps directly to parameters consumed inside `opensr_gan/model/SRGAN.py`, the dataset factory, or the training script.
 
 ## Data
 
@@ -28,7 +28,7 @@ Each section maps directly to parameters consumed inside `model/SRGAN.py`, the d
 | `val_batch_size` | 8 | Batch size for validation. |
 | `num_workers` | 6 | Number of worker processes for both dataloaders. |
 | `prefetch_factor` | 2 | Additional batches prefetched by each worker. Ignored when `num_workers == 0`. |
-| `dataset_type` | `S2_6b` | Dataset selector consumed by `data.data_utils.select_dataset`. |
+| `dataset_type` | `S2_6b` | Dataset selector consumed by `opensr_gan.data.data_utils.select_dataset`. |
 
 ## Model
 

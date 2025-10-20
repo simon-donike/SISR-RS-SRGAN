@@ -16,6 +16,7 @@ wandb/
 tmp/
 
 # local folders
+.crossnote
 other/
 trash/
 logs/

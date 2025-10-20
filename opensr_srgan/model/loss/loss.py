@@ -1,9 +1,11 @@
+from pathlib import Path
+
+import kornia.metrics as km
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import kornia.metrics as km
 
-from data.utils import Normalizer
+from opensr_srgan.data.utils import Normalizer
 
 def _cfg_get(cfg, keys, default=None):
     cur = cfg
@@ -210,7 +212,8 @@ if __name__ == "__main__":
     # simple test
     from omegaconf import OmegaConf
 
-    with open("configs/config_20m.yaml", "r") as f:
+    config_path = Path(__file__).resolve().parents[2] / "configs" / "config_20m.yaml"
+    with open(config_path, "r") as f:
         cfg = OmegaConf.load(f)
 
     loss_fn = GeneratorContentLoss(cfg)

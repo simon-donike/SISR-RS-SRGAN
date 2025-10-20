@@ -24,7 +24,7 @@ def select_dataset(config):
 
     if dataset_selection == "S2_6b":
         # Import here to avoid import costs when other datasets are used elsewhere.
-        from data.SEN2_SAFE.S2_6b_ds import S2SAFEDataset
+        from .SEN2_SAFE.S2_6b_ds import S2SAFEDataset
 
         # 6 × 20 m bands (B05, B06, B07, B8A, B11, B12) in a fixed order
         desired_20m_order = ["B05_20m","B06_20m","B07_20m","B8A_20m","B11_20m","B12_20m"]
@@ -59,7 +59,7 @@ def select_dataset(config):
     elif dataset_selection == "S2_4b":
         # FYI: You import from S2_6b_ds for the 4-band case too (as per your snippet).
         # If there is a dedicated 4-band dataset file, swap the import accordingly.
-        from data.SEN2_SAFE.S2_6b_ds import S2SAFEDataset
+        from .SEN2_SAFE.S2_6b_ds import S2SAFEDataset
 
         # 4 × 10 m bands (R, G, B, NIR) in a fixed order.
         # FYI: The manifest path below still points to the 20 m manifest. If you truly
@@ -92,7 +92,7 @@ def select_dataset(config):
         )
 
     elif dataset_selection =="SISR_WW":
-        from data.SISR_WW.SISR_WW_dataset import SISRWorldWide
+        from .SISR_WW.SISR_WW_dataset import SISRWorldWide
         path = "/data3/SEN2NAIP_global"
         ds_train = SISRWorldWide(path=path,split="train")
         ds_val = SISRWorldWide(path=path,split="val")
@@ -179,6 +179,10 @@ def datamodule_from_datasets(config, ds_train, ds_val):
 
 
 if __name__ == "__main__":
+    from pathlib import Path
+
     from omegaconf import OmegaConf
-    config = OmegaConf.load("configs/config_10m.yaml")
+
+    config_path = Path(__file__).resolve().parents[1] / "configs" / "config_10m.yaml"
+    config = OmegaConf.load(config_path)
     _ = select_dataset(config)

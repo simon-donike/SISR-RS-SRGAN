@@ -11,7 +11,7 @@ from typing import Iterator, Optional, Union
 import torch
 from pytorch_lightning import LightningModule
 
-from model.SRGAN import SRGAN_model
+from .model.SRGAN import SRGAN_model
 
 __all__ = ["load_from_config", "load_inference_model"]
 

@@ -1,10 +1,13 @@
 # Package Imports
-import torch
-from pytorch_lightning import Trainer
-from omegaconf import OmegaConf
-import wandb
-import os, datetime
+import datetime
+import os
 from multiprocessing import freeze_support
+from pathlib import Path
+
+import torch
+from omegaconf import OmegaConf
+from pytorch_lightning import Trainer
+import wandb
 
 # set visible GPUs
 #os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -18,10 +21,11 @@ if __name__ == '__main__':
 
     # ---- CLI: single positional argument (config path) ----
     parser = argparse.ArgumentParser(description="Train SRGAN with a YAML config.")
+    default_config = Path(__file__).resolve().parent / "configs" / "config_10m.yaml"
     parser.add_argument(
         "--config", "-c",
-        default="configs/config_10m.yaml",
-        help="Path to YAML config file (default: configs/config_10m.yaml)"
+        default=str(default_config),
+        help="Path to YAML config file (default: opensr_srgan/configs/config_10m.yaml)"
     )
     args = parser.parse_args()
 
@@ -39,7 +43,7 @@ if __name__ == '__main__':
     " LOAD MODEL "
     #############################################################################################################
     # load pretrained or instanciate new
-    from model.SRGAN import SRGAN_model
+    from opensr_srgan.model.SRGAN import SRGAN_model
     if config.Model.load_checkpoint != False:
         model = SRGAN_model.load_from_checkpoint(config.Model.load_checkpoint, strict=False)
     else:
@@ -53,7 +57,7 @@ if __name__ == '__main__':
     """ GET DATA """
     #############################################################################################################
     # create dataloaders via dataset_selector -> config -> class selection -> convert to pl_module
-    from data.data_utils import select_dataset
+    from opensr_srgan.data.data_utils import select_dataset
     pl_datamodule = select_dataset(config)
 
     #############################################################################################################
@@ -71,7 +75,7 @@ if __name__ == '__main__':
     from pytorch_lightning.callbacks import ModelCheckpoint
     dir_save_checkpoints = os.path.join(os.path.normpath("logs/"),wandb_project,
                                                 datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-    from utils.gpu_rank import _is_global_zero # make dir only on main process
+    from opensr_srgan.utils.gpu_rank import _is_global_zero  # make dir only on main process
     if _is_global_zero(): # only on main process
         os.makedirs(dir_save_checkpoints, exist_ok=True)
         print("Experiment Path:",dir_save_checkpoints)

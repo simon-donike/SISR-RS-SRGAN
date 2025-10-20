@@ -1,7 +1,7 @@
 [![PyPI](https://img.shields.io/pypi/v/opensr-srgan)](https://pypi.org/project/opensr-srgan/)
 ![Python](https://img.shields.io/pypi/pyversions/opensr-srgan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/ESAOpenSR/Remote-Sensing-SRGAN/actions/workflows/ci.yml/badge.svg)](https://github.com/ESAOpenSR/Remote-Sensing-SRGAN/actions/workflows/ci.yml)
+[![CI](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml/badge.svg)](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-mkdocs%20material-brightgreen)](https://srgan.opensr.eu)
 [![Coverage](https://codecov.io/gh/simon-donike/SISR-RS-SRGAN/branch/main/graph/badge.svg)](https://app.codecov.io/gh/simon-donike/SISR-RS-SRGAN)
 

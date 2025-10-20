@@ -21,6 +21,10 @@ lightning_logs
 wandb/
 tmp/
 
+# Tests
+.coverage
+coverage.xml
+
 # local folders
 .crossnote
 other/

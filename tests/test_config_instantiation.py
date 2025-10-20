@@ -19,13 +19,19 @@ OmegaConf = omegaconf.OmegaConf
 
 from data import data_utils
 
+# --- FIX: give the module a real name & register it in sys.modules ---
+_factory_path = ROOT / "opensr_srgan" / "_factory.py"
 _factory_spec = importlib.util.spec_from_file_location(
-    "opensr_srgan._factory", ROOT / "opensr_srgan" / "_factory.py"
+    "opensr_srgan._factory", str(_factory_path)  # <<< changed
 )
 assert _factory_spec and _factory_spec.loader
 _factory = importlib.util.module_from_spec(_factory_spec)
-_factory_spec.loader.exec_module(_factory)  # type: ignore[assignment]
 
+# Register before executing so dataclasses & relative imports resolve
+sys.modules[_factory_spec.name] = _factory               # <<< changed
+_factory.__package__ = "opensr_srgan"                    # <<< changed
+
+_factory_spec.loader.exec_module(_factory)  # type: ignore[assignment]
 
 @pytest.mark.parametrize("config_name", ["config_10m.yaml", "config_20m.yaml"])
 def test_example_configs_can_instantiate(config_name: str, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -87,4 +93,3 @@ def test_prebuilt_models_can_instantiate(preset: str, monkeypatch: pytest.Monkey
     model = _factory.load_inference_model(preset, map_location="cpu")
     assert isinstance(model, SRGAN_model)
     assert not model.training
-

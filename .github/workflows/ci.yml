@@ -33,8 +33,7 @@ jobs:
         if: matrix.python-version == '3.11'
         uses: codecov/codecov-action@v4
         with:
-          # For public repos token is optional; for private, add:
-          # token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           flags: unittests
           fail_ci_if_error: true

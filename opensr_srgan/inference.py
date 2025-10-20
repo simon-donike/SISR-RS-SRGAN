@@ -5,7 +5,7 @@ from pathlib import Path
 
 import torch
 
-from opensr_gan.model.SRGAN import SRGAN_model
+from opensr_srgan.model.SRGAN import SRGAN_model
 
 
 def load_model(config_path=None, ckpt_path=None, device=None):

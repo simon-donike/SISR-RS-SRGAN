@@ -43,7 +43,7 @@ if __name__ == '__main__':
     " LOAD MODEL "
     #############################################################################################################
     # load pretrained or instanciate new
-    from opensr_gan.model.SRGAN import SRGAN_model
+    from opensr_srgan.model.SRGAN import SRGAN_model
     if config.Model.load_checkpoint != False:
         model = SRGAN_model.load_from_checkpoint(config.Model.load_checkpoint, strict=False)
     else:
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     """ GET DATA """
     #############################################################################################################
     # create dataloaders via dataset_selector -> config -> class selection -> convert to pl_module
-    from opensr_gan.data.data_utils import select_dataset
+    from opensr_srgan.data.data_utils import select_dataset
     pl_datamodule = select_dataset(config)
 
     #############################################################################################################
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     from pytorch_lightning.callbacks import ModelCheckpoint
     dir_save_checkpoints = os.path.join(os.path.normpath("logs/"),wandb_project,
                                                 datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-    from opensr_gan.utils.gpu_rank import _is_global_zero  # make dir only on main process
+    from opensr_srgan.utils.gpu_rank import _is_global_zero  # make dir only on main process
     if _is_global_zero(): # only on main process
         os.makedirs(dir_save_checkpoints, exist_ok=True)
         print("Experiment Path:",dir_save_checkpoints)

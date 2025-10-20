@@ -17,7 +17,7 @@ torch = pytest.importorskip("torch")
 omegaconf = pytest.importorskip("omegaconf")
 OmegaConf = omegaconf.OmegaConf
 
-from opensr_gan.data import data_utils
+from opensr_srgan.data import data_utils
 
 # --- FIX: give the module a real name & register it in sys.modules ---
 _factory_path = ROOT / "opensr_gan" / "_factory.py"
@@ -48,7 +48,7 @@ def test_example_configs_can_instantiate(config_name: str, monkeypatch: pytest.M
 
     monkeypatch.setattr(data_utils, "select_dataset", fake_select_dataset)
 
-    from opensr_gan.model.SRGAN import SRGAN_model
+    from opensr_srgan.model.SRGAN import SRGAN_model
 
     model = SRGAN_model(config_file_path=str(config_path))
     assert hasattr(model, "generator")
@@ -88,7 +88,7 @@ def test_prebuilt_models_can_instantiate(preset: str, monkeypatch: pytest.Monkey
     hub_module.hf_hub_download = fake_hf_hub_download
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub_module)
 
-    from opensr_gan.model.SRGAN import SRGAN_model
+    from opensr_srgan.model.SRGAN import SRGAN_model
 
     model = _factory.load_inference_model(preset, map_location="cpu")
     assert isinstance(model, SRGAN_model)

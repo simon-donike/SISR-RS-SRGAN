@@ -30,7 +30,7 @@ This repository provides:
 * A **stabilized GAN procedure** (G‑only pretraining → adversarial ramp‑up → scheduled D , EMA weights) that makes RS‑SR training more reliable.
 * Smooth integration with the **OpenSR** ecosystem for data handling, evaluation, and large‑scene inference.
 * A **PyPI package (`opensr-srgan`)** with helpers to load models directly from configs or download ready-to-run inference presets from the Hugging Face Hub.
-* **Configuration‑first workflow**: everything — from generator/discriminator choices to loss weights and warmup length — is selectable in `configs/config.yaml`.
+* **Configuration‑first workflow**: everything — from generator/discriminator choices to loss weights and warmup length — is selectable in `opensr_srgan/configs/config.yaml`.
 
 ### Key Features
 
@@ -82,7 +82,7 @@ After installation you have two options for model creation:
    from opensr_srgan import load_from_config
 
    model = load_from_config(
-       config_path="configs/config_10m.yaml",
+       config_path="opensr_srgan/configs/config_10m.yaml",
        checkpoint_uri="https://example.com/checkpoints/srgan.ckpt",
        map_location="cpu",  # optional
    )
@@ -145,14 +145,14 @@ pip install -r requirements.txt
 
 ### 0) Data
 
-Make sure the datafolders exist and are correctly associated with the dataset classes in the dataset folder. Use either your own data or any of the provided datasets in the `data/` folder.
+Make sure the data folders exist and are correctly associated with the dataset classes in the dataset folder. Use either your own data or any of the provided datasets in the `opensr_srgan/data/` folder.
 
 ### 1) SRGAN Training
 
 Train the GAN model.
 
 ```bash
-python train.py --config configs/config.yaml
+python -m opensr_srgan.train --config opensr_srgan/configs/config.yaml
 ```
 
 Multi-GPU training is enabled by setting `Training.gpus` in your config to a list of device indices (e.g. `[0, 1, 2, 3]`). The trainer automatically switches to Distributed Data Parallel (DDP), yielding significantly faster wall-clock times when scaling out across multiple GPUs.
@@ -181,7 +181,7 @@ opensr_utils.large_file_processing(
 
 ## 🏗️ Configuration Highlights
 
-All key knobs are exposed via YAML in the `configs` folder:
+All key knobs are exposed via YAML in the `opensr_srgan/configs` folder:
 
 * **Model**: `in_channels`, `n_channels`, `n_blocks`, `scale`, `block_type ∈ {SRResNet, res, rcab, rrdb, lka}`
 * **Losses**: `l1_weight`, `sam_weight`, `perceptual_weight`, `tv_weight`, `adv_loss_beta`
@@ -212,7 +212,7 @@ The schedule and ramp make training **easier, safer, and more reproducible**.
 
 ## 🛰️ Datasets
 
-Two dataset pipelines ship with the repository under `data/`. Both return `(lr, hr)` pairs that are wired into the training `LightningDataModule` through `data/data_utils.py`.
+Two dataset pipelines ship with the repository under `opensr_srgan/data/`. Both return `(lr, hr)` pairs that are wired into the training `LightningDataModule` through `opensr_srgan/data/data_utils.py`.
 
 ### Sentinel‑2 SAFE windowed chips
 
@@ -223,7 +223,7 @@ Two dataset pipelines ship with the repository under `data/`. Both return `(lr, 
   3. The stacked HR tensor is downsampled in code with anti‑aliased bilinear interpolation to create the LR observation, so the model sees the interpolated image as input and the original Sentinel‑2 patch as target. Invalid chips (NaNs, nodata, near‑black) are filtered out during training.
 * **Setup.**
   1. Organise your `.SAFE` products under a common root (the builder expects the usual `GRANULE/<id>/IMG_DATA` structure).
-  2. Run the builder (see the `__main__` example in `data/SEN2_SAFE/S2_6b_ds.py`) to generate a manifest JSON containing file metadata and chip coordinates.
+  2. Run the builder (see the `__main__` example in `opensr_srgan/data/SEN2_SAFE/S2_6b_ds.py`) to generate a manifest JSON containing file metadata and chip coordinates.
   3. Instantiate `S2SAFEDataset` with the manifest path, the band list/order, your desired `hr_size`, and the super‑resolution factor. The dataset will normalise values and synthesise the LR input automatically.
 
 ### SEN2NAIP (4× Sentinel‑2 → NAIP pairs)
@@ -232,15 +232,15 @@ Two dataset pipelines ship with the repository under `data/`. Both return `(lr, 
 * **Scale.** This loader is hard‑coded for 4× super‑resolution. The Taco manifest already contains the bilinearly downsampled Sentinel‑2 inputs, so no alternative scale factors are exposed.
 * **Setup.**
   1. Install the optional dependencies used by the loader: `pip install tacoreader rasterio` (plus Git LFS for the download step).
-  2. Fetch the dataset by running `python data/SEN2AIP/download_S2N.py`. The helper script downloads the manifest and image tiles from the Hugging Face hub into the working directory.
+  2. Fetch the dataset by running `python -m opensr_srgan.data.SEN2NAIP.download_S2N`. The helper script downloads the manifest and image tiles from the Hugging Face hub into the working directory.
   3. Point your config to the resulting `.taco` file when you instantiate `SEN2NAIP` (e.g. in a custom `select_dataset` branch). No extra preprocessing is required—the dataset returns NumPy arrays that are subsequently converted to tensors by the training pipeline.
 
 
 ### Adding a new dataset
 
-1. **Create the dataset class** inside `data/<your_dataset>/`. Mirror the existing API (`__len__`, `__getitem__` returning `(lr, hr)`) so it can plug into the shared training utilities.
-2. **Register it with the selector** by adding a new branch in `data/data_utils.py::select_dataset`, alongside the existing `S2_6b`/`S2_4b` options, so the configuration key resolves to your implementation.
-3. **Expose a config toggle** by adding the new `Data.dataset_type` value to your experiment YAML (for example `configs/config_20m.yaml`). Point any dataset‑specific parameters (paths, band lists, scale factors) to your new loader inside that branch.
+1. **Create the dataset class** inside `opensr_srgan/data/<your_dataset>/`. Mirror the existing API (`__len__`, `__getitem__` returning `(lr, hr)`) so it can plug into the shared training utilities.
+2. **Register it with the selector** by adding a new branch in `opensr_srgan/data/data_utils.py::select_dataset`, alongside the existing `S2_6b`/`S2_4b` options, so the configuration key resolves to your implementation.
+3. **Expose a config toggle** by adding the new `Data.dataset_type` value to your experiment YAML (for example `opensr_srgan/configs/config_20m.yaml`). Point any dataset‑specific parameters (paths, band lists, scale factors) to your new loader inside that branch.
 
 This keeps dataset plumbing centralised: dataset classes own their I/O logic, `select_dataset` wires them into Lightning, and the configuration file becomes the single switch for experiments.
 
@@ -249,11 +249,18 @@ This keeps dataset plumbing centralised: dataset classes own their I/O logic, `s
 ## 📂 Repository Structure
 
 ```
-Remote-Sensing-SRGAN/
-├── models/                # Generator/Discriminator + block implementations
-├── utils/                 # Normalization, stretching, plotting, logging
-├── utils/                 # Dataset implementations and downloading scripts
-├── train.py               # Training entry point (Lightning-compatible)
+SISR-RS-SRGAN/
+├── opensr_srgan/
+│   ├── configs/           # YAML presets for training and inference
+│   ├── data/              # Dataset wrappers and download helpers
+│   ├── model/             # Lightning module, generators, discriminators, losses
+│   ├── utils/             # Logging, spectral helpers, model summaries
+│   ├── train.py           # Training entry point (Lightning-compatible)
+│   └── inference.py       # Convenience helpers for tiled inference
+├── docs/                  # MkDocs documentation sources
+├── paper/                 # Publication, figures, and supporting material
+├── pyproject.toml         # Packaging metadata
+└── requirements.txt       # Development dependencies
 ```
 
 ---

@@ -5,14 +5,14 @@ each piece interacts during training and inference.
 
 ## SRGAN Lightning module
 
-`model/SRGAN.py` defines `SRGAN_model`, a `pytorch_lightning.LightningModule` that encapsulates the full adversarial workflow.
+`opensr_srgan/model/SRGAN.py` defines `SRGAN_model`, a `pytorch_lightning.LightningModule` that encapsulates the full adversarial workflow.
 The module is initialised from a YAML configuration file and provides the following responsibilities:
 
 * **Configuration ingestion.** Uses OmegaConf to load hyperparameters, dataset choices, and logging options. Convenience helpers
   such as `_pretrain_check()` and `_compute_adv_loss_weight()` translate config values into runtime behaviour.
 * **Model factory.** `get_models()` builds the generator and discriminator at runtime based on `Generator.model_type` and
   `Discriminator.model_type`. Unsupported combinations fail fast with clear error messages.
-* **Loss construction.** `GeneratorContentLoss` (from `model.loss`) provides L1, spectral angle mapper (SAM), perceptual, and
+* **Loss construction.** `GeneratorContentLoss` (from `opensr_srgan.model.loss`) provides L1, spectral angle mapper (SAM), perceptual, and
   total-variation terms. Adversarial supervision uses `torch.nn.BCEWithLogitsLoss` with optional label smoothing.
 * **Optimiser scheduling.** `configure_optimizers()` returns paired Adam optimisers (generator + discriminator) with
   `ReduceLROnPlateau` schedulers that monitor a configurable validation metric.
@@ -35,7 +35,7 @@ The module is initialised from a YAML configuration file and provides the follow
 
 ## Generator options
 
-The generator zoo lives under `model/generators/` and can be selected via `Generator.model_type` in the configuration.
+The generator zoo lives under `opensr_srgan/model/generators/` and can be selected via `Generator.model_type` in the configuration.
 
 * **`SRResNet` (`srresnet.py`).** Classic residual blocks with pixel shuffle upsampling. Ideal for baseline experiments or when a
   lightweight architecture is required.
@@ -52,7 +52,7 @@ Common traits across generators include configurable input channel counts (`Mode
 
 ## Discriminator options
 
-`model/descriminators/` exposes two complementary discriminators:
+`opensr_srgan/model/discriminators/` exposes two complementary discriminators:
 
 * **Standard SRGAN discriminator (`srgan_discriminator.py`).** Deep convolutional stack tailored for multispectral imagery. The
   number of convolutional blocks is configurable through `Discriminator.n_blocks`.
@@ -64,7 +64,7 @@ logit map is produced.
 
 ## Loss suite and metrics
 
-`model/loss` contains the perceptual and pixel-based criteria applied to the generator outputs. The primary entry point is
+`opensr_srgan/model/loss` contains the perceptual and pixel-based criteria applied to the generator outputs. The primary entry point is
 `GeneratorContentLoss`, which supports:
 
 * **L1 reconstruction** over all spectral bands.
@@ -77,7 +77,7 @@ The same module exposes `return_metrics()` so validation can log PSNR/SSIM-style
 ## Data flow and normalisation
 
 The Lightning module expects batches of `(lr_imgs, hr_imgs)` tensors supplied by the `LightningDataModule` returned from
-`data/data_utils.py`. `predict_step()` and the validation hooks rely on two utilities from `utils.spectral_helpers`:
+`opensr_srgan/data/data_utils.py`. `predict_step()` and the validation hooks rely on two utilities from `opensr_srgan.utils.spectral_helpers`:
 
 * `normalise_10k`: Converts Sentinel-2 style reflectance values between `[0, 10000]` and `[0, 1]`.
 * `histogram`: Matches the SR histogram to the LR reference to minimise domain gaps during inference.
@@ -86,9 +86,9 @@ These helpers allow the generator to operate in a normalised space while still r
 
 ## Putting it together
 
-1. `train.py` loads the YAML configuration and instantiates `SRGAN_model`.
+1. `opensr_srgan/train.py` loads the YAML configuration and instantiates `SRGAN_model`.
 2. The model initialises the selected generator/discriminator, prepares losses, and prints a summary via
-   `utils.model_descriptions.print_model_summary`.
+   `opensr_srgan.utils.model_descriptions.print_model_summary`.
 3. During each training batch, the discriminator receives real HR crops and fake SR predictions, while the generator combines
    content loss and a ramped adversarial term.
 4. Validation reuses the same modules to compute quantitative metrics and log qualitative examples.

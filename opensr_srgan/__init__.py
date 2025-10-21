@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from model.SRGAN import SRGAN_model
+from .model.SRGAN import SRGAN_model
 
 from ._factory import load_from_config, load_inference_model
 

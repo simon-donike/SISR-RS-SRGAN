@@ -1,8 +1,11 @@
 # inference.py
 
 import os
+from pathlib import Path
+
 import torch
-from model.SRGAN import SRGAN_model
+
+from .model.SRGAN import SRGAN_model
 
 
 def load_model(config_path=None, ckpt_path=None, device=None):
@@ -66,14 +69,14 @@ def main():
     os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
     # ---- Define placeholders ----
-    sen2_path = "data/S2A_MSIL2A_EXAMPLE.SAFE"
-    config_path = "configs/config_20m.yaml"
+    sen2_path = Path(__file__).resolve().parent / "data" / "S2A_MSIL2A_EXAMPLE.SAFE"
+    config_path = Path(__file__).resolve().parent / "configs" / "config_20m.yaml"
     ckpt_path = "checkpoints/srgan-20m-6band/last.ckpt"
     gpus = [0]
 
     run_sen2_inference(
-        sen2_path=sen2_path,
-        config_path=config_path,
+        sen2_path=str(sen2_path),
+        config_path=str(config_path),
         ckpt_path=ckpt_path,
         gpus=gpus,
     )

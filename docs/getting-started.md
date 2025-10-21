@@ -37,7 +37,7 @@ Refer to [Data](data.md) for dataset-specific requirements and how to plug in ne
 Use of the provided YAML presets or copy and edit one:
 
 ```bash
-cp configs/config_10m.yaml configs/my_experiment.yaml
+cp opensr_srgan/configs/config_10m.yaml opensr_srgan/configs/my_experiment.yaml
 ```
 
 Update at least the following fields:
@@ -54,7 +54,7 @@ See [Configuration](configuration.md) for a full breakdown of available options.
 Run the training script with your customised config:
 
 ```bash
-python train.py --config configs/my_experiment.yaml
+python -m opensr_srgan.train --config opensr_srgan/configs/my_experiment.yaml
 ```
 
 The script will:
@@ -78,7 +78,7 @@ Training resumes automatically if `Model.continue_training` points to a Lightnin
 
     # Option A – bring your own config + checkpoint (local path or URL)
     custom_model = load_from_config(
-        config_path="configs/config_10m.yaml",
+        config_path="opensr_srgan/configs/config_10m.yaml",
         checkpoint_uri="https://example.com/checkpoints/srgan.ckpt",
         map_location="cuda",  # optional
     )
@@ -88,7 +88,7 @@ Training resumes automatically if `Model.continue_training` points to a Lightnin
     ```
   * **When working from source:**
     ```python
-    from model.SRGAN import SRGAN_model
+    from opensr_srgan.model.SRGAN import SRGAN_model
 
     model = SRGAN_model("your_config.yaml")
     model.load_from_checkpoint("path/to/checkpoint.ckpt")
@@ -106,4 +106,4 @@ Training resumes automatically if `Model.continue_training` points to a Lightnin
 * Explore alternative generator backbones such as RCAB or RRDB by changing `Generator.model_type`.
 * Adjust adversarial warm-up with `Training.pretrain_g_only`, `g_pretrain_steps`, and `adv_loss_ramp_steps` if you observe
   instability.
-* Integrate new datasets by extending the factory in `data/data_utils.py` and documenting them in [Data](data.md).
+* Integrate new datasets by extending the factory in `opensr_srgan/data/data_utils.py` and documenting them in [Data](data.md).

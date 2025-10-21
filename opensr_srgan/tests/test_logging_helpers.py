@@ -5,7 +5,7 @@ Image = PIL.Image
 
 torch = pytest.importorskip("torch")
 
-from utils import logging_helpers as lh
+from opensr_srgan.utils import logging_helpers as lh
 
 
 def test_to_numpy_img_single_channel():

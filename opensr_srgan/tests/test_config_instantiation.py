@@ -10,17 +10,18 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+PROJECT_ROOT = ROOT.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 torch = pytest.importorskip("torch")
 omegaconf = pytest.importorskip("omegaconf")
 OmegaConf = omegaconf.OmegaConf
 
-from data import data_utils
+from opensr_srgan.data import data_utils
 
 # --- FIX: give the module a real name & register it in sys.modules ---
-_factory_path = ROOT / "opensr_srgan" / "_factory.py"
+_factory_path = ROOT / "_factory.py"
 _factory_spec = importlib.util.spec_from_file_location(
     "opensr_srgan._factory", str(_factory_path)  # <<< changed
 )
@@ -37,7 +38,7 @@ _factory_spec.loader.exec_module(_factory)  # type: ignore[assignment]
 def test_example_configs_can_instantiate(config_name: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """Mirror the training script by loading configs and instantiating model + datamodule."""
 
-    config_path = Path("configs") / config_name
+    config_path = ROOT / "configs" / config_name
     config = OmegaConf.load(config_path)
 
     sentinel = object()
@@ -48,7 +49,7 @@ def test_example_configs_can_instantiate(config_name: str, monkeypatch: pytest.M
 
     monkeypatch.setattr(data_utils, "select_dataset", fake_select_dataset)
 
-    from model.SRGAN import SRGAN_model
+    from opensr_srgan.model.SRGAN import SRGAN_model
 
     model = SRGAN_model(config_file_path=str(config_path))
     assert hasattr(model, "generator")
@@ -63,8 +64,8 @@ def test_prebuilt_models_can_instantiate(preset: str, monkeypatch: pytest.Monkey
     """Ensure factory presets can be instantiated without performing remote downloads."""
 
     config_sources = {
-        "RGB": Path("configs/config_10m.yaml"),
-        "SWIR": Path("configs/config_20m.yaml"),
+        "RGB": ROOT / "configs" / "config_10m.yaml",
+        "SWIR": ROOT / "configs" / "config_20m.yaml",
     }
 
     download_map: dict[str, Path] = {}
@@ -88,7 +89,7 @@ def test_prebuilt_models_can_instantiate(preset: str, monkeypatch: pytest.Monkey
     hub_module.hf_hub_download = fake_hf_hub_download
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub_module)
 
-    from model.SRGAN import SRGAN_model
+    from opensr_srgan.model.SRGAN import SRGAN_model
 
     model = _factory.load_inference_model(preset, map_location="cpu")
     assert isinstance(model, SRGAN_model)

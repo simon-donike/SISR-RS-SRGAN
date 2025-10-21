@@ -15,6 +15,7 @@ requires-python = ">=3.9"
 dependencies = [
   "torch>=1.13,<2.0",
   "pytorch-lightning>=1.9,<2.0",
+  "torchvision",
   "numpy",
   "kornia",
   "wandb",

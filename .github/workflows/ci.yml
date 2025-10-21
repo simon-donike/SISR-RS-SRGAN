@@ -2,8 +2,7 @@
 name: CI
 on:
   push:
-    branches: [ main ]      # CI on direct pushes to main
-    tags: [ 'v*' ]          # CI also runs when you push a tag like v1.2.3
+    tags: [ 'v*' ]    # CI only runs on tagged releases like v1.2.3
 
 
 jobs:

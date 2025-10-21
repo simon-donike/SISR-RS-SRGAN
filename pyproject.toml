@@ -54,5 +54,5 @@ opensr_srgan = [
 ]
 
 [project.optional-dependencies]
-tests = ["pytest", "pytest-cov"]
+tests = ["pytest", "pytest-cov","numpy"]
 docs = ["mkdocs-material"]

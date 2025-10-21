@@ -1,8 +1,6 @@
 # .github/workflows/ci.yml
 name: CI
 on:
-  pull_request:
-    branches: [ main ]      # CI for PRs into main
   push:
     branches: [ main ]      # CI on direct pushes to main
     tags: [ 'v*' ]          # CI also runs when you push a tag like v1.2.3

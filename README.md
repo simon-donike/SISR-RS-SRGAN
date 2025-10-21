@@ -17,7 +17,7 @@
 
 ## 📖 Documentation
 
-Full docs live at **[srgan.opensr.eu](https://www.srgan.opensr.eu/)**. They cover usage, configuration, training recipes, and deployment tips in depth.
+Full docs live at **[srgan.opensr.eu](https://srgan.opensr.eu/)**. They cover usage, configuration, training recipes, and deployment tips in depth.
 
 ## 🧠 Highlights
 
@@ -65,21 +65,21 @@ The YAML keeps the SRGAN flexible: swap architectures or rebalance perceptual vs
 
 ## 🧰 Installation
 
-Follow the [installation instructions](https://www.srgan.opensr.eu/getting-started/installation/) for package, source, and dependency setup options.
+Follow the [installation instructions](https://srgan.opensr.eu/getting-started/installation/) for package, source, and dependency setup options.
 
 ---
 
 ## 🚀 Quickstart
 
-* **Datasets:** Dataset structure, downloads, and custom loaders are documented in the [data guide](https://www.srgan.opensr.eu/data/).
-* **Training:** Launch training with `python -m opensr_srgan.train --config opensr_srgan/configs/config.yaml` or follow the [training walkthrough](https://www.srgan.opensr.eu/getting-started/training/).
-* **Inference:** Ready-made presets and large-scene pipelines are described in the [inference section](https://www.srgan.opensr.eu/getting-started/inference/).
+* **Datasets:** Dataset structure, downloads, and custom loaders are documented in the [data guide](https://srgan.opensr.eu/data/).
+* **Training:** Launch training with `python -m opensr_srgan.train --config opensr_srgan/configs/config.yaml` or follow the [training walkthrough](https://srgan.opensr.eu/getting-started/training/).
+* **Inference:** Ready-made presets and large-scene pipelines are described in the [inference section](https://srgan.opensr.eu/getting-started/inference/).
 
 ---
 
 ## 🏗️ Configuration & Stabilization
 
-All tunable knobs—architectures, loss weights, schedulers, and EMA—are exposed via YAML files under `opensr_srgan/configs`. Strategy tips for warm-ups, adversarial ramps, and EMA usage are summarised in the [training concepts chapter](https://www.srgan.opensr.eu/training/concepts/).
+All tunable knobs—architectures, loss weights, schedulers, and EMA—are exposed via YAML files under `opensr_srgan/configs`. Strategy tips for warm-ups, adversarial ramps, and EMA usage are summarised in the [training concepts chapter](https://srgan.opensr.eu/training/concepts/).
 
 
 ## 📂 Repository Structure

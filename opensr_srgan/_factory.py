@@ -11,7 +11,7 @@ from typing import Iterator, Optional, Union
 import torch
 from pytorch_lightning import LightningModule
 
-from .model.SRGAN import SRGAN_model
+from opensr_srgan.model.SRGAN import SRGAN_model
 
 __all__ = ["load_from_config", "load_inference_model"]
 
@@ -67,6 +67,7 @@ def load_from_config(
     checkpoint_uri: Optional[Union[str, Path]] = None,
     *,
     map_location: Optional[Union[str, torch.device]] = None,
+    mode: str = "train",
 ) -> LightningModule:
     """Instantiate ``SRGAN_model`` from a YAML config and optional checkpoint.
 
@@ -83,13 +84,15 @@ def load_from_config(
     map_location:
         Optional argument forwarded to :func:`torch.load` during checkpoint
         deserialisation.
+    mode:
+        Mode in which to instantiate the model. Either "train" or "eval".
     """
 
     config_path = Path(config_path)
     if not config_path.is_file():
         raise FileNotFoundError(f"Config file '{config_path}' could not be located.")
 
-    model = SRGAN_model(config_file_path=str(config_path))
+    model = SRGAN_model(config_file_path=str(config_path), mode=mode)
 
     if checkpoint_uri is not None:
         with _maybe_download(checkpoint_uri) as resolved_path:
@@ -147,4 +150,13 @@ def load_inference_model(
         config_path,
         checkpoint_path,
         map_location=map_location,
+        mode="eval",
     )
+    
+if __name__ == "__main__":
+    # simple test
+    model = load_inference_model("RGB-NIR")
+    import torch
+    lr = torch.randn(1,4,64,64)
+    sr = model.predict_step(lr)
+    print(sr.shape)

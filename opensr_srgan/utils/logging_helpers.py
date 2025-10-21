@@ -1,30 +1,33 @@
 import io
 
 import matplotlib.pyplot as plt
-import numpy as np
 import torch
 from PIL import Image
 
 from .spectral_helpers import minmax_percentile
+from .torch_numpy import tensor_to_numpy
+
+
+def _tensor_to_plot_data(t: torch.Tensor):
+    """Convert a CPU tensor to data suitable for matplotlib."""
+    return tensor_to_numpy(t.contiguous())
 
 def _to_numpy_img(t: torch.Tensor):
-    """
-    Expects t shape (C,H,W) on CPU; returns (H,W,3) or (H,W) numpy.
-    """
+    """Convert a tensor in (C, H, W) format to plotting data."""
     if t.dim() != 3:
         raise ValueError(f"Expected (C,H,W), got {tuple(t.shape)}")
     C, H, W = t.shape
-    t = t.clamp(0, 1)
+    t = t.detach().clamp(0, 1)
     if C == 1:
-        out = np.array(t[0].contiguous())
+        out = _tensor_to_plot_data(t[0])
         return out               # grayscale
 
     if C in (3, 4):
-        rgb = t[:3]            
-        out = np.array(rgb.permute(1, 2, 0).contiguous())
+        rgb = t[:3]
+        out = _tensor_to_plot_data(rgb.permute(1, 2, 0))
         return out
 
-    return np.array(t.permute(1, 2, 0).contiguous())
+    return _tensor_to_plot_data(t.permute(1, 2, 0))
     # Multichannel (first 3 shown upstream)
 
 def plot_tensors(lr, sr, hr, title="Train"):

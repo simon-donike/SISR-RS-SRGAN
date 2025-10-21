@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from skimage import exposure
 import torch
 
+from .torch_numpy import tensor_to_numpy
+
 
 # -------------------------------------------------------------------------
 # SENTINEL-2 NORMALIZATION HELPERS
@@ -208,8 +210,8 @@ def histogram(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         )
 
     # Convert to NumPy for histogram matching operations
-    ref_np = ref.detach().cpu().numpy()
-    tgt_np = tgt.detach().cpu().numpy()
+    ref_np = tensor_to_numpy(ref)
+    tgt_np = tensor_to_numpy(tgt)
     out_np = np.empty_like(tgt_np)  # preallocate output array
 
     # --- Loop over batches and channels ---
@@ -275,15 +277,16 @@ def moment(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         as the corresponding reference channel.
     """
 
-    # Convert to NumPy arrays for easier numerical processing
-    reference, target = reference.numpy(), target.numpy()
+    device, dtype = target.device, target.dtype
 
-    # Counter to handle first channel initialization
-    c = 0
+    # Convert to NumPy arrays for easier numerical processing
+    reference_np = tensor_to_numpy(reference)
+    target_np = tensor_to_numpy(target)
+
+    matched_channels = []
 
     # Iterate channel-wise through reference and target
-    for ref_ch, tgt_ch in zip(reference, target):
-        c += 1
+    for ref_ch, tgt_ch in zip(reference_np, target_np):
 
         # --- Compute per-channel mean and std ---
         ref_mean = np.mean(ref_ch)
@@ -294,15 +297,12 @@ def moment(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         # --- Apply moment matching formula ---
         # Normalize target → scale by reference std → shift by reference mean
         matched_channel = (((tgt_ch - tgt_mean) / tgt_std) * ref_std) + ref_mean
+        matched_channels.append(matched_channel)
 
-        # --- Stack matched channels together ---
-        if c == 1:
-            matched = matched_channel  # initialize stack
-        else:
-            matched = np.dstack((matched, matched_channel))  # append depth-wise (H, W, C)
+    matched_np = np.stack(matched_channels, axis=0)
 
     # Convert back to PyTorch tensor with channel-first format (C, H, W)
-    matched = torch.tensor(matched.transpose((2, 0, 1)))
+    matched = torch.from_numpy(matched_np).to(device=device, dtype=dtype)
 
     return matched
 

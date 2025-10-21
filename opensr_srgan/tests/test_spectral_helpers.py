@@ -1,8 +1,6 @@
 import pytest
-import numpy as np
-import torch
 
-np = pytest.importorskip("numpy")
+pytest.importorskip("numpy")
 torch = pytest.importorskip("torch")
 
 from opensr_srgan.utils import spectral_helpers as sh
@@ -81,9 +79,9 @@ def test_moment_matches_statistics():
 
     matched = sh.moment(reference, target)
     for ref_ch, matched_ch in zip(reference, matched):
-        assert np.isclose(
-            np.mean(np.array(matched_ch)), np.mean(np.array(ref_ch)), atol=1e-5
+        assert torch.isclose(
+            matched_ch.mean(), ref_ch.mean(), atol=1e-5
         )
-        assert np.isclose(
-            np.std(np.array(matched_ch)), np.std(np.array(ref_ch)), atol=1e-5
+        assert torch.isclose(
+            matched_ch.std(unbiased=False), ref_ch.std(unbiased=False), atol=1e-5
         )

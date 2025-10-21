@@ -1,4 +1,4 @@
-name: docs
+name: Build Docs
 on:
   push:
     tags: ['v*']        # deploy only when pushing a tag like v1.0.1

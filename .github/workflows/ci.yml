@@ -1,5 +1,5 @@
 # .github/workflows/ci.yml
-name: CI
+name: CI Tests
 on:
   push:
     tags: [ 'v*' ]    # CI only runs on tagged releases like v1.2.3

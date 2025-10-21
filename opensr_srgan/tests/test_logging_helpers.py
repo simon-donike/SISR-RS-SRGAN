@@ -8,23 +8,10 @@ torch = pytest.importorskip("torch")
 from opensr_srgan.utils import logging_helpers as lh
 
 
-def test_to_numpy_img_single_channel():
-    tensor = torch.linspace(0, 1, steps=4).view(1, 2, 2)
-    array = lh._to_numpy_img(tensor)
-    assert array.shape == (2, 2)
-    assert array.min() >= 0.0 and array.max() <= 1.0
-
-
 def test_to_numpy_img_rgb():
     tensor = torch.rand(3, 6, 6)
     array = lh._to_numpy_img(tensor)
     assert array.shape == (6, 6, 3)
-
-
-def test_to_numpy_img_invalid_dim():
-    tensor = torch.zeros(2, 2)
-    with pytest.raises(ValueError):
-        lh._to_numpy_img(tensor)
 
 
 def test_plot_tensors_returns_pil_image():

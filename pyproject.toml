@@ -44,6 +44,13 @@ classifiers = [
 
 [tool.setuptools]
 package-dir = {"" = "."}
+include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["opensr_srgan", "opensr_srgan.*"]
+
+[tool.setuptools.package-data]
+opensr_srgan = [
+  "configs/*.yaml",
+  "configs/**/*.yaml",
+]

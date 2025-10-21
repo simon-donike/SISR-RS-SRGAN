@@ -107,9 +107,9 @@ its `.generator` attribute for inference-ready PyTorch modules.
 
 ### Option 2 — work from source
 
-> ⚠️ **Python version**: the pinned `torch==1.13.1` and `torchvision==0.14.1` wheels target
-> Python 3.10 (or earlier). Create your environment with a Python 3.10 interpreter to avoid
-> installation failures on newer runtimes (e.g., Python 3.11).
+> ⚠️ **Python version**: the default PyTorch 2.x wheels target Python 3.10+.
+> Create your environment with a supported interpreter (Python 3.10 or 3.11) to
+> ensure compatible binaries are available for your platform/CUDA toolkit.
 
 ```bash
 # Clone the repository
@@ -130,13 +130,13 @@ pip install -r requirements.txt
 # pip install lpips tacoreader
 ```
 
-> ℹ️ **Tip:** If the default PyPI index cannot find `torch==1.13.1`, install
-> PyTorch directly from the official wheel index before running
-> `pip install -r requirements.txt`:
+> ℹ️ **Tip:** If the default PyPI index cannot find a matching torch/torchvision
+> build for your CUDA toolkit, install PyTorch directly from the official wheel
+> index before running `pip install -r requirements.txt`:
 >
 > ```bash
-> # CUDA 11.7 builds
-> pip install torch==1.13.1 torchvision==0.14.1 --index-url https://download.pytorch.org/whl/cu117
+> # Example: CUDA 12.1 builds
+> pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 > ```
 
 ---

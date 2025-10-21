@@ -210,7 +210,7 @@ class SRGAN_model(pl.LightningModule):
         return sr_imgs
 
 
-    def training_step(self,batch,batch_idx,optimizer_idx):
+    def training_step(self, batch, batch_idx, optimizer_idx=0):
         # ======================================================================
         # SECTION: Forward pass + metric logging (no gradients for metrics)
         # Purpose: compute SR prediction, evaluate training metrics, log them.
@@ -508,25 +508,42 @@ class SRGAN_model(pl.LightningModule):
             )
 
             warmup_scheduler_config = {
-                'scheduler': warmup_scheduler,
-                'interval': 'step',
-                'frequency': 1,
-                'name': 'generator_warmup',
+                "scheduler": warmup_scheduler,
+                "interval": "step",
+                "frequency": 1,
+                "name": "generator_warmup",
             }
 
+        plateau_metric = self.config.Schedulers.metric
         scheduler_configs = [
-            {'scheduler': scheduler_d, 'monitor': self.config.Schedulers.metric, 'reduce_on_plateau': True, 'interval': 'epoch', 'frequency': 1},
-            {'scheduler': scheduler_g, 'monitor': self.config.Schedulers.metric, 'reduce_on_plateau': True, 'interval': 'epoch', 'frequency': 1}
+            {
+                "scheduler": scheduler_d,
+                "monitor": plateau_metric,
+                "reduce_on_plateau": True,
+                "interval": "epoch",
+                "frequency": 1,
+                "name": "discriminator_plateau",
+            },
+            {
+                "scheduler": scheduler_g,
+                "monitor": plateau_metric,
+                "reduce_on_plateau": True,
+                "interval": "epoch",
+                "frequency": 1,
+                "name": "generator_plateau",
+            },
         ]
 
         if warmup_scheduler_config is not None:
             scheduler_configs.append(warmup_scheduler_config)
 
-        # return both optimizers + schedulers for PL
-        return [
-            [optimizer_d, optimizer_g],  # order super important, it's [D, G] and checked in training step
-            scheduler_configs,
+        # return both optimizers + schedulers for PL 2.x (tuple of sequences)
+        optimizers = [
+            optimizer_d,
+            optimizer_g,
         ]
+
+        return optimizers, scheduler_configs
 
 
     def on_train_batch_start(self, batch, batch_idx):  # called before each training batch

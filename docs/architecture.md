@@ -14,8 +14,9 @@ The module is initialised from a YAML configuration file and provides the follow
   `Discriminator.model_type`. Unsupported combinations fail fast with clear error messages.
 * **Loss construction.** `GeneratorContentLoss` (from `opensr_srgan.model.loss`) provides L1, spectral angle mapper (SAM), perceptual, and
   total-variation terms. Adversarial supervision uses `torch.nn.BCEWithLogitsLoss` with optional label smoothing.
-* **Optimiser scheduling.** `configure_optimizers()` returns paired Adam optimisers (generator + discriminator) with
-  `ReduceLROnPlateau` schedulers that monitor a configurable validation metric.
+* **Optimiser scheduling.** `configure_optimizers()` returns a `(optimizers, schedulers)` tuple compatible with
+  PyTorch Lightning 2.x. Optimisers are ordered `[discriminator, generator]` and use `ReduceLROnPlateau`
+  schedules (plus an optional generator warm-up) that monitor a configurable validation metric.
 * **Training orchestration.** `training_step()` alternates discriminator (`optimizer_idx == 0`) and generator (`optimizer_idx ==
   1`) updates. During the warm-up period configured by `Training.pretrain_g_only`, discriminator weights are frozen via
   `on_train_batch_start()` and a dedicated `pretraining_training_step()` computes purely content-driven updates.

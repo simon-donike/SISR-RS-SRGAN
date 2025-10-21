@@ -1,21 +1,22 @@
 # Package Imports
 import math
-from contextlib import nullcontext
-
-import torch
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-import pytorch_lightning as pl
-import numpy as np
 import time
-from omegaconf import OmegaConf
+from contextlib import nullcontext
+from pathlib import Path
+
+import numpy as np
+import pytorch_lightning as pl
+import torch
 import wandb
+from omegaconf import OmegaConf
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 # local imports
-from utils.logging_helpers import plot_tensors
-from utils.spectral_helpers import normalise_10k
-from utils.spectral_helpers import histogram as histogram_match
-from utils.model_descriptions import print_model_summary
-from model.model_blocks import ExponentialMovingAverage
+from ..utils.logging_helpers import plot_tensors
+from ..utils.model_descriptions import print_model_summary
+from ..utils.spectral_helpers import histogram as histogram_match
+from ..utils.spectral_helpers import normalise_10k
+from .model_blocks import ExponentialMovingAverage
 
 
 #############################################################################################################
@@ -80,7 +81,7 @@ class SRGAN_model(pl.LightningModule):
         # SECTION: Define Loss Functions
         # Purpose: Configure generator content loss and discriminator adversarial loss.
         # ======================================================================
-        from model.loss import GeneratorContentLoss
+        from .loss import GeneratorContentLoss
         self.content_loss_criterion = GeneratorContentLoss(self.config)  # perceptual loss (VGG + pixel)
         self.adversarial_loss_criterion = torch.nn.BCEWithLogitsLoss()   # binary cross-entropy for D/G
 
@@ -98,7 +99,7 @@ class SRGAN_model(pl.LightningModule):
 
         if generator_type == 'SRResNet':
             # Standard SRResNet generator
-            from model.generators.srresnet import Generator
+            from .generators.srresnet import Generator
             self.generator = Generator(
                 in_channels=self.config.Model.in_bands,                # number of input channels
                 large_kernel_size=self.config.Generator.large_kernel_size,
@@ -109,7 +110,7 @@ class SRGAN_model(pl.LightningModule):
             )
         elif generator_type in ['res', 'rcab', 'rrdb', 'lka']:
             # Advanced generator variants (ResNet, RCAB, RRDB, etc.)
-            from model.generators.flexible_generator import FlexibleGenerator
+            from .generators.flexible_generator import FlexibleGenerator
             self.generator = FlexibleGenerator(
                 in_channels=self.config.Model.in_bands,
                 n_channels=self.config.Generator.n_channels,
@@ -120,7 +121,7 @@ class SRGAN_model(pl.LightningModule):
                 block_type=self.config.Generator.model_type
             )
         elif generator_type.lower() in ['conditional_cgan', 'cgan']:
-            from model.generators import ConditionalGANGenerator
+            from .generators import ConditionalGANGenerator
 
             self.generator = ConditionalGANGenerator(
                 in_channels=self.config.Model.in_bands,
@@ -144,7 +145,7 @@ class SRGAN_model(pl.LightningModule):
         n_blocks = getattr(self.config.Discriminator, 'n_blocks', None)
 
         if discriminator_type == 'standard':
-            from model.discriminators.srgan_discriminator import Discriminator
+            from .discriminators.srgan_discriminator import Discriminator
 
             discriminator_kwargs = {
                 "in_channels": self.config.Model.in_bands,
@@ -154,7 +155,7 @@ class SRGAN_model(pl.LightningModule):
 
             self.discriminator = Discriminator(**discriminator_kwargs)
         elif discriminator_type == 'patchgan':
-            from model.discriminators.patchgan import PatchGANDiscriminator
+            from .discriminators.patchgan import PatchGANDiscriminator
 
             patchgan_layers = n_blocks if n_blocks is not None else 3
             self.discriminator = PatchGANDiscriminator(
@@ -545,7 +546,7 @@ class SRGAN_model(pl.LightningModule):
         # SECTION: Print Model Summary
         # Purpose: Output model architecture and parameter counts (only once).
         # ======================================================================
-        from utils.gpu_rank import _is_global_zero
+        from ..utils.gpu_rank import _is_global_zero
         if _is_global_zero():
             print_model_summary(self)  # print model summary to console
 
@@ -744,8 +745,9 @@ class SRGAN_model(pl.LightningModule):
         print(f"Loaded checkpoint from {ckpt_path}")
         
 
-if __name__=="__main__":       
-    model = SRGAN_model(config_file_path="configs/config_20m.yaml")
+if __name__=="__main__":
+    config_path = Path(__file__).resolve().parents[1] / "configs" / "config_20m.yaml"
+    model = SRGAN_model(config_file_path=str(config_path))
     model.forward(torch.randn(1,6,32,32))
     
     model.load_from_checkpoint("logs/SRGAN_6bands/2025-10-11_23-53-20/last.ckpt")

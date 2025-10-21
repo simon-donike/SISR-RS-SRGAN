@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import io
 from utils.spectral_helpers import minmax_percentile
-import numpy
+import numpy as np
 
 def _to_numpy_img(t: torch.Tensor):
     """
@@ -14,13 +14,16 @@ def _to_numpy_img(t: torch.Tensor):
     C, H, W = t.shape
     t = t.clamp(0, 1)
     if C == 1:
-        return t[0].contiguous().numpy()               # grayscale
+        out = np.array(t[0].contiguous())
+        return out               # grayscale
 
     if C in (3, 4):
-        rgb = t[:3]                                    # enforce bands 0,1,2 as RGB for 3/4-band inputs
-        return rgb.permute(1, 2, 0).contiguous().numpy()
+        rgb = t[:3]            
+        out = np.array(rgb.permute(1, 2, 0).contiguous())
+        return out
 
-    return t.permute(1, 2, 0).contiguous().numpy()     # Multichannel (first 3 shown upstream)
+    return np.array(t.permute(1, 2, 0).contiguous())
+    # Multichannel (first 3 shown upstream)
 
 def plot_tensors(lr, sr, hr, title="Train"):
     # --- denorm + stretch on whatever device you're using ---

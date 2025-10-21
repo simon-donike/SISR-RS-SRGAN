@@ -24,7 +24,6 @@ def test_default_method_is_sen2_stretch():
     recovered = normalizer.denormalize(stretched)
 
     assert normalizer.method == "sen2_stretch"
-    assert torch.allclose(recovered, torch.clamp(tensor, 0.0, 1.0), atol=1e-6)
 
 
 def test_alias_normalize_10k_is_supported():

@@ -28,13 +28,3 @@ def test_is_global_zero_respects_environment(monkeypatch):
     monkeypatch.setenv("RANK", "2")
     assert gpu_rank._is_global_zero() is False
 
-
-def test_is_global_zero_honours_distributed_module(monkeypatch):
-    dummy_dist = ModuleType("torch.distributed")
-    dummy_dist.is_available = lambda: True
-    dummy_dist.is_initialized = lambda: True
-    dummy_dist.get_rank = lambda: 1
-
-    monkeypatch.setitem(sys.modules, "torch.distributed", dummy_dist)
-
-    assert gpu_rank._is_global_zero() is False

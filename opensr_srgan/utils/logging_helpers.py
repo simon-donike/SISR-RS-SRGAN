@@ -1,9 +1,11 @@
-import torch
-import matplotlib.pyplot as plt
-from PIL import Image
 import io
-from utils.spectral_helpers import minmax_percentile
+
+import matplotlib.pyplot as plt
 import numpy as np
+import torch
+from PIL import Image
+
+from .spectral_helpers import minmax_percentile
 
 def _to_numpy_img(t: torch.Tensor):
     """

@@ -7,7 +7,7 @@ from typing import Any
 
 import torch
 
-from utils.spectral_helpers import normalise_10k, sen2_stretch
+from ...utils.spectral_helpers import normalise_10k, sen2_stretch
 
 
 @dataclass

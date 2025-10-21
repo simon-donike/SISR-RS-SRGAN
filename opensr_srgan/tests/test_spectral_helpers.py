@@ -3,7 +3,7 @@ import pytest
 np = pytest.importorskip("numpy")
 torch = pytest.importorskip("torch")
 
-from utils import spectral_helpers as sh
+from opensr_srgan.utils import spectral_helpers as sh
 
 
 def test_normalise_s2_roundtrip():

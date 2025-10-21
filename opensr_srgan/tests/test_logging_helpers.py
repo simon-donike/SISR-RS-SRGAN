@@ -19,6 +19,8 @@ def test_to_numpy_img_rgb():
 
 
 def test_plot_tensors_returns_pil_image():
+    import torch
+    import numpy
     lr = torch.rand(1, 3, 4, 4)
     sr = torch.rand(1, 3, 4, 4)
     hr = torch.rand(1, 3, 4, 4)

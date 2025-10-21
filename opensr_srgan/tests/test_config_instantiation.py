@@ -99,6 +99,9 @@ def test_prebuilt_models_can_instantiate(preset: str, monkeypatch: pytest.Monkey
 
     model = _factory.load_inference_model(preset, map_location="cpu")
     from opensr_srgan.model.SRGAN import SRGAN_model
+    
+    from opensr_srgan.utils.model_descriptions import print_model_summary
+    print_model_summary(model)
 
     assert isinstance(model, SRGAN_model)
     assert not model.training

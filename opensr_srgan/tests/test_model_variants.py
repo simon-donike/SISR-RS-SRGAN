@@ -64,7 +64,7 @@ def test_generator_variants_instantiate(factory):
     """Ensure all supported generator variants can be built and run a forward pass."""
 
     generator = factory()
-    lr = torch.randn(1, 4, 16, 16)
+    lr = torch.randn(1, 4, 128, 128)
     sr = generator(lr)
     assert isinstance(sr, torch.Tensor)
     assert sr.shape[0] == lr.shape[0]
@@ -91,7 +91,7 @@ def test_discriminator_variants_instantiate(factory):
     """Ensure discriminator variants can be built and process a forward pass."""
 
     discriminator = factory()
-    hr = torch.randn(1, 4, 64, 64)
+    hr = torch.randn(1, 4, 128, 128)
     scores = discriminator(hr)
     assert isinstance(scores, torch.Tensor)
     assert scores.shape[0] == hr.shape[0]

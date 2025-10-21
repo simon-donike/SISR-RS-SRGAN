@@ -27,6 +27,7 @@ jobs:
           pip install pytest pytest-cov
           pip install --index-url https://download.pytorch.org/whl/cpu torch
           pip install -r requirements.txt
+          pip install numpy
 
       - name: Run tests with coverage
         run: |

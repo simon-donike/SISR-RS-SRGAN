@@ -1,4 +1,6 @@
 import pytest
+import numpy as np
+import torch
 
 np = pytest.importorskip("numpy")
 torch = pytest.importorskip("torch")
@@ -80,8 +82,8 @@ def test_moment_matches_statistics():
     matched = sh.moment(reference, target)
     for ref_ch, matched_ch in zip(reference, matched):
         assert np.isclose(
-            np.mean(matched_ch.numpy()), np.mean(ref_ch.numpy()), atol=1e-5
+            np.mean(np.array(matched_ch)), np.mean(np.array(ref_ch)), atol=1e-5
         )
         assert np.isclose(
-            np.std(matched_ch.numpy()), np.std(ref_ch.numpy()), atol=1e-5
+            np.std(np.array(matched_ch)), np.std(np.array(ref_ch)), atol=1e-5
         )

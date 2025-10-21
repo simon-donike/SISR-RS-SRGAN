@@ -1,12 +1,8 @@
 import torch
 import numpy as np
-import torchvision.transforms as transforms
 import torch.nn.functional as F
 from skimage import exposure
-
-
 import torch
-from torchvision import transforms
 
 
 # -------------------------------------------------------------------------

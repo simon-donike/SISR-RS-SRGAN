@@ -25,10 +25,11 @@ Full docs live at **[srgan.opensr.eu](https://www.srgan.opensr.eu/)**. They cove
 * **Remote-sensing aware losses:** combine spectral, perceptual, and adversarial objectives with tunable weights.
 * **Stable training loop:** generator pretraining, adversarial ramp-ups, EMA, and multi-GPU Lightning support out of the box.
 * **PyPI distribution:** `pip install opensr-srgan` for ready-to-use presets or custom configs.
+* **Extensive Logging:** Logging all important information automatically to `WandB` for optimal insights.
 
 ---
 
-## 🏗️ Configuration Highlights
+## 🏗️ Configuration Examples
 
 All key knobs are exposed via YAML in the `opensr_srgan/configs` folder:
 
@@ -49,13 +50,6 @@ All key knobs are exposed via YAML in the `opensr_srgan/configs` folder:
 The schedule and ramp make training **easier, safer, and more reproducible**.
 
 ---
-
-## 🧱 Architectures & Blocks (short)
-
-* **SRResNet (res)**: Residual blocks **without BN**, residual scaling; strong content backbone for pretraining.
-* **RCAB (rcab)**: Residual Channel Attention Blocks (attention via channel‑wise reweighting) for enhanced detail contrast in textures.
-* **RRDB (rrdb)**: Residual‑in‑Residual Dense Blocks (as in ESRGAN); deeper receptive fields with dense skip pathways for sharper detail.
-* **LKA (lka)**: Large‑Kernel Attention blocks approximating wide‑context kernels; good for **large structures** common in RS (fields, roads, shorelines).
 
 ## ⚙️ Config‑driven components
 

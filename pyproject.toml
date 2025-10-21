@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opensr-srgan"
-version = "0.1.21"
+version = "0.1.22"
 description = "Modular Super-Resolution GAN Framework for Remote Sensing."
 readme = "README.md"
 authors = [
@@ -29,8 +29,6 @@ dependencies = [
 keywords = ["super-resolution", "gan", "remote-sensing", "pytorch", "lightning"]
 classifiers = [
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "License :: OSI Approved :: MIT License",
   "Intended Audience :: Science/Research",
@@ -54,3 +52,7 @@ opensr_srgan = [
   "configs/*.yaml",
   "configs/**/*.yaml",
 ]
+
+[project.optional-dependencies]
+tests = ["pytest", "pytest-cov"]
+docs = ["mkdocs-material"]

@@ -37,7 +37,7 @@ class SRGAN_model(pl.LightningModule):
         config_file_path (str): Path to the YAML configuration file.
     """
 
-    def __init__(self, config_file_path="config.yaml"):
+    def __init__(self, config_file_path="config.yaml", mode="train"):
         super(SRGAN_model, self).__init__()
 
         # ======================================================================
@@ -45,6 +45,8 @@ class SRGAN_model(pl.LightningModule):
         # Purpose: Load and parse model/training hyperparameters from YAML file.
         # ======================================================================
         self.config = OmegaConf.load(config_file_path)  # load config file with OmegaConf
+        assert mode in {"train", "eval"}, "Mode must be 'train' or 'eval'"  # validate mode
+        self.mode = mode                                # store mode (train/eval)
 
         # --- Training settings ---
         self.pretrain_g_only = bool(getattr(self.config.Training, "pretrain_g_only", False))  # pretrain generator only (default False)
@@ -56,7 +58,7 @@ class SRGAN_model(pl.LightningModule):
         # SECTION: Initialize Generator
         # Purpose: Build generator network depending on selected architecture.
         # ======================================================================
-        self.get_models()  # dynamically builds and attaches generator + discriminator
+        self.get_models(mode=self.mode)  # dynamically builds and attaches generator + discriminator
 
         # ======================================================================
         # SECTION: Initialize EMA
@@ -81,11 +83,12 @@ class SRGAN_model(pl.LightningModule):
         # SECTION: Define Loss Functions
         # Purpose: Configure generator content loss and discriminator adversarial loss.
         # ======================================================================
-        from .loss import GeneratorContentLoss
-        self.content_loss_criterion = GeneratorContentLoss(self.config)  # perceptual loss (VGG + pixel)
-        self.adversarial_loss_criterion = torch.nn.BCEWithLogitsLoss()   # binary cross-entropy for D/G
+        if self.mode == "train":
+            from .loss import GeneratorContentLoss
+            self.content_loss_criterion = GeneratorContentLoss(self.config)  # perceptual loss (VGG + pixel)
+            self.adversarial_loss_criterion = torch.nn.BCEWithLogitsLoss()   # binary cross-entropy for D/G
 
-    def get_models(self):
+    def get_models(self, mode):
         """
         Initialize and attach Generator and Discriminator models based on config.
         Supports multiple generator architectures (SRResNet, RCAB, RRDB, etc.).
@@ -137,41 +140,40 @@ class SRGAN_model(pl.LightningModule):
         else:
             raise ValueError(f"Unknown generator model type: {self.config.Generator.model_type}")  # safety check
 
-        # ======================================================================
-        # SECTION: Initialize Discriminator
-        # Purpose: Build discriminator network for adversarial training.
-        # ======================================================================
-        discriminator_type = getattr(self.config.Discriminator, 'model_type', 'standard')
-        n_blocks = getattr(self.config.Discriminator, 'n_blocks', None)
+        if mode == "train": # only get discriminator in training mode
+            # ======================================================================
+            # SECTION: Initialize Discriminator
+            # Purpose: Build discriminator network for adversarial training.
+            # ======================================================================
+            discriminator_type = getattr(self.config.Discriminator, 'model_type', 'standard')
+            n_blocks = getattr(self.config.Discriminator, 'n_blocks', None)
 
-        if discriminator_type == 'standard':
-            from .discriminators.srgan_discriminator import Discriminator
+            if discriminator_type == 'standard':
+                from .discriminators.srgan_discriminator import Discriminator
 
-            discriminator_kwargs = {
-                "in_channels": self.config.Model.in_bands,
-            }
-            if n_blocks is not None:
-                discriminator_kwargs["n_blocks"] = n_blocks
+                discriminator_kwargs = {
+                    "in_channels": self.config.Model.in_bands,
+                }
+                if n_blocks is not None:
+                    discriminator_kwargs["n_blocks"] = n_blocks
 
-            self.discriminator = Discriminator(**discriminator_kwargs)
-        elif discriminator_type == 'patchgan':
-            from .discriminators.patchgan import PatchGANDiscriminator
+                self.discriminator = Discriminator(**discriminator_kwargs)
+            elif discriminator_type == 'patchgan':
+                from .discriminators.patchgan import PatchGANDiscriminator
 
-            patchgan_layers = n_blocks if n_blocks is not None else 3
-            self.discriminator = PatchGANDiscriminator(
-                input_nc=self.config.Model.in_bands,
-                n_layers=patchgan_layers,
-            )
-        else:
-            raise ValueError(f"Unknown discriminator model type: {discriminator_type}")
+                patchgan_layers = n_blocks if n_blocks is not None else 3
+                self.discriminator = PatchGANDiscriminator(
+                    input_nc=self.config.Model.in_bands,
+                    n_layers=patchgan_layers,
+                )
+            else:
+                raise ValueError(f"Unknown discriminator model type: {discriminator_type}")
 
 
     def forward(self, lr_imgs):
         # perform generative step (LR → SR)
         sr_imgs = self.generator(lr_imgs)   # pass LR input through generator network
         return sr_imgs                      # return super-resolved output
-
-
 
     @torch.no_grad()
     def predict_step(self, lr_imgs):
@@ -182,7 +184,7 @@ class SRGAN_model(pl.LightningModule):
         - If input range ≈ [0,10000] → apply normalization.
         - Handles inference, histogram matching, and denormalization.
         """
-
+        assert self.generator.training is False, "Generator must be in eval mode for prediction."  # ensure eval mode
         lr_imgs = lr_imgs.to(self.device)  # move to device (GPU or CPU)
 
         # --- Check if normalization is needed ---

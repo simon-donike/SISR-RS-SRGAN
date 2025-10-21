@@ -1,4 +1,4 @@
-name: Create GitHub Release
+name: Create GH tagged Release
 
 on:
   push:

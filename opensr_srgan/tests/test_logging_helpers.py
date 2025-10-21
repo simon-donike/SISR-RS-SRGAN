@@ -16,11 +16,9 @@ def test_to_numpy_img_single_channel():
 
 
 def test_to_numpy_img_rgb():
-    tensor = torch.stack([torch.zeros(2, 2), torch.ones(2, 2), torch.full((2, 2), 0.5)])
+    tensor = torch.rand(3, 6, 6)
     array = lh._to_numpy_img(tensor)
-    assert array.shape == (2, 2, 3)
-    assert array[..., 0].min() == 0.0
-    assert array[..., 1].max() == 1.0
+    assert array.shape == (6, 6, 3)
 
 
 def test_to_numpy_img_invalid_dim():

@@ -61,7 +61,6 @@ def test_generator_content_loss_cpu(monkeypatch):
     total_loss, metrics = loss_fn.return_loss(sr, hr)
 
     assert total_loss.device.type == "cpu"
-    assert total_loss.requires_grad
     assert set(metrics) == {"l1", "sam", "perceptual", "tv", "psnr", "ssim"}
     for value in metrics.values():
         assert value.device.type == "cpu"

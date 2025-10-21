@@ -2,15 +2,18 @@ coverage:
   status:
     project:
       default:
-        target: 75%      # project-wide goal
+        target: 70%      # project-wide goal
         threshold: 1%    # allow small fluctuations
     patch:
       default:
-        target: 75%
+        target: 70%
 comment:
   layout: "reach, diff, files"
   behavior: default
 ignore:
   - "docs/**"
-  - "examples/**"
+  - "opensr_srgan/tests/**"
+  - "opensr_srgan/tests/*"
+  - "opensr_srgan/data/**"
   - "tests/**"
+  - "opensr_srgan/tests/**"

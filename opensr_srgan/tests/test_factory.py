@@ -48,7 +48,7 @@ class DummyEMA:
 
 
 class DummySRGAN:
-    def __init__(self, config_file_path=None):
+    def __init__(self, config_file_path=None,mode=None):
         self.config_file_path = config_file_path
         self.loaded_state = None
         self.eval_called = False

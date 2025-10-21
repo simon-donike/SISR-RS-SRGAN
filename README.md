@@ -28,9 +28,46 @@ Full docs live at **[srgan.opensr.eu](https://www.srgan.opensr.eu/)**. They cove
 
 ---
 
-## 🧱 Architectures & Blocks
+## 🏗️ Configuration Highlights
 
-See the [Architectures & Blocks guide](https://www.srgan.opensr.eu/model/architectures/) for supported generator/discriminator components, block variants, and configuration examples.
+All key knobs are exposed via YAML in the `opensr_srgan/configs` folder:
+
+* **Model**: `in_channels`, `n_channels`, `n_blocks`, `scale`, `block_type ∈ {SRResNet, res, rcab, rrdb, lka}`
+* **Losses**: `l1_weight`, `sam_weight`, `perceptual_weight`, `tv_weight`, `adv_loss_beta`
+* **Training**: `pretrain_g_only`, `g_pretrain_steps`, `adv_loss_ramp_steps`, `label_smoothing`, generator LR warmup (`Schedulers.g_warmup_steps`, `Schedulers.g_warmup_type`), discriminator cadence controls
+* **Data**: band order, normalization stats, crop sizes, augmentations
+
+---
+
+## 🎚️ Training Stabilization Strategies
+
+* **G‑only pretraining:** Train with content/perceptual losses while the adversarial term is held at zero during the first `g_pretrain_steps`.
+* **Adversarial ramp‑up:** Increase the BCE adversarial weight **linearly** or smoothly (**cosine**) over `adv_loss_ramp_steps` until it reaches `adv_loss_beta`.
+* **Generator LR warmup:** Ramp the generator optimiser with a **cosine** or **linear** schedule for the first 1–5k steps via `Schedulers.g_warmup_steps`/`g_warmup_type` before switching to plateau-based reductions.
+* **EMA smoothing:** Enable `Training.EMA.enabled` to keep a shadow copy of the generator. Decay values in the 0.995–0.9999 range balance responsiveness with stability and are swapped in automatically for validation/inference.
+
+The schedule and ramp make training **easier, safer, and more reproducible**.
+
+---
+
+## 🧱 Architectures & Blocks (short)
+
+* **SRResNet (res)**: Residual blocks **without BN**, residual scaling; strong content backbone for pretraining.
+* **RCAB (rcab)**: Residual Channel Attention Blocks (attention via channel‑wise reweighting) for enhanced detail contrast in textures.
+* **RRDB (rrdb)**: Residual‑in‑Residual Dense Blocks (as in ESRGAN); deeper receptive fields with dense skip pathways for sharper detail.
+* **LKA (lka)**: Large‑Kernel Attention blocks approximating wide‑context kernels; good for **large structures** common in RS (fields, roads, shorelines).
+
+## ⚙️ Config‑driven components
+
+| Component | Options | Config keys |
+|-----------|---------|-------------|
+| **Generators** | `SRResNet`, `res`, `rcab`, `rrdb`, `lka` | `Generator.model_type`, depth via `Generator.n_blocks`, width via `Generator.n_channels`, kernels and scale. |
+| **Discriminators** | `standard` SRGAN CNN, `patchgan` | `Discriminator.model_type`, granularity with `Discriminator.n_blocks`. |
+| **Content losses** | L1, Spectral Angle Mapper, VGG19/LPIPS perceptual metrics, Total Variation | Weighted by `Training.Losses.*` (e.g. `l1_weight`, `sam_weight`, `perceptual_weight`, `perceptual_metric`, `tv_weight`). |
+| **Adversarial loss** | BCE‑with‑logits on real/fake logits | Warmup via `Training.pretrain_g_only`, ramped by `adv_loss_ramp_steps`, capped at `adv_loss_beta`, optional label smoothing. |
+
+The YAML keeps the SRGAN flexible: swap architectures or rebalance perceptual vs. spectral fidelity without touching the code.
+
 
 ## 🧰 Installation
 
@@ -49,3 +86,48 @@ Follow the [installation instructions](https://www.srgan.opensr.eu/getting-start
 ## 🏗️ Configuration & Stabilization
 
 All tunable knobs—architectures, loss weights, schedulers, and EMA—are exposed via YAML files under `opensr_srgan/configs`. Strategy tips for warm-ups, adversarial ramps, and EMA usage are summarised in the [training concepts chapter](https://www.srgan.opensr.eu/training/concepts/).
+
+
+## 📂 Repository Structure
+
+```
+SISR-RS-SRGAN/
+├── opensr_srgan/         # Library + training code
+├── docs/                 # MkDocs documentation sources
+├── paper/                # Publication, figures, and supporting material
+├── pyproject.toml        # Packaging metadata
+└── requirements.txt      # Development dependencies
+```
+
+---
+
+## 📚 Related Projects
+
+* **OpenSR-Model** – Latent Diffusion SR (LDSR-S2)
+* **OpenSR-Utils** – Large-scale inference & data plumbing
+* **OpenSR-Test** – Benchmarks & metrics
+* **SEN2NEON** – Multispectral HR reference dataset
+
+---
+
+## ✍️ Citation
+
+If you use this work, please cite:
+
+```bibtex
+coming soon...
+```
+
+---
+
+## 🧑‍🚀 Authors & Acknowledgements
+
+Developed by **Simon Donike** (IPL–UV) within the **ESA Φ-lab / OpenSR** initiative.
+
+---
+
+## 🧑‍🚀 ToDOs
+- [ ] create inference.py  (interface with opensr-test)
+- [ ] build interface with SEN2SR (for 10m + 20m SR)
+- [x] incorporate the SEN2NAIP versions + downloading
+- [x] implement different discriminators

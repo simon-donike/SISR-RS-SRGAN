@@ -5,7 +5,7 @@ options, required inputs, and how the Lightning data module is assembled.
 
 ## Dataset selector
 
-`data/data_utils.py` exposes `select_dataset(config)`, which inspects `config.Data.dataset_type` and returns a
+`opensr_srgan/data/data_utils.py` exposes `select_dataset(config)`, which inspects `config.Data.dataset_type` and returns a
 `pytorch_lightning.LightningDataModule`. The helper keeps dataset instantiation and dataloader configuration in one place so that
 training scripts only need the YAML file.
 
@@ -22,7 +22,7 @@ as `sr_factor`, ensuring the dataloader and model agree on the upsampling ratio.
 
 ## Sentinel-2 SAFE datasets
 
-Both Sentinel-2 options rely on `data/SEN2_SAFE/S2_6b_ds.py` for data loading. Key behaviours include:
+Both Sentinel-2 options rely on `opensr_srgan/data/SEN2_SAFE/S2_6b_ds.py` for data loading. Key behaviours include:
 
 * **Manifest-driven tiling.** The JSON manifest encodes absolute paths to SAFE granule chips and ensures low-/high-resolution
   crops are spatially aligned.

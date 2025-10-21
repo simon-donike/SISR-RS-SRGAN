@@ -27,7 +27,7 @@ model = load_inference_model("RGB-NIR", map_location="cuda")
 ```python
 import opensr_utils
 
-sen2_path = "data/S2A_MSIL2A_20230901T104031_N0509_R137_T31TFJ_20230901T130204.SAFE"
+sen2_path = "opensr_srgan/data/S2A_MSIL2A_20230901T104031_N0509_R137_T31TFJ_20230901T130204.SAFE"
 sr_runner = opensr_utils.large_file_processing(
     root=sen2_path,
     model=model,
@@ -43,7 +43,7 @@ sr_runner = opensr_utils.large_file_processing(
 sr_runner.start_super_resolution()
 ```
 
-`large_file_processing` orchestrates the windowed inference workflow: it slides a `(128 × 128)` LR window over the scene, feeds each crop through the SRGAN, blends overlapping predictions (12 px overlap with 2 px border trimming), and optionally stores both previews and georeferenced outputs. The helper understands either directory-style SAFE products or single GeoTIFFs, and it accepts GPU IDs for accelerated execution.【F:inference.py†L17-L30】 Adjust the paths, window size, and overlap to match your dataset or hardware constraints.
+`large_file_processing` orchestrates the windowed inference workflow: it slides a `(128 × 128)` LR window over the scene, feeds each crop through the SRGAN, blends overlapping predictions (12 px overlap with 2 px border trimming), and optionally stores both previews and georeferenced outputs. The helper understands either directory-style SAFE products or single GeoTIFFs, and it accepts GPU IDs for accelerated execution.【F:opensr_srgan/inference.py†L20-L32】 Adjust the paths, window size, and overlap to match your dataset or hardware constraints.
 
 ## 4. Next steps
 

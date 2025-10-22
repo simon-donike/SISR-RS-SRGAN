@@ -135,6 +135,8 @@ Table: **Implemented generator types and their characteristics.**
 | `lka` [@lka] | Large-Kernel Attention blocks. Capture wide spatial context, beneficial for structured RS patterns (e.g., fields, roads). |
 | `cgan` | stoachastic Conditional Generator with *NoiseResBlock*. |
 
+:::
+
 The `Generator` class provides a unified implementation of SR backbones that share a common convolutional structure while differing in their internal residual block design.  
 The module is initialized with a `block_type` flag selecting one of `{res, rcab, rrdb, lka, cgan}`, each drawn from a shared registry of block factories.  
 Given an input tensor $x$, the model applies a wide receptive-field head convolution, followed by $N$ residual blocks of the selected type, a tail convolution for residual fusion, and an upsampling module that increases spatial resolution by a factor of 2, 4, or 8.  
@@ -182,6 +184,8 @@ Table: **Implemented discriminator types and their purposes.**
 | `standard` [@ledig2017photo] | A global SR-GAN-style CNN discriminator that judges the overall realism of the full image. Promotes coherent global structure. |
 | `patchgan` [@patchgan] | A PatchGAN discriminator that outputs patch-level predictions. Focuses on local realism and texture detail. Patch size is implicitly controlled by network depth (`n_blocks`). |
 
+:::
+
 Two discriminator variants are implemented to complement the different generator types: a global `Discriminator` and a local `PatchGANDiscriminator`. Both are built from shared convolutional blocks with LeakyReLU activations and instance normalization.
 
 The standard discriminator follows the original SRGAN [@ledig2017photo] design and evaluates the realism of the entire super-resolved image and the actual HR image. It stacks a sequence of strided convolutional layers with progressively increasing feature channels, an adaptive average pooling layer to a fixed spatial size, and two fully connected layers producing a scalar real/fake score. This “global” discriminator promotes coherent large-scale structure and overall photorealism.
@@ -193,7 +197,8 @@ The `PatchGANDiscriminator` instead outputs a grid of patch-level predictions, c
 
 Training stability is improved through several built-in mechanisms that address the common issues of adversarial optimization ([Table&nbsp;3](#tab:train)). These are configured in the `Training` section of the YAML configuration.
 
-Table: **Implemented training features for stable adversarial optimization.** {#tab:train}
+:::{#tab:train}
+Table: **Implemented training features for stable adversarial optimization.** 
 
 
 | **Feature** | **Description** |
@@ -204,6 +209,8 @@ Table: **Implemented training features for stable adversarial optimization.** {#
 | `g_warmup_steps`, `g_warmup_type` | Warmup schedule for the generator’s learning rate, linear or cosine, ensuring smooth optimizer convergence. |
 | `EMA.enabled` | Enables Exponential Moving Average tracking of generator weights for smoother validation and inference outputs. |
 | `Training.gpus` | Enables distributed data-parallel training when multiple GPU indices are listed, scaling training efficiently via Pytorch-Lightning. |
+
+:::
 
 #### Exponential Moving Average (EMA) Stabilisation
 
@@ -233,7 +240,9 @@ Empirically, applying EMA has been shown to stabilise adversarial training by mi
 
 Each loss term in [Table&nbsp;4](#tab:loss) can be weighted independently, allowing users to balance spectral accuracy and perceptual realism.  
 
-Table: **Supported loss components and configuration parameters.** {#tab:loss}
+
+:::{#tab:loss}
+Table: **Supported loss components and configuration parameters.** 
 
 
 | **Loss Type** | **Description** |
@@ -245,6 +254,8 @@ Table: **Supported loss components and configuration parameters.** {#tab:loss}
 | `Adversarial Loss` | Binary cross-entropy loss on discriminator predictions; drives realism and high-frequency texture generation. |
 
 Typical configurations combine L1, Perceptual, and Adversarial losses, optionally augmented by SAM and TV for multispectral consistency and smoothness. The overall objective is a weighted sum of these terms defined in the `Training.Losses` section of the configuration.
+
+:::
 
 ### Metrics
 

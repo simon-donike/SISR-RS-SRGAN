@@ -53,6 +53,8 @@ class SRGAN_model(pl.LightningModule):
         else:
             raise TypeError("Config must be a filepath (str or Path), dict, or OmegaConf object.")
         assert mode in {"train", "eval"}, "Mode must be 'train' or 'eval'"  # validate mode
+        
+        self.config = config
         self.mode = mode                                # store mode (train/eval)
 
         # --- Training settings ---

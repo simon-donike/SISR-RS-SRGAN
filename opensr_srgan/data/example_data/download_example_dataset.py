@@ -1,24 +1,33 @@
 from huggingface_hub import hf_hub_download
-import zipfile
-import os
+import zipfile, os
 
 def get_example_dataset(out_dir: str = "example_dataset/"):
     """Download and extract the example dataset for SRGAN training."""
-    # make sure the target dir exists
     os.makedirs(out_dir, exist_ok=True)
 
-    # download the file from your repo
     repo_id = "simon-donike/SR-GAN"
     filename = "example_dataset.zip"
 
-    print("Downloading from Hugging Face Hub...")
+    print("📦 Downloading from Hugging Face Hub...")
     zip_path = hf_hub_download(repo_id=repo_id, filename=filename)
 
-    # unzip after download
     with zipfile.ZipFile(zip_path, "r") as z:
-        z.extractall(out_dir)
+        members = z.namelist()
 
-    print(f"✅ Extracted dataset to: {os.path.abspath(out_dir)}")
-    
-    # delete the zip file to save space
+        # detect common top-level folder (e.g. "example_data/")
+        prefix = os.path.commonprefix(members)
+        if prefix and prefix.endswith("/"):
+            for member in members:
+                # strip the prefix
+                target = member[len(prefix):]
+                if not target:  # skip folder itself
+                    continue
+                target_path = os.path.join(out_dir, target)
+                os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                with z.open(member) as src, open(target_path, "wb") as dst:
+                    dst.write(src.read())
+        else:
+            z.extractall(out_dir)
+
     os.remove(zip_path)
+    print(f"✅ Extracted dataset to: {os.path.abspath(out_dir)}")

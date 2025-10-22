@@ -489,13 +489,13 @@ class SRGAN_model(pl.LightningModule):
             optimizer_g, mode='min',
             factor=self.config.Schedulers.factor_g,
             patience=self.config.Schedulers.patience_g,
-            verbose=self.config.Schedulers.verbose
+            #verbose=self.config.Schedulers.verbose
         )
         scheduler_d = ReduceLROnPlateau(
             optimizer_d, mode='min',
             factor=self.config.Schedulers.factor_d,
             patience=self.config.Schedulers.patience_d,
-            verbose=self.config.Schedulers.verbose
+            #verbose=self.config.Schedulers.verbose
         )
 
         # optional generator warmup scheduler (step-based)

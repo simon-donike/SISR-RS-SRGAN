@@ -16,6 +16,12 @@ htmlcov/
 .pytest_cache/*
 *.egg-info
 
+# Data
+opensr_srgan/data/SISR_WW/
+opensr_srgan/data/SISR_WW/*
+opensr_srgan/data/SEN2_SAFE
+opensr_srgan/data/SEN2_SAFE/*
+
 # Logs
 lightning_logs/
 lightning_logs/*

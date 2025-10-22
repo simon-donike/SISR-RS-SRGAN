@@ -1,0 +1,29 @@
+name: Build PDF
+
+on:
+  push:
+    paths:
+      - "paper/**"
+  workflow_dispatch:
+
+jobs:
+  paper:
+    runs-on: ubuntu-latest
+    name: Build JOSS draft
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build draft PDF
+        uses: openjournals/openjournals-draft-action@master
+        with:
+          journal: joss
+          # Path to your paper.md inside the repo
+          paper-path: paper/paper.md
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper
+          # PDF is emitted next to paper.md
+          path: paper/paper.pdf

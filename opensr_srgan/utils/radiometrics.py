@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from skimage import exposure
 import torch
 
-from .torch_numpy import tensor_to_numpy
+from .tensor_conversions import tensor_to_numpy
 
 
 # -------------------------------------------------------------------------

@@ -1,7 +1,8 @@
 name: Build Docs
 on:
   push:
-    tags: ['v*']        # deploy only when pushing a tag like v1.0.1
+    paths:
+      - "paper/**"
   workflow_dispatch:     # allow manual runs
 
 permissions:

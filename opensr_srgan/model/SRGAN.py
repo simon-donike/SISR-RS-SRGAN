@@ -14,8 +14,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 # local imports
 from ..utils.logging_helpers import plot_tensors
 from ..utils.model_descriptions import print_model_summary
-from ..utils.spectral_helpers import histogram as histogram_match
-from ..utils.spectral_helpers import normalise_10k
+from ..utils.radiometrics import histogram as histogram_match
+from ..utils.radiometrics import normalise_10k
 from .model_blocks import ExponentialMovingAverage
 
 
@@ -37,14 +37,21 @@ class SRGAN_model(pl.LightningModule):
         config_file_path (str): Path to the YAML configuration file.
     """
 
-    def __init__(self, config_file_path="config.yaml", mode="train"):
+    def __init__(self, config="config.yaml", mode="train"):
         super(SRGAN_model, self).__init__()
 
         # ======================================================================
         # SECTION: Load Configuration
         # Purpose: Load and parse model/training hyperparameters from YAML file.
         # ======================================================================
-        self.config = OmegaConf.load(config_file_path)  # load config file with OmegaConf
+        if isinstance(config, Path) or isinstance(config, str):
+            self.config = OmegaConf.load(config)  # load config file with OmegaConf
+        elif isinstance(config, dict):
+            self.config = OmegaConf.create(config)          # create config from dict
+        elif OmegaConf.is_config(config):
+            self.config = config                           # already an OmegaConf object
+        else:
+            print("Invalid config type; must be file path or OmegaConf/dict.")
         assert mode in {"train", "eval"}, "Mode must be 'train' or 'eval'"  # validate mode
         self.mode = mode                                # store mode (train/eval)
 

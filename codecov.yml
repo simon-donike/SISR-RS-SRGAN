@@ -15,5 +15,5 @@ ignore:
   - "opensr_srgan/tests/**"
   - "opensr_srgan/tests/*"
   - "opensr_srgan/data/**"
+  - "opensr_srgan/data/*"
   - "tests/**"
-  - "opensr_srgan/tests/**"

@@ -123,6 +123,8 @@ The system consists of four main components:
 
 The generator network can be configured with the different backbone types outlined in [Table&nbsp;1](#tab:arch), each providing a unique trade-off between complexity, receptive field, and textural detail.  
 
+
+:::{tab:arch}
 Table: **Implemented generator types and their characteristics.**
 
 | **Generator Type** | **Description** |
@@ -171,7 +173,8 @@ The module also exposes `sample_noise(batch_size)` and a `return_noise` flag for
 
 The discriminator can be selected to prioritize either global consistency or fine local realism. The different arcitechtures are outlined in [Table&nbsp;2](#tab:disc).
 
-Table: **Implemented discriminator types and their purposes.** {#tab:disc}
+:::{#tab:disc}
+Table: **Implemented discriminator types and their purposes.** 
 
 
 | **Discriminator Type** | **Description** |
@@ -184,7 +187,7 @@ Two discriminator variants are implemented to complement the different generator
 The standard discriminator follows the original SRGAN [@ledig2017photo] design and evaluates the realism of the entire super-resolved image and the actual HR image. It stacks a sequence of strided convolutional layers with progressively increasing feature channels, an adaptive average pooling layer to a fixed spatial size, and two fully connected layers producing a scalar real/fake score. This “global” discriminator promotes coherent large-scale structure and overall photorealism.
 
 The `PatchGANDiscriminator` instead outputs a grid of patch-level predictions, classifying each overlapping region as real or fake. Built upon the CycleGAN/pix2pix [@cyclegan; @px2px] reference implementation, it uses a configurable number of convolutional layers and normalization schemes (batch, instance, or none). The resulting patch map acts as a spatial realism prior, emphasizing texture fidelity and fine detail. Together, these architectures allow users to select the appropriate adversarial granularity: global consistency through SRGAN-style discrimination, or local realism through PatchGAN.
-
+{#tab:disc}
 
 ### Training Features
 
@@ -247,20 +250,22 @@ Typical configurations combine L1, Perceptual, and Adversarial losses, optionall
 
 During training, a range of scalar metrics are continuously computed and logged Weights & Biases. These indicators capture the evolving balance between generator and discriminator, quantify loss dynamics, and provide early warnings of instability or mode collapse. Together, they form a compact diagnostic suite that allows users to monitor convergence, identify regime transitions (e.g., from pretraining to adversarial learning), and ensure stable training behaviour. [Table&nbsp;5](#tab:metrics) summarises the most relevant internal metrics recorded by *Remote-Sensing-SRGAN*.
 
-Table: **Key internal metrics tracked during training and validation for monitoring adversarial dynamics, generator stability, and EMA behaviour.** {#tab:metrics}
+
+::: {#tab:metrics}
+Table: **Key internal metrics tracked during training and validation for monitoring adversarial dynamics, generator stability, and EMA behaviour.**
 
 
 | **Metric** | **Description and Expected Behaviour** |
 |:------------|:--------------------------------------|
 | `training/pretrain_phase` | Binary flag indicating whether generator-only warm-up is active. Remains 1 during pretraining and switches to 0 once adversarial learning begins. |
-| `discriminator/adversarial_loss` | Binary cross-entropy loss separating real HR from generated SR samples. Decreases below $\sim$0.7 during stable co-training; large oscillations may indicate imbalance. |
+| `discriminator/adversarial_loss` | Binary cross-entropy loss separating real HR from generated SR samples. Decreases below $\sim$ 0.7 during stable co-training; large oscillations may indicate imbalance. |
 | `discriminator/D(y)_prob` | Mean discriminator confidence that ground-truth HR inputs are real. Should rise toward 0.8–1.0 and stay high when $D$ is healthy. |
 | `discriminator/D(G(x))_prob` | Mean discriminator confidence that generated SR outputs are real. Starts near 0 and climbs toward 0.4–0.6 as $G$ improves realism. |
 | `generator/content_loss` | Weighted content component of the generator objective (e.g., L1 or spectral loss). Dominant during pretraining; gradually decreases over time. |
 | `generator/total_loss` | Full generator objective combining content and adversarial terms. Tracks `content_loss` early, then stabilises once the adversarial weight ramps up. |
 | `training/adv_loss_weight` | Current adversarial weight applied to the generator loss. Stays at 0 during pretrain and linearly ramps to its configured maximum value. |
 | `validation/DISC_adversarial_loss` | Discriminator loss on validation batches. Should roughly mirror the training curve; strong divergence may signal overfitting or instability. |
-
+:::
 
 ## Performance Preview
 
@@ -272,7 +277,9 @@ To illustrate its workflow and SR capabilities, we include two representative ex
 This experiment evaluates the RCAB-based generator on the SEN2NAIP [@sen2naip] dataset, learning to map Sentinel-2 RGB-NIR patches (10 m) to NAIP RGB-NIR ground truth (2.5 m).  
 The configuration uses a standard global discriminator, 4× upscaling, and combined L1+LPIPS+Adversarial loss.  
 
-Table: **Configuration summary for the SEN2NAIP RGB experiment.** {#tab:exp1_config}
+
+::: {#tab:exp1_config}
+Table: **Configuration summary for the SEN2NAIP RGB experiment.**
 
 
 | **Parameter** | **Setting** |
@@ -284,14 +291,20 @@ Table: **Configuration summary for the SEN2NAIP RGB experiment.** {#tab:exp1_con
 | Training schedule | Pretrain: 150k steps, Ramp: 50k steps, EMA β=0.999 |
 | Hardware | Dual A100 (DDP), mixed precision (16-bit) |
 
-**Placeholder Quantitative Metrics:**
+:::
 
-Table: **Validation performance of the SEN2NAIP RGB experiment (4×).** {#tab:exp1_metrics}
+**Quantitative Metrics:**
+
+
+:::{#tab:exp1_metrics}
+Table: **Validation performance of the SEN2NAIP RGB experiment (4×).** 
 
 
 | **Model** | **PSNR↑** | **SSIM↑** | **LPIPS↑** | **SAM↓** |
 |:-----------|:-----------|:-----------|:-----------|:-----------|
 | RCAB–SRResNet + Standard Discriminator | 31.45 | 0.81 | 0.82 | 0.069 |
+
+:::
 
 **Qualitative Example:**
 
@@ -304,23 +317,30 @@ Table: **Validation performance of the SEN2NAIP RGB experiment (4×).** {#tab:ex
 This example demonstrates multispectral support by training a 6-band SRResNet generator to upsample the 20m Sentinel-2 SWIR bands. Due to the unavailability of ground truth HR data, we treat the 20m as HR and interpolate the images to 160m LR derivatives. Learning this 8x SR factor can then be applied to the 20m images to create 2.5m SR products. This methodology is by far inferior to workflows where actual HR references are available, but can help out in data-scarce situations.  
 A PatchGAN discriminator enforces local texture realism while preserving spectral consistency via L1+SAM losses.
 
-Table: **Configuration summary for the 6-band Sentinel-2 experiment.** {#tab:exp2_config}
+
+:::{#tab:exp2_config}
+Table: **Configuration summary for the 6-band Sentinel-2 experiment.** 
 
 | **Parameter** | **Setting** |
 |:---------------|:------------|
 | Dataset | Sentinel-2 6-band subset (160 m → 20 m, 8× upscaling) |
 | Generator | SRResNet backbone (`block_type=res`, 32 blocks, 96 channels, scale=8) |
-| Discriminator | PatchGAN (`n_blocks=4`, patch size ≈ 70×70) |
+| Discriminator | PatchGAN (`n_blocks=4`, patch size $\approx$ 70×70) |
 | Loss composition | L1 (1.0) + SAM (0.2) + Adversarial (0.005) |
 | Training schedule | Pretrain: 100k steps, Ramp: 40k steps, EMA disabled |
 | Hardware | Dual A100 GPU, full-precision (32-bit) |
 
-Table: **Validation performance of the 6-band Sentinel-2 experiment (8×).** {#tab:exp2_metrics}
+:::
+
+:::{#tab:exp2_metrics}
+Table: **Validation performance of the 6-band Sentinel-2 experiment (8×).** 
 
 
 | **Model** | **PSNR↑** | **SSIM↑** | **LPIPS↑** | **SAM↓** |
 |:-----------|:-----------|:-----------|:-----------|:-----------|
 | SRResNet (6-band) + PatchGAN Discriminator | 26.65 | 0.74 | 0.80 | 0.091 |
+
+:::
 
 **Qualitative Example:**
 

@@ -42,9 +42,9 @@ def train(config):
     else:
         model = SRGAN_model(config=config)
     if config.Model.continue_training != False:
-        resume_from_checkpoint = config.Model.continue_training
+        resume_from_checkpoint_variable = config.Model.continue_training
     else:
-        resume_from_checkpoint = None
+        resume_from_checkpoint_variable = None
 
     #############################################################################################################
     """ GET DATA """
@@ -98,10 +98,10 @@ def train(config):
     """ make it robust for both PL<2.0 and PL>=2.0 """
     #############################################################################################################
     from packaging.version import Version
+    import inspect
     pl_ver = Version(pl.__version__)
     is_v2 = pl_ver >= Version("2.0.0")
-    
-    # Common kwargs for all versions
+
     trainer_kwargs = dict(
         accelerator='cuda',
         strategy=cuda_strategy,
@@ -113,20 +113,21 @@ def train(config):
         logger=[wandb_logger],
         callbacks=[checkpoint_callback, early_stop_callback],
     )
-    
-    # If we're on < 2.0, add resume_from_checkpoint to kwargs
-    if not is_v2 and resume_from_checkpoint:
-        trainer_kwargs["resume_from_checkpoint"] = resume_from_checkpoint
-    else:
-        os.environ.pop("PL_TRAINER_RESUME_FROM_CHECKPOINT", None)  # get rid of env var if set
-        
-    # build trainer with kwargs
+
+    # Only add the legacy kwarg on < 2.0
+    if not is_v2 and resume_from_checkpoint_variable!=None:
+        trainer_kwargs["resume_from_checkpoint"] = resume_from_checkpoint_variable
+
+    # (Optional extra safety: drop any kwargs Trainer doesn't support)
+    #sig = inspect.signature(pl.Trainer.__init__).parameters
+    #trainer_kwargs = {k: v if k in sig else None for k, v in trainer_kwargs.items() if k in sig}
+
     trainer = pl.Trainer(**trainer_kwargs)
-    
-    # On ≥ 2.0, pass the checkpoint path to fit(..., ckpt_path=...)
+
     fit_kwargs = {}
-    if is_v2 and resume_from_checkpoint:
-        fit_kwargs["ckpt_path"] = resume_from_checkpoint
+    if is_v2 and resume_from_checkpoint_variable!=None:
+        fit_kwargs["ckpt_path"] = resume_from_checkpoint_variable
+
 
     # Start training
     trainer.fit(model, datamodule=pl_datamodule, **fit_kwargs)

@@ -1,4 +1,3 @@
-
 # For this to work, you need tacoreader and rasterio installed
 # !pip install tacoreader rasterio --upgrade --no-deps
 from huggingface_hub import hf_hub_download

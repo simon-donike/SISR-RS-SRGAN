@@ -92,7 +92,7 @@ def load_from_config(
     if not config_path.is_file():
         raise FileNotFoundError(f"Config file '{config_path}' could not be located.")
 
-    model = SRGAN_model(config_file_path=str(config_path), mode=mode)
+    model = SRGAN_model(config=config_path, mode=mode)
 
     if checkpoint_uri is not None:
         with _maybe_download(checkpoint_uri) as resolved_path:

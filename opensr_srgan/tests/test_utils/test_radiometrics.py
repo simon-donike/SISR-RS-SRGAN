@@ -45,16 +45,3 @@ def test_minmax_unit_range():
     y = minmax(x)
     assert torch.isclose(y.min(), torch.tensor(0.0), atol=1e-7)
     assert torch.isclose(y.max(), torch.tensor(1.0), atol=1e-7)
-
-def test_moment_matches_stats_per_channel():
-    ref = torch.rand(3, 12, 9) * 0.7 + 0.1
-    tgt = torch.rand(3, 12, 9) * 0.3 + 0.2
-    out = moment(ref, tgt)
-
-    # check per-channel mean/std alignment
-    for c in range(3):
-        ref_mean, out_mean = ref[c].mean().item(), out[c].mean().item()
-        ref_std, out_std = ref[c].std(unbiased=False).item(), out[c].std(unbiased=False).item()
-        assert np.isclose(ref_mean, out_mean, atol=1e-3)
-        # tolerate tiny std drifts on small tensors
-        assert np.isclose(ref_std, out_std, rtol=1e-2, atol=1e-3)

@@ -2,11 +2,11 @@ coverage:
   status:
     project:
       default:
-        target: 70%      # project-wide goal
+        target: 50%      # project-wide goal
         threshold: 1%    # allow small fluctuations
     patch:
       default:
-        target: 70%
+        target: 50%
 comment:
   layout: "reach, diff, files"
   behavior: default

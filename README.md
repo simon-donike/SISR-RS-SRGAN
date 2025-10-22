@@ -1,8 +1,8 @@
 [![PyPI](https://img.shields.io/pypi/v/opensr-srgan)](https://pypi.org/project/opensr-srgan/)
 ![Python](https://img.shields.io/pypi/pyversions/opensr-srgan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-<!--[![CI](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml/badge.svg)](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml)-->
 [![Docs](https://img.shields.io/badge/docs-mkdocs%20material-brightgreen)](https://srgan.opensr.eu)
+<!--[![CI](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml/badge.svg)](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml)-->
 <!--[![Coverage](https://codecov.io/gh/simon-donike/SISR-RS-SRGAN/branch/main/graph/badge.svg)](https://app.codecov.io/gh/simon-donike/SISR-RS-SRGAN)-->
 
 <img src="https://github.com/ESAOpenSR/opensr-model/blob/main/resources/opensr_logo.png?raw=true" width="250"/>
@@ -93,6 +93,10 @@ SISR-RS-SRGAN/
 └── requirements.txt      # Development dependencies
 ```
 
+## Contribution and Issues
+If you wish to contribute (such as new models, data or functionalities), please review the contribution guidelines and open a PR here on GitHub. If you're having problems or need support, please open an Issue here on GitHub.
+
+
 ---
 
 ## 📚 Related Projects
@@ -120,8 +124,3 @@ Developed by **Simon Donike** (IPL–UV) within the **ESA Φ-lab / OpenSR** init
 
 ---
 
-## 🧑‍🚀 ToDOs
-- [ ] create inference.py  (interface with opensr-test)
-- [ ] build interface with SEN2SR (for 10m + 20m SR)
-- [x] incorporate the SEN2NAIP versions + downloading
-- [x] implement different discriminators

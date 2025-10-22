@@ -24,7 +24,7 @@ class GeneratorContentLoss(nn.Module):
     total = l1_w*L1 + sam_w*SAM + perc_w*Perceptual + tv_w*TV
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, testing=False):
         super().__init__()
         self.cfg = cfg
 
@@ -55,7 +55,7 @@ class GeneratorContentLoss(nn.Module):
 
             i = int(_cfg_get(cfg, ["TruncatedVGG", "i"], 5))
             j = int(_cfg_get(cfg, ["TruncatedVGG", "j"], 4))
-            self.perceptual_model = TruncatedVGG19(i=i, j=j)
+            self.perceptual_model = TruncatedVGG19(i=i, j=j,weights= not testing)
         elif self.perc_metric == "lpips":
             import lpips
 

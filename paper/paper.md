@@ -22,7 +22,7 @@ authors:
 affiliations:
   - name: Image and Signal Processing Group, University of Valencia, Spain
     index: 1
-date: October 2025
+date:  25 October 2025
 bibliography: paper.bib
 version:
   report: v0.1.0
@@ -365,24 +365,22 @@ These example configurations illustrate how users can reproduce experiments dire
 ## Limitations
 
 Super-resolution techniques, including those implemented in *Remote-Sensing-SRGAN*, can enhance apparent spatial detail but can never substitute for true high-resolution observations acquired by native sensors.  
-While *Remote-Sensing-SRGAN* provides a stable and extensible foundation for GAN-based super-resolution in remote sensing, several limitations remain.  
-
-First, the framework focuses on the engineering and reproducibility aspects of model development rather than achieving state-of-the-art quantitative performance. It is therefore intended as a research and benchmarking blueprint, not as an optimized production model.  
-
-Second, although the modular configuration system greatly simplifies experimentation, users are still responsible for ensuring proper data preprocessing, radiometric normalization, and accurate LR–HR alignment, factors that strongly influence training stability and reconstruction quality.  
-
-Third, adversarial optimization in multispectral domains remains sensitive to dataset size and diversity; small or unbalanced datasets may still yield mode collapse or spectral inconsistencies despite the provided stabilization mechanisms.  
-
-Finally, the current release does not include native uncertainty estimation or automatic hyperparameter tuning; these remain open areas for future extension.
+While *Remote-Sensing-SRGAN* provides a stable and extensible foundation for GAN-based super-resolution in remote sensing, several limitations remain. First, the framework focuses on the engineering and reproducibility aspects of model development rather than achieving state-of-the-art quantitative performance. It is therefore intended as a research and benchmarking blueprint, not as an optimized production model. Second, although the modular configuration system greatly simplifies experimentation, users are still responsible for ensuring proper data preprocessing, radiometric normalization, and accurate LR–HR alignment, factors that strongly influence training stability and reconstruction quality. Third, adversarial optimization in multispectral domains remains sensitive to dataset size and diversity; small or unbalanced datasets may still yield mode collapse or spectral inconsistencies despite the provided stabilization mechanisms. Finally, the current release does not include native uncertainty estimation or automatic hyperparameter tuning; these remain open areas for future extension.
 
 ---
 
+## Acknowledgement
+This work has been supported by the European Space Agency (ESA) $\Phi$-Lab, within the framework of the ['Explainable AI: Application to Trustworthy Super-Resolution (OpenSR)'](https://eo4society.esa.int/projects/opensr/) Project.
+
+<!---
+---
 **DOI:** [10.5281/zenodo.XXXXXXX](https://doi.org/10.5281/zenodo.XXXXXXX)  
 **Software:** [github.com/simon-donike/SISR-RS-SRGAN](https://github.com/simon-donike/SISR-RS-SRGAN)  
 **Documentation:** [srgan.opensr.eu](https://srgan.opensr.eu)  
 **License:** Apache-2.0  
 **Version:** v1.0.0  
-
 ---
+--->
+
 
 ## References

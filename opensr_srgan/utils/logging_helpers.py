@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import torch
 from PIL import Image
 
-from .spectral_helpers import minmax_percentile
-from .torch_numpy import tensor_to_numpy
+from .radiometrics import minmax_percentile
+from .tensor_conversions import tensor_to_numpy
 
 
 def _tensor_to_plot_data(t: torch.Tensor):

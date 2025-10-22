@@ -120,10 +120,3 @@ Training resumes automatically if `Model.continue_training` points to a Lightnin
 ## 6. Create Data Pipeline
 
 * **SR Sen2 Tiles**: Use `opensr-utils` to crop, SR, patch, and overlap whole Sentinel-2 tiles. (Note: Currently only supports RGB-NIR.)
-
-## 6. Next steps
-
-* Explore alternative generator backbones such as RCAB or RRDB by changing `Generator.model_type`.
-* Adjust adversarial warm-up with `Training.pretrain_g_only`, `g_pretrain_steps`, and `adv_loss_ramp_steps` if you observe
-  instability.
-* Integrate new datasets by extending the factory in `opensr_srgan/data/dataset_selector.py` and documenting them in [Data](data.md).

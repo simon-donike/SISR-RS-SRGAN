@@ -131,7 +131,6 @@ def train(config):
     wandb.finish()
 
 
-
 # Run training if called from command line
 if __name__ == '__main__':
     import argparse

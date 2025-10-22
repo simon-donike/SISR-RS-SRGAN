@@ -3,8 +3,13 @@
 # If PyPI cannot locate torch/torchvision, install them from the official
 # PyTorch wheel index (CPU or CUDA builds) before re-running
 # `pip install -r requirements.txt`.
-torch==1.13.1
-pytorch-lightning==1.9.0
+
+torch==1.13.1; python_version < "3.11"
+torch>=2.1; python_version >= "3.12"
+
+pytorch-lightning==1.9.*; python_version < "3.11"
+pytorch-lightning>=2.1,<3.0; python_version >= "3.12"
+
 torchvision
 numpy
 kornia

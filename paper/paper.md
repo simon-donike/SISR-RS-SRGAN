@@ -257,14 +257,14 @@ Table: **Key internal metrics tracked during training and validation for monitor
 
 | **Metric** | **Description and Expected Behaviour** |
 |:------------|:--------------------------------------|
-| `training/pretrain_phase` | Binary flag indicating whether generator-only warm-up is active. Remains 1 during pretraining and switches to 0 once adversarial learning begins. |
-| `discriminator/adversarial_loss` | Binary cross-entropy loss separating real HR from generated SR samples. Decreases below $\sim$ 0.7 during stable co-training; large oscillations may indicate imbalance. |
-| `discriminator/D(y)_prob` | Mean discriminator confidence that ground-truth HR inputs are real. Should rise toward 0.8–1.0 and stay high when $D$ is healthy. |
-| `discriminator/D(G(x))_prob` | Mean discriminator confidence that generated SR outputs are real. Starts near 0 and climbs toward 0.4–0.6 as $G$ improves realism. |
-| `generator/content_loss` | Weighted content component of the generator objective (e.g., L1 or spectral loss). Dominant during pretraining; gradually decreases over time. |
-| `generator/total_loss` | Full generator objective combining content and adversarial terms. Tracks `content_loss` early, then stabilises once the adversarial weight ramps up. |
-| `training/adv_loss_weight` | Current adversarial weight applied to the generator loss. Stays at 0 during pretrain and linearly ramps to its configured maximum value. |
-| `validation/DISC_adversarial_loss` | Discriminator loss on validation batches. Should roughly mirror the training curve; strong divergence may signal overfitting or instability. |
+| `training/ pretrain_phase` | Binary flag indicating whether generator-only warm-up is active. Remains 1 during pretraining and switches to 0 once adversarial learning begins. |
+| `discriminator/ adversarial_loss` | Binary cross-entropy loss separating real HR from generated SR samples. Decreases below $\sim$ 0.7 during stable co-training; large oscillations may indicate imbalance. |
+| `discriminator/ D(y)_prob` | Mean discriminator confidence that ground-truth HR inputs are real. Should rise toward 0.8–1.0 and stay high when $D$ is healthy. |
+| `discriminator/ D(G(x))_prob` | Mean discriminator confidence that generated SR outputs are real. Starts near 0 and climbs toward 0.4–0.6 as $G$ improves realism. |
+| `generator/ content_loss` | Weighted content component of the generator objective (e.g., L1 or spectral loss). Dominant during pretraining; gradually decreases over time. |
+| `generator/ total_loss` | Full generator objective combining content and adversarial terms. Tracks `content_loss` early, then stabilises once the adversarial weight ramps up. |
+| `training/ adv_loss_weight` | Current adversarial weight applied to the generator loss. Stays at 0 during pretrain and linearly ramps to its configured maximum value. |
+| `validation/ DISC_adversarial_loss` | Discriminator loss on validation batches. Should roughly mirror the training curve; strong divergence may signal overfitting or instability. |
 :::
 
 ## Performance Preview

@@ -99,6 +99,12 @@ def select_dataset(config):
         ds_train = SISRWorldWide(path=path,split="train")
         ds_val = SISRWorldWide(path=path,split="val")
         
+    elif dataset_selection == "ExampleDataset":
+        from opensr_srgan.data.example_data.example_dataset import ExampleDataset
+        path = "example_dataset/"
+        ds_train = ExampleDataset(folder=path, phase="train")
+        ds_val = ExampleDataset(folder=path, phase="val")
+        
     else:
         # Centralized error so unsupported keys fail loudly & clearly.
         raise NotImplementedError(f"Dataset {dataset_selection} not implemented")
@@ -183,6 +189,6 @@ def datamodule_from_datasets(config, ds_train, ds_val):
 if __name__ == "__main__":
     from omegaconf import OmegaConf
 
-    config_path = Path(__file__).resolve().parent.parent / "configs" / "config_10m.yaml"
+    config_path = "opensr_srgan/configs/config_training_example.yaml"
     config = OmegaConf.load(config_path)
     _ = select_dataset(config)

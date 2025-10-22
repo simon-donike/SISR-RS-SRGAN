@@ -11,21 +11,21 @@
 # ---------------------------------------------------------------------------- #
 Data:
   # Loader parameters
-  train_batch_size: 24        # Batch size for training
-  val_batch_size: 8           # Batch size for validation
-  num_workers: 8              # Number of parallel workers for dataloader
-  prefetch_factor: 4          # Samples prefetched per worker (2 is stable default)
+  train_batch_size: 8        # Batch size for training
+  val_batch_size: 5           # Batch size for validation
+  num_workers: 6              # Number of parallel workers for dataloader
+  prefetch_factor: 2          # Samples prefetched per worker (2 is stable default)
 
   # Dataset configuration
-  dataset_type: 'S2_6b'       # Choose dataset type: ['cv', 'SPOT6', 'S2_6b']
-  normalization: 'normalise_10k'  # Normalization strategy for data processing
+  dataset_type: 'ExampleDataset'       # Choose dataset type: ['ExampleDataset']
+  normalization: 'normalise_10k' # Normalization strategy for data processing
 
 
 # ============================================================================ #
 # 🧠 MODEL AND CHECKPOINT SETTINGS
 # ---------------------------------------------------------------------------- #
 Model:
-  in_bands: 6                 # Number of input channels (e.g. RGB-NIR-SWIR etc.)
+  in_bands: 4                 # Number of input channels (e.g. RGB-NIR-SWIR etc.)
   continue_training: False    # Resume full training (PL checkpoint path or False)
   load_checkpoint: False      # Load weights only (path or False)
 
@@ -33,18 +33,18 @@ Model:
 # ============================================================================ #
 # 🏋️ TRAINING CONFIGURATION
 # ---------------------------------------------------------------------------- #
-Training:
+Training:  
   # --- Hardware Setup
-  gpus: [2,3]                    # Number of GPUs to use, individually in list form, e.g. [0] or [0,2]
+  gpus: [0]                    # Number of GPUs to use, individually in list form, e.g. [0] or [0,2]
   # --- General Training Setup
-  max_epochs: 9999            # Maximum number of training epochs
-  val_check_interval: 1.0     # Validate once per epoch (float) or every N steps (int)
+  max_epochs: 5               # Maximum number of training epochs
+  val_check_interval: 1.0     # Validate at x percent of epoch (float) or every N steps (int)
   limit_val_batches: 250      # Limit number of validation batches
-
+  
   # --- Pretraining and adversarial setup ---
-  pretrain_g_only: True        # Train generator only for initial phase
-  g_pretrain_steps: 15000     # Number of generator-only warmup steps
-  adv_loss_ramp_steps: 2500   # Gradual adversarial weight ramp steps
+  pretrain_g_only: False        # Train generator only for initial phase
+  g_pretrain_steps: 100000     # Number of generator-only warmup steps
+  adv_loss_ramp_steps: 25000   # Gradual adversarial weight ramp steps
   label_smoothing: True        # Discriminator target smoothing (1.0 → 0.9)
 
   EMA:
@@ -73,13 +73,14 @@ Training:
 # ============================================================================ #
 # 🧩 ARCHITECTURAL PARAMETERS
 # ---------------------------------------------------------------------------- #
+# See Docs for archtecture details and suggestions
 Generator:
-  model_type: 'rcab'           # Block type: ['SRResNet', 'res', 'rcab', 'rrdb', 'lka', 'conditional_cgan'/'cgan']
+  model_type: 'SRResNet'           # Block type: ['SRResNet', 'res', 'rcab', 'rrdb', 'lka', 'conditional_cgan'/'cgan']
   large_kernel_size: 9         # Kernel for head and tail conv layers
   small_kernel_size: 3         # Kernel for intermediate blocks
-  n_channels: 96               # Number of feature channels (original 64)
+  n_channels: 64               # Number of feature channels (original 64)
   n_blocks: 32                 # Number of residual/attention blocks (original 16)
-  scaling_factor: 8            # Upscaling factor (e.g., 2×, 4×, 8×)
+  scaling_factor: 4            # Upscaling factor (e.g., 2×, 4×, 8×)
 
 Discriminator:
   model_type: 'standard'       # Discriminator architecture selector ['standard', 'patchgan']
@@ -97,11 +98,11 @@ Optimizers:
 # 📉 SCHEDULERS AND EARLY STOPPING
 # ---------------------------------------------------------------------------- #
 Schedulers:
-  g_warmup_steps: 2500         # Generator warmup duration in steps (0 disables warmup)
+  g_warmup_steps: 0        # Generator warmup LR curve duration in steps (0 disables warmup)
   g_warmup_type: 'cosine'      # Generator warmup curve: ['cosine', 'linear']
   metric: 'val_metrics/l1'     # Metric monitored for both schedulers
-  patience_g: 50              # Patience (epochs) for Generator LR scheduler
-  patience_d: 50              # Patience (epochs) for Discriminator LR scheduler
+  patience_g: 10              # Patience (epochs) for Generator LR scheduler
+  patience_d: 10              # Patience (epochs) for Discriminator LR scheduler
   factor_g: 0.5                # LR reduction factor for Generator
   factor_d: 0.5                # LR reduction factor for Discriminator
   verbose: True                # Enable scheduler logging output
@@ -114,5 +115,5 @@ Logging:
   num_val_images: 5            # Number of validation images logged per epoch
   wandb:
     enabled: False              # Toggle Weights & Biases logging on/off
-    entity: "opensr"      # W&B entity or team name
-    project: "SRGAN_20m"        # W&B project name
+    entity: ""                   # W&B entity or team name
+    project: ""                  # W&B project name

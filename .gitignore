@@ -1,3 +1,6 @@
+# large Files
+*.zip
+
 # Checkpoints
 *.pth
 *.ckpt 
@@ -17,6 +20,7 @@ htmlcov/
 *.egg-info
 
 # Data
+example_dataset/
 opensr_srgan/data/SEN2NAIP
 opensr_srgan/data/SISR_WW/
 opensr_srgan/data/SISR_WW/*

@@ -12,11 +12,11 @@ from omegaconf import OmegaConf
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 # local imports
-from ..utils.logging_helpers import plot_tensors
-from ..utils.model_descriptions import print_model_summary
-from ..utils.radiometrics import histogram as histogram_match
-from ..utils.radiometrics import normalise_10k
-from .model_blocks import ExponentialMovingAverage
+from opensr_srgan.utils.logging_helpers import plot_tensors
+from opensr_srgan.utils.model_descriptions import print_model_summary
+from opensr_srgan.utils.radiometrics import histogram as histogram_match
+from opensr_srgan.utils.radiometrics import normalise_10k
+from opensr_srgan.model.model_blocks import ExponentialMovingAverage
 
 
 #############################################################################################################
@@ -44,15 +44,17 @@ class SRGAN_model(pl.LightningModule):
         # SECTION: Load Configuration
         # Purpose: Load and parse model/training hyperparameters from YAML file.
         # ======================================================================
-        if isinstance(config, Path) or isinstance(config, str):
-            self.config = OmegaConf.load(config)  # load config file with OmegaConf
+        if isinstance(config, str) or isinstance(config, Path):
+            config = OmegaConf.load(config)     
         elif isinstance(config, dict):
-            self.config = OmegaConf.create(config)          # create config from dict
+            config = OmegaConf.create(config)
         elif OmegaConf.is_config(config):
-            self.config = config                           # already an OmegaConf object
+            pass
         else:
-            print("Invalid config type; must be file path or OmegaConf/dict.")
+            raise TypeError("Config must be a filepath (str or Path), dict, or OmegaConf object.")
         assert mode in {"train", "eval"}, "Mode must be 'train' or 'eval'"  # validate mode
+        
+        self.config = config
         self.mode = mode                                # store mode (train/eval)
 
         # --- Training settings ---
@@ -91,7 +93,7 @@ class SRGAN_model(pl.LightningModule):
         # Purpose: Configure generator content loss and discriminator adversarial loss.
         # ======================================================================
         if self.mode == "train":
-            from .loss import GeneratorContentLoss
+            from opensr_srgan.model.loss import GeneratorContentLoss
             self.content_loss_criterion = GeneratorContentLoss(self.config)  # perceptual loss (VGG + pixel)
             self.adversarial_loss_criterion = torch.nn.BCEWithLogitsLoss()   # binary cross-entropy for D/G
 
@@ -109,7 +111,7 @@ class SRGAN_model(pl.LightningModule):
 
         if generator_type == 'SRResNet':
             # Standard SRResNet generator
-            from .generators.srresnet import Generator
+            from opensr_srgan.model.generators.srresnet import Generator
             self.generator = Generator(
                 in_channels=self.config.Model.in_bands,                # number of input channels
                 large_kernel_size=self.config.Generator.large_kernel_size,
@@ -120,7 +122,7 @@ class SRGAN_model(pl.LightningModule):
             )
         elif generator_type in ['res', 'rcab', 'rrdb', 'lka']:
             # Advanced generator variants (ResNet, RCAB, RRDB, etc.)
-            from .generators.flexible_generator import FlexibleGenerator
+            from opensr_srgan.model.generators.flexible_generator import FlexibleGenerator
             self.generator = FlexibleGenerator(
                 in_channels=self.config.Model.in_bands,
                 n_channels=self.config.Generator.n_channels,
@@ -131,7 +133,7 @@ class SRGAN_model(pl.LightningModule):
                 block_type=self.config.Generator.model_type
             )
         elif generator_type.lower() in ['conditional_cgan', 'cgan']:
-            from .generators import ConditionalGANGenerator
+            from opensr_srgan.model.generators import ConditionalGANGenerator
 
             self.generator = ConditionalGANGenerator(
                 in_channels=self.config.Model.in_bands,
@@ -156,7 +158,7 @@ class SRGAN_model(pl.LightningModule):
             n_blocks = getattr(self.config.Discriminator, 'n_blocks', None)
 
             if discriminator_type == 'standard':
-                from .discriminators.srgan_discriminator import Discriminator
+                from opensr_srgan.model.discriminators.srgan_discriminator import Discriminator
 
                 discriminator_kwargs = {
                     "in_channels": self.config.Model.in_bands,
@@ -166,7 +168,7 @@ class SRGAN_model(pl.LightningModule):
 
                 self.discriminator = Discriminator(**discriminator_kwargs)
             elif discriminator_type == 'patchgan':
-                from .discriminators.patchgan import PatchGANDiscriminator
+                from opensr_srgan.model.discriminators.patchgan import PatchGANDiscriminator
 
                 patchgan_layers = n_blocks if n_blocks is not None else 3
                 self.discriminator = PatchGANDiscriminator(
@@ -198,9 +200,9 @@ class SRGAN_model(pl.LightningModule):
         lr_min, lr_max = lr_imgs.min().item(), lr_imgs.max().item()  # get value range
         if lr_max > 1.5:  # Sentinel-2 style raw reflectance → normalize
             lr_imgs = normalise_10k(lr_imgs, stage="norm")           # normalize to 0–1 range
-            normalized = True
+            needs_normalization = True
         else:
-            normalized = False                                       # already normalized
+            needs_normalization = False                                       # already normalized
 
         # --- Perform super-resolution (optionally using EMA weights) ---
         context = self.ema.average_parameters(self.generator) if self.ema is not None else nullcontext()
@@ -211,7 +213,7 @@ class SRGAN_model(pl.LightningModule):
         sr_imgs = histogram_match(lr_imgs, sr_imgs)                  # match distributions
 
         # --- Denormalize only if normalization was applied ---
-        if normalized:
+        if needs_normalization:
             sr_imgs = normalise_10k(sr_imgs, stage="denorm")         # convert back to original scale
 
         # --- Move to CPU and return ---
@@ -300,6 +302,7 @@ class SRGAN_model(pl.LightningModule):
             # run discriminator and get loss between pred labels and true labels
             sr_discriminated = self.discriminator(sr_imgs)                             # D(SR): logits for generator outputs
             adversarial_loss = self.adversarial_loss_criterion(sr_discriminated, torch.ones_like(sr_discriminated)) # keep taargets 1.0 for G loss
+            self.log("generator/adversarial_loss",adversarial_loss,sync_dist=True)     # log unweighted adversarial loss
 
             """ 3. Weight the losses"""
             adv_weight = self._adv_loss_weight() # get adversarial weight based on current step
@@ -317,8 +320,9 @@ class SRGAN_model(pl.LightningModule):
         optimizer,
         optimizer_idx,
         optimizer_closure,
-        on_tpu=False,
+        on_tpu=False, # these arguments are needed in case we're running on PL>2.0
         using_lbfgs=False,
+        
     ):
         optimizer.step(closure=optimizer_closure)
         optimizer.zero_grad()
@@ -485,13 +489,13 @@ class SRGAN_model(pl.LightningModule):
             optimizer_g, mode='min',
             factor=self.config.Schedulers.factor_g,
             patience=self.config.Schedulers.patience_g,
-            verbose=self.config.Schedulers.verbose
+            #verbose=self.config.Schedulers.verbose
         )
         scheduler_d = ReduceLROnPlateau(
             optimizer_d, mode='min',
             factor=self.config.Schedulers.factor_d,
             patience=self.config.Schedulers.patience_d,
-            verbose=self.config.Schedulers.verbose
+            #verbose=self.config.Schedulers.verbose
         )
 
         # optional generator warmup scheduler (step-based)
@@ -556,7 +560,7 @@ class SRGAN_model(pl.LightningModule):
         # SECTION: Print Model Summary
         # Purpose: Output model architecture and parameter counts (only once).
         # ======================================================================
-        from ..utils.gpu_rank import _is_global_zero
+        from opensr_srgan.utils.gpu_rank import _is_global_zero
         if _is_global_zero():
             print_model_summary(self)  # print model summary to console
 
@@ -756,8 +760,7 @@ class SRGAN_model(pl.LightningModule):
         
 
 if __name__=="__main__":
-    config_path = Path(__file__).resolve().parents[1] / "configs" / "config_20m.yaml"
-    model = SRGAN_model(config_file_path=str(config_path))
-    model.forward(torch.randn(1,6,32,32))
+    config_path = "opensr_srgan/configs/config_10m.yaml"
+    model = SRGAN_model(config=str(config_path))
+    model.forward(torch.randn(1,4,32,32))
     
-    model.load_from_checkpoint("logs/SRGAN_6bands/2025-10-11_23-53-20/last.ckpt")

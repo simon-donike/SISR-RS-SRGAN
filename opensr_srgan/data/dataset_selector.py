@@ -1,5 +1,3 @@
-from pathlib import Path
-
 def select_dataset(config):
     """
     Build train/val datasets from `config` and wrap them into a LightningDataModule.
@@ -23,6 +21,10 @@ def select_dataset(config):
         A tiny DataModule that exposes train/val DataLoaders built from the selected datasets.
     """
     dataset_selection = config.Data.dataset_type
+    
+    # Please Note: The "S2_6b","S2_4b","SISR_WW" settings are leftover from previous versions
+    # I dont want to delete them in case they are needed again.
+    # Only the "ExampleDataset" is actively used in the current version.
 
     if dataset_selection == "S2_6b":
         # Import here to avoid import costs when other datasets are used elsewhere.
@@ -104,10 +106,10 @@ def select_dataset(config):
         path = "example_dataset/"
         ds_train = ExampleDataset(folder=path, phase="train")
         ds_val = ExampleDataset(folder=path, phase="val")
-        
     else:
         # Centralized error so unsupported keys fail loudly & clearly.
-        raise NotImplementedError(f"Dataset {dataset_selection} not implemented")
+        raise NotImplementedError(f"Dataset {dataset_selection} not implemented!"
+                                  f"Add your dataset in data/dataset_selector.py to train on that.")
 
     # Wrap the two datasets into a LightningDataModule with config-driven loader knobs.
     pl_datamodule = datamodule_from_datasets(config, ds_train, ds_val)

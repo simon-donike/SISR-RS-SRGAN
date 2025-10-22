@@ -426,8 +426,9 @@ class SRGAN_model(pl.LightningModule):
             # --- Cleanup ---
             del plot_lr_img, plot_hr_img, plot_sr_img         # free memory after plotting
 
-            # --- Log image to WandB (or compatible logger) ---
-            self.logger.experiment.log({"Val SR": wandb.Image(val_img)})  # upload to dashboard
+            # --- Log image to WandB (or compatible logger), if wanted ---
+            if self.config.Logging.wandb.enabled:
+                self.logger.experiment.log({"Val SR": wandb.Image(val_img)})  # upload to dashboard
 
             
             """ 3. Log Discriminator metrics """

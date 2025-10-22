@@ -3,13 +3,21 @@
 `opensr_srgan/train.py` is the canonical entry point for ESA OpenSR experiments. It ties together configuration loading, model instantiation,
 dataset selection, logging, and callbacks. This page explains how the script is organised and how to customise the training loop.
 
-## Command-line interface
+## Command-line and Python interfaces
 
-Run the script with a single optional argument:
+You can launch training from the CLI or by importing the helper inside Python.
 
 ```bash
 python -m opensr_srgan.train --config path/to/config.yaml
 ```
+
+```python
+from opensr_srgan import train
+
+train("path/to/config.yaml")
+```
+
+Both entry points accept the same configuration file. The CLI exposes a single optional argument:
 
 * `--config / -c`: Path to a YAML file describing the experiment. Defaults to `opensr_srgan/configs/config_20m.yaml`.
 
@@ -30,8 +38,10 @@ GPU assignment is handled directly in the configuration. Set `Training.gpus` to 
 
 ## Data module construction
 
-`select_dataset(config)` decides which dataset pair to use and wraps them in a `LightningDataModule`. The module inherits batch
-sizes, worker counts, and prefetching parameters from the configuration and prints a summary including dataset size.
+`select_dataset(config)` decides which dataset pair to use and wraps them in a `LightningDataModule`. With the bundled setup the
+selector instantiates `ExampleDataset` by default—perfect for smoke tests after downloading the sample data. Custom datasets can
+be registered by adding new branches to the selector (see [Data](data.md)). The module inherits batch sizes, worker counts, and
+prefetching parameters from the configuration and prints a summary including dataset size.
 
 ## Logging setup
 

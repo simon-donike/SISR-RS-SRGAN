@@ -28,7 +28,7 @@ Each section maps directly to parameters consumed inside `opensr_srgan/model/SRG
 | `val_batch_size` | 8 | Batch size for validation. |
 | `num_workers` | 6 | Number of worker processes for both dataloaders. |
 | `prefetch_factor` | 2 | Additional batches prefetched by each worker. Ignored when `num_workers == 0`. |
-| `dataset_type` | `S2_6b` | Dataset selector consumed by `opensr_srgan.data.data_utils.select_dataset`. |
+| `dataset_type` | `ExampleDataset` | Dataset selector consumed by `opensr_srgan.data.dataset_selector.select_dataset`. |
 
 ## Model
 

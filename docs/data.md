@@ -1,69 +1,58 @@
 # Data
 
-ESA OpenSR provides dataset utilities tailored to remote-sensing super-resolution tasks. This guide summarises the available
-options, required inputs, and how the Lightning data module is assembled.
+The training stack ships with a single, self-contained example dataset that you can download in seconds to verify that the
+pipeline works end to end. This page explains how to fetch the sample data, how it is structured, and what you need to do when
+you are ready to plug in your own collections.
 
-## Dataset selector
+## Example dataset
 
-`opensr_srgan/data/data_utils.py` exposes `select_dataset(config)`, which inspects `config.Data.dataset_type` and returns a
-`pytorch_lightning.LightningDataModule`. The helper keeps dataset instantiation and dataloader configuration in one place so that
-training scripts only need the YAML file.
+The example dataset is a small Sentinel-2 crop bundle hosted on the Hugging Face Hub. Each `.npz` archive contains a
+high-resolution chip stored under the key `hr`. Low-resolution counterparts are generated on the fly by bicubic
+interpolation inside the dataset class.
 
-Supported dataset keys:
+* **Scale factor:** 4× upsampling between the generated LR inputs and provided HR targets.
+* **Splits:** All files except the final 20 samples are used for training; the last 20 form the validation split.
+* **Normalisation:** Values above 1.5 are assumed to be Sentinel-2 reflectance and are normalised by `1/10000`.
 
-| Key | Description | Expected assets |
-| --- | --- | --- |
-| `S2_6b` | Sentinel-2 SAFE crops with six 20 m bands (B05, B06, B07, B8A, B11, B12). | Manifest JSON listing paired LR/HR chips, stored on disk with consistent band naming. |
-| `S2_4b` | Sentinel-2 SAFE crops with four 10 m bands (B05, B04, B03, B02) reordered for RGB+NIR. | Same manifest structure as `S2_6b`; ensure 10 m bands are present. |
-| `SISR_WW` | SEN2NAIP worldwide dataset. | Directory containing `train` and `val` splits compatible with the `SISRWorldWide` dataset class. |
+### Downloading the files
 
-Each dataset expects a super-resolution scale provided by `Generator.scaling_factor`. The helper passes this to the dataset class
-as `sr_factor`, ensuring the dataloader and model agree on the upsampling ratio.
+`opensr_srgan/data/example_data/download_example_dataset.py` exposes a helper that downloads and extracts the archive
+into `example_dataset/` relative to your working directory. Run it from a Python shell or a small script:
 
-## Sentinel-2 SAFE datasets
+```python
+from opensr_srgan.data.example_data.download_example_dataset import get_example_dataset
 
-Both Sentinel-2 options rely on `opensr_srgan/data/SEN2_SAFE/S2_6b_ds.py` for data loading. Key behaviours include:
+get_example_dataset()
+```
 
-* **Manifest-driven tiling.** The JSON manifest encodes absolute paths to SAFE granule chips and ensures low-/high-resolution
-  crops are spatially aligned.
-* **Band selection and ordering.** `bands_keep` restricts which bands are loaded while `band_order` ensures the tensor channel
-  ordering matches the model expectation.
-* **On-the-fly antialiasing.** Downsampling uses antialiased transforms when `sr_factor > 1` to avoid aliasing artefacts during
-  generator training.
+The helper pulls `example_dataset.zip` from the [`simon-donike/SR-GAN`](https://huggingface.co/simon-donike/SR-GAN)
+repository, extracts it, and removes the temporary archive once the copy completes.
 
-When switching between `S2_6b` and `S2_4b`, verify that the manifest references the correct resolution tier (20 m vs 10 m) and
-that the band names in the manifest align with the expected strings (`B05_20m`, `B04_10m`, etc.).
+### Directory layout
 
-## SEN2NAIP worldwide dataset
+After extraction the folder contains `.npz` chips named `hr_*.npz`. No further preparation is required. Simply point the
+configuration to the dataset by setting:
 
-`SISRWorldWide` provides global coverage pairs by fusing Sentinel-2 inputs with NAIP high-resolution targets. The dataset class
-handles split logic internally; you only need to set the root path (defaults to `/data3/SEN2NAIP_global`). For best results:
+```yaml
+Data:
+  dataset_type: ExampleDataset
+```
 
-* Keep the `train` and `val` directories consistent with the expected folder names.
-* Confirm that the dynamic range of inputs matches the normalisation utilities used in the model (`normalise_10k`).
+The training loop automatically instantiates `opensr_srgan.data.example_data.example_dataset.ExampleDataset` for both the
+training and validation dataloaders.
 
-## Data module configuration
+## Adding new datasets
 
-After instantiating the train and validation datasets, `select_dataset` wraps them in a minimal `LightningDataModule`:
+When you are ready to move beyond the bundled sample data you can register a custom dataset. The repository uses a single
+factory function—`opensr_srgan.data.dataset_selector.select_dataset`—to keep the training script agnostic of individual
+collections. To integrate a new source:
 
-* **Batch sizes.** Controlled via `Data.train_batch_size`, `Data.val_batch_size`, or the shared fallback `Data.batch_size`.
-* **Workers and prefetching.** `Data.num_workers` and `Data.prefetch_factor` adjust dataloader throughput. When set to zero, the
-  helper avoids passing `prefetch_factor` (which would otherwise raise an error).
-* **Shuffling.** Training dataloaders shuffle by default, while validation loaders keep shuffling enabled for more diverse metric
-  coverage across long epochs.
-* **Logging.** A summary statement prints the dataset type and sample counts so you can confirm that manifests were parsed
-  correctly.
+1. **Implement a dataset class.** Create a `torch.utils.data.Dataset` that returns `(lr, hr)` tensors and performs any
+   normalisation your sensor requires. Place the implementation somewhere under `opensr_srgan/data/`.
+2. **Update the selector.** Add a new `elif` branch to `select_dataset` that imports your dataset class, instantiates the
+   training and validation splits, and returns them.
+3. **Expose configuration hooks.** Introduce a new `Data.dataset_type` key (for example `MySensor`) and any additional fields
+   you need (paths, augmentation flags, scale factors, …). Document the required entries in your configuration file.
 
-Because the module returns a standard Lightning interface, you can drop it into custom training scripts or use it with
-`Trainer.fit()` directly.
-
-## Extending to new datasets
-
-To integrate a new dataset:
-
-1. Implement a `torch.utils.data.Dataset` that returns `(lr_img, hr_img)` tensors with channels in the expected order.
-2. Add a new branch inside `select_dataset` that imports and instantiates your dataset class.
-3. Update the documentation and your YAML configuration to expose the new `Data.dataset_type` key.
-
-Following this pattern keeps your training scripts unchanged while enabling rapid experimentation with different sensors or tiling
-strategies.
+Following this pattern keeps `opensr_srgan.train` untouched: once the selector knows about your dataset you can launch
+training through the CLI or the Python API without further changes.

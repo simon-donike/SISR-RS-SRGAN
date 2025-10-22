@@ -35,7 +35,7 @@ Model:
 # ---------------------------------------------------------------------------- #
 Training:
   # --- Hardware Setup
-  device: cuda                # Runtime device backend: ['cuda', 'cpu']
+  device: "cpu"                # Runtime device backend: ['cuda', 'cpu']
   gpus: [0]                    # Number of GPUs to use, individually in list form, e.g. [0] or [0,2]
   # --- General Training Setup
   max_epochs: 5               # Maximum number of training epochs

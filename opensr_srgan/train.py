@@ -97,43 +97,17 @@ def train(config):
     """ Set Args for Training and Start Training """
     """ make it robust for both PL<2.0 and PL>=2.0 """
     #############################################################################################################
-    from packaging.version import Version
-    import inspect
-    pl_ver = Version(pl.__version__)
-    is_v2 = pl_ver >= Version("2.0.0")
-
-    trainer_kwargs = dict(
-        accelerator='cuda',
-        strategy=cuda_strategy,
-        devices=cuda_devices,
-        val_check_interval=config.Training.val_check_interval,
-        limit_val_batches=config.Training.limit_val_batches,
-        max_epochs=config.Training.max_epochs,
-        log_every_n_steps=100,
-        logger=[wandb_logger],
-        callbacks=[checkpoint_callback, early_stop_callback],
+    from opensr_srgan.utils.build_trainer_kwargs import build_lightning_kwargs
+    trainer_kwargs, fit_kwargs = build_lightning_kwargs( # get kwargs depending on PL version
+        config=config,
+        logger=wandb_logger,
+        checkpoint_callback=checkpoint_callback,
+        early_stop_callback=early_stop_callback,
+        resume_ckpt=resume_from_checkpoint_variable,
     )
-
-    # Only add the legacy kwarg on < 2.0
-    if not is_v2:
-        print("Running on PyTorch Lightning < 2.0")
-        if resume_from_checkpoint_variable!=None:
-            trainer_kwargs["resume_from_checkpoint"] = resume_from_checkpoint_variable
-
-    # (Optional extra safety: drop any kwargs Trainer doesn't support)
-    #sig = inspect.signature(pl.Trainer.__init__).parameters
-    #trainer_kwargs = {k: v if k in sig else None for k, v in trainer_kwargs.items() if k in sig}
-
-
-    print(trainer_kwargs.keys())
-    trainer = pl.Trainer(**trainer_kwargs)
-
-    fit_kwargs = {}
-    if is_v2 and resume_from_checkpoint_variable!=None:
-        fit_kwargs["ckpt_path"] = resume_from_checkpoint_variable
-
-
+   
     # Start training
+    trainer = pl.Trainer(**trainer_kwargs)
     trainer.fit(model, datamodule=pl_datamodule, **fit_kwargs)
     wandb.finish()
 

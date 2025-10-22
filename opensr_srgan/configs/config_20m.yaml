@@ -35,6 +35,7 @@ Model:
 # ---------------------------------------------------------------------------- #
 Training:
   # --- Hardware Setup
+  device: "cuda"                # Runtime device backend: ['cuda', 'cpu']
   gpus: [2,3]                    # Number of GPUs to use, individually in list form, e.g. [0] or [0,2]
   # --- General Training Setup
   max_epochs: 9999            # Maximum number of training epochs
@@ -113,6 +114,6 @@ Schedulers:
 Logging:
   num_val_images: 5            # Number of validation images logged per epoch
   wandb:
-    enabled: False              # Toggle Weights & Biases logging on/off
+    enabled: True              # Toggle Weights & Biases logging on/off
     entity: "opensr"      # W&B entity or team name
     project: "SRGAN_20m"        # W&B project name

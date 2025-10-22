@@ -7,6 +7,7 @@ from multiprocessing import freeze_support
 import torch
 import wandb
 from omegaconf import OmegaConf
+import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 
     
@@ -16,14 +17,11 @@ def train(config):
     """ LOAD CONFIG """
     # either path to config file or omegaconf object
     
-    if isinstance(config, str):
-        config = OmegaConf.load(config)    
-    elif isinstance(config, Path):
-        config = str(config)
-        config = OmegaConf.load(config)    
+    if isinstance(config, str) or isinstance(config, Path):
+        config = OmegaConf.load(config)     
     elif isinstance(config, dict):
         config = OmegaConf.create(config)
-    elif isinstance(config, OmegaConf):
+    elif OmegaConf.is_config(config):
         pass
     else:
         raise TypeError("Config must be a filepath (str or Path), dict, or OmegaConf object.")
@@ -42,11 +40,11 @@ def train(config):
     if config.Model.load_checkpoint != False:
         model = SRGAN_model.load_from_checkpoint(config.Model.load_checkpoint, strict=False)
     else:
-        model = SRGAN_model(config=cfg_filepath)
+        model = SRGAN_model(config=config)
     if config.Model.continue_training != False:
-        resume_from_checkpoint = config.Model.continue_training
+        resume_from_checkpoint_variable = config.Model.continue_training
     else:
-        resume_from_checkpoint = None
+        resume_from_checkpoint_variable = None
 
     #############################################################################################################
     """ GET DATA """
@@ -96,28 +94,22 @@ def train(config):
                                     mode="min",check_finite=True) # patience in epochs
 
     #############################################################################################################
-    """ Start Training """
+    """ Set Args for Training and Start Training """
+    """ make it robust for both PL<2.0 and PL>=2.0 """
     #############################################################################################################
-    
-    trainer = Trainer(accelerator='cuda',
-                    strategy=cuda_strategy,
-                    devices=cuda_devices,
-                    val_check_interval=config.Training.val_check_interval,
-                    limit_val_batches=config.Training.limit_val_batches,
-                    resume_from_checkpoint=resume_from_checkpoint,
-                    max_epochs=config.Training.max_epochs,
-                    log_every_n_steps=100, # log batch frequency
-                    logger=[ 
-                                wandb_logger,
-                            ],
-                    callbacks=[ checkpoint_callback,
-                                early_stop_callback,
-                                ],)
-
-
-    trainer.fit(model, datamodule=pl_datamodule)
+    from opensr_srgan.utils.build_trainer_kwargs import build_lightning_kwargs
+    trainer_kwargs, fit_kwargs = build_lightning_kwargs( # get kwargs depending on PL version
+        config=config,
+        logger=wandb_logger,
+        checkpoint_callback=checkpoint_callback,
+        early_stop_callback=early_stop_callback,
+        resume_ckpt=resume_from_checkpoint_variable,
+    )
+   
+    # Start training
+    trainer = pl.Trainer(**trainer_kwargs)
+    trainer.fit(model, datamodule=pl_datamodule, **fit_kwargs)
     wandb.finish()
-
 
 
 # Run training if called from command line
@@ -148,4 +140,3 @@ if __name__ == '__main__':
     
     # Run training
     train(cfg_filepath)
-    

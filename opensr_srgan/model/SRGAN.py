@@ -44,14 +44,14 @@ class SRGAN_model(pl.LightningModule):
         # SECTION: Load Configuration
         # Purpose: Load and parse model/training hyperparameters from YAML file.
         # ======================================================================
-        if isinstance(config, Path) or isinstance(config, str):
-            self.config = OmegaConf.load(config)  # load config file with OmegaConf
+        if isinstance(config, str) or isinstance(config, Path):
+            config = OmegaConf.load(config)     
         elif isinstance(config, dict):
-            self.config = OmegaConf.create(config)          # create config from dict
+            config = OmegaConf.create(config)
         elif OmegaConf.is_config(config):
-            self.config = config                           # already an OmegaConf object
+            pass
         else:
-            print("Invalid config type; must be file path or OmegaConf/dict.")
+            raise TypeError("Config must be a filepath (str or Path), dict, or OmegaConf object.")
         assert mode in {"train", "eval"}, "Mode must be 'train' or 'eval'"  # validate mode
         self.mode = mode                                # store mode (train/eval)
 
@@ -318,8 +318,6 @@ class SRGAN_model(pl.LightningModule):
         optimizer,
         optimizer_idx,
         optimizer_closure,
-        on_tpu=False,
-        using_lbfgs=False,
     ):
         optimizer.step(closure=optimizer_closure)
         optimizer.zero_grad()

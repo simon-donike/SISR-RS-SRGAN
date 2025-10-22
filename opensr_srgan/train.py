@@ -115,13 +115,17 @@ def train(config):
     )
 
     # Only add the legacy kwarg on < 2.0
-    if not is_v2 and resume_from_checkpoint_variable!=None:
-        trainer_kwargs["resume_from_checkpoint"] = resume_from_checkpoint_variable
+    if not is_v2:
+        print("Running on PyTorch Lightning < 2.0")
+        if resume_from_checkpoint_variable!=None:
+            trainer_kwargs["resume_from_checkpoint"] = resume_from_checkpoint_variable
 
     # (Optional extra safety: drop any kwargs Trainer doesn't support)
     #sig = inspect.signature(pl.Trainer.__init__).parameters
     #trainer_kwargs = {k: v if k in sig else None for k, v in trainer_kwargs.items() if k in sig}
 
+
+    print(trainer_kwargs.keys())
     trainer = pl.Trainer(**trainer_kwargs)
 
     fit_kwargs = {}

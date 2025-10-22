@@ -60,7 +60,7 @@ if __name__ == '__main__':
     """ GET DATA """
     #############################################################################################################
     # create dataloaders via dataset_selector -> config -> class selection -> convert to pl_module
-    from opensr_srgan.data.data_utils import select_dataset
+    from opensr_srgan.data.dataset_selector import select_dataset
     pl_datamodule = select_dataset(config)
 
     #############################################################################################################

@@ -34,7 +34,7 @@ Whether you are reproducing published results, exploring new remote-sensing moda
 | **Losses** | Weighted combinations of L1/L2, perceptual (VGG/LPIPS), style, and relativistic adversarial losses. |
 | **Training utilities** | Generator warm-up phases, on-plateau learning-rate schedules, adversarial-weight ramping, EMA tracking, and mixed-precision support. |
 | **Experiment management** | Configurable logging (Weights & Biases, TensorBoard), checkpointing, and experiment reproducibility hooks. |
-| **Datasets** | Sentinel-2 SAFE archives, SEN2NAIP, and pluggable dataset interfaces for custom collections. |
+| **Datasets** | Bundled example dataset for quick smoke tests plus a selector designed for custom collections. |
 | **Deployment** | PyPI package (`opensr-srgan`) with helpers to load Lightning modules from configs or download pre-trained presets from the Hugging Face Hub. |
 
 ## Install in two ways
@@ -60,10 +60,10 @@ Whether you are reproducing published results, exploring new remote-sensing moda
 
 1. **Pick a configuration.** Start from a preset in `opensr_srgan/configs/` and adapt dataset paths, scale, generator, discriminator, and loss
    options to match your experiment.
-2. **Prepare datasets.** Point the config to a Sentinel-2 SAFE manifest or the SEN2NAIP worldwide dataset and verify that the
-   required bands exist on disk (see [Data](data.md)).
-3. **Launch training.** Run `python -m opensr_srgan.train --config <path>` to instantiate the Lightning module, configure optimisers and
-   callbacks, and start adversarial training (see [Training](training.md)).
+2. **Prepare datasets.** Download the bundled example dataset or register your own source with the dataset selector (see
+   [Data](data.md)).
+3. **Launch training.** Run `python -m opensr_srgan.train --config <path>` or import `train` from the package to instantiate the
+   Lightning module, configure optimisers and callbacks, and start adversarial training (see [Training](training.md)).
 4. **Monitor progress.** Use the included Weights & Biases logging to track perceptual losses, adversarial
    metrics, and validation imagery.
 5. **Deploy or evaluate.** The Lightning module exposes `predict_step` for batched inference, automatically normalising inputs and

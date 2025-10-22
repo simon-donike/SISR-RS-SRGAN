@@ -39,7 +39,7 @@ def train(config):
     if config.Model.load_checkpoint != False:
         model = SRGAN_model.load_from_checkpoint(config.Model.load_checkpoint, strict=False)
     else:
-        model = SRGAN_model(config=cfg_filepath)
+        model = SRGAN_model(config=config)
     if config.Model.continue_training != False:
         resume_from_checkpoint = config.Model.continue_training
     else:
@@ -145,4 +145,3 @@ if __name__ == '__main__':
     
     # Run training
     train(cfg_filepath)
-    

@@ -21,6 +21,12 @@ jobs:
           # Path to your paper.md inside the repo
           paper-path: paper/paper.md
 
+      - name: Extract and move compiled PDF
+        run: |
+          mkdir -p paper
+          unzip paper.zip paper.pdf
+          cp paper.pdf paper/paper.pdf
+
       - name: Upload PDF artifact
         uses: actions/upload-artifact@v4
         with:

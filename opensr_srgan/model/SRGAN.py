@@ -300,6 +300,7 @@ class SRGAN_model(pl.LightningModule):
             # run discriminator and get loss between pred labels and true labels
             sr_discriminated = self.discriminator(sr_imgs)                             # D(SR): logits for generator outputs
             adversarial_loss = self.adversarial_loss_criterion(sr_discriminated, torch.ones_like(sr_discriminated)) # keep taargets 1.0 for G loss
+            self.log("generator/adversarial_loss",adversarial_loss,sync_dist=True)     # log unweighted adversarial loss
 
             """ 3. Weight the losses"""
             adv_weight = self._adv_loss_weight() # get adversarial weight based on current step

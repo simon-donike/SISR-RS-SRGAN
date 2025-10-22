@@ -72,8 +72,8 @@ Follow the [installation instructions](https://srgan.opensr.eu/getting-started/i
 
 ## 🚀 Quickstart
 
-* **Datasets:** Dataset structure, downloads, and custom loaders are documented in the [data guide](https://srgan.opensr.eu/data/).
-* **Training:** Launch training with `python -m opensr_srgan.train --config opensr_srgan/configs/config.yaml` or follow the [training walkthrough](https://srgan.opensr.eu/getting-started/training/).
+* **Datasets:** Grab the bundled example dataset or learn how to register your own sources in the [data guide](https://srgan.opensr.eu/data/).
+* **Training:** Launch training with `python -m opensr_srgan.train --config opensr_srgan/configs/config.yaml` or import `train` from the package as described in the [training walkthrough](https://srgan.opensr.eu/getting-started/training/).
 * **Inference:** Ready-made presets and large-scene pipelines are described in the [inference section](https://srgan.opensr.eu/getting-started/inference/).
 
 ---

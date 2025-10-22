@@ -16,14 +16,11 @@ def train(config):
     """ LOAD CONFIG """
     # either path to config file or omegaconf object
     
-    if isinstance(config, str):
-        config = OmegaConf.load(config)    
-    elif isinstance(config, Path):
-        config = str(config)
-        config = OmegaConf.load(config)    
+    if isinstance(config, str) or isinstance(config, Path):
+        config = OmegaConf.load(config)     
     elif isinstance(config, dict):
         config = OmegaConf.create(config)
-    elif isinstance(config, OmegaConf):
+    elif OmegaConf.is_config(config):
         pass
     else:
         raise TypeError("Config must be a filepath (str or Path), dict, or OmegaConf object.")

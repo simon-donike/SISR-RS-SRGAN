@@ -17,6 +17,7 @@ htmlcov/
 *.egg-info
 
 # Data
+opensr_srgan/data/SEN2NAIP
 opensr_srgan/data/SISR_WW/
 opensr_srgan/data/SISR_WW/*
 opensr_srgan/data/SEN2_SAFE

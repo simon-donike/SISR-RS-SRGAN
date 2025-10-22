@@ -7,6 +7,7 @@ from multiprocessing import freeze_support
 import torch
 import wandb
 from omegaconf import OmegaConf
+import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 
     
@@ -93,26 +94,40 @@ def train(config):
                                     mode="min",check_finite=True) # patience in epochs
 
     #############################################################################################################
-    """ Start Training """
+    """ Set Args for Training and Start Training """
+    """ make it robust for both PL<2.0 and PL>=2.0 """
     #############################################################################################################
+    from packaging.version import Version
+    pl_ver = Version(pl.__version__)
+    is_v2 = pl_ver >= Version("2.0.0")
     
-    trainer = Trainer(accelerator='cuda',
-                    strategy=cuda_strategy,
-                    devices=cuda_devices,
-                    val_check_interval=config.Training.val_check_interval,
-                    limit_val_batches=config.Training.limit_val_batches,
-                    resume_from_checkpoint=resume_from_checkpoint,
-                    max_epochs=config.Training.max_epochs,
-                    log_every_n_steps=100, # log batch frequency
-                    logger=[ 
-                                wandb_logger,
-                            ],
-                    callbacks=[ checkpoint_callback,
-                                early_stop_callback,
-                                ],)
+    # Common kwargs for all versions
+    trainer_kwargs = dict(
+        accelerator='cuda',
+        strategy=cuda_strategy,
+        devices=cuda_devices,
+        val_check_interval=config.Training.val_check_interval,
+        limit_val_batches=config.Training.limit_val_batches,
+        max_epochs=config.Training.max_epochs,
+        log_every_n_steps=100,
+        logger=[wandb_logger],
+        callbacks=[checkpoint_callback, early_stop_callback],
+    )
+    
+    # If we're on < 2.0, add resume_from_checkpoint to kwargs
+    if not is_v2 and resume_from_checkpoint:
+        trainer_kwargs["resume_from_checkpoint"] = resume_from_checkpoint
+        
+    # build trainer with kwargs
+    trainer = pl.Trainer(**trainer_kwargs)
+    
+    # On ≥ 2.0, pass the checkpoint path to fit(..., ckpt_path=...)
+    fit_kwargs = {}
+    if is_v2 and resume_from_checkpoint:
+        fit_kwargs["ckpt_path"] = resume_from_checkpoint
 
-
-    trainer.fit(model, datamodule=pl_datamodule)
+    # Start training
+    trainer.fit(model, datamodule=pl_datamodule, **fit_kwargs)
     wandb.finish()
 
 

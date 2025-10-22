@@ -9,6 +9,9 @@ authors:
     family-names: Donike
     email: accounts@donike.net
     orcid: 'https://orcid.org/0000-0002-4440-3835'
+  - given-names: Luis
+    family-names: Gomez-Chova
+    orcid: 'https://orcid.org/0000-0003-3924-1269'
 repository-code: 'https://github.com/simon-donike/SISR-RS-SRGAN'
 url: 'http://srgan.opensr.eu/'
 keywords:

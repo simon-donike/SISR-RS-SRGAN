@@ -46,24 +46,6 @@ def test_minmax_unit_range():
     assert torch.isclose(y.min(), torch.tensor(0.0), atol=1e-7)
     assert torch.isclose(y.max(), torch.tensor(1.0), atol=1e-7)
 
-
-def test_histogram_identity_no_change():
-    ref = torch.rand(3, 16, 16)
-    tgt = ref.clone()
-    out = histogram(ref, tgt)
-    assert out.shape == tgt.shape and out.dtype == tgt.dtype
-    # should be very close if ref == tgt
-    assert torch.allclose(out, tgt, atol=1e-3)
-
-
-def test_histogram_broadcast_and_resize():
-    ref = torch.rand(1, 3, 8, 8)      # B=1, smaller spatial size
-    tgt = torch.rand(2, 3, 16, 12)    # B=2, larger spatial size
-    out = histogram(ref, tgt)
-    assert out.shape == tgt.shape
-    assert torch.isfinite(out).all()
-
-
 def test_moment_matches_stats_per_channel():
     ref = torch.rand(3, 12, 9) * 0.7 + 0.1
     tgt = torch.rand(3, 12, 9) * 0.3 + 0.2

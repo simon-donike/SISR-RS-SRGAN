@@ -320,6 +320,9 @@ class SRGAN_model(pl.LightningModule):
         optimizer,
         optimizer_idx,
         optimizer_closure,
+        on_tpu=False, # these arguments are needed in case we're running on PL>2.0
+        using_lbfgs=False,
+        
     ):
         optimizer.step(closure=optimizer_closure)
         optimizer.zero_grad()

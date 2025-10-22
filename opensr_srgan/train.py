@@ -117,6 +117,8 @@ def train(config):
     # If we're on < 2.0, add resume_from_checkpoint to kwargs
     if not is_v2 and resume_from_checkpoint:
         trainer_kwargs["resume_from_checkpoint"] = resume_from_checkpoint
+    else:
+        os.environ.pop("PL_TRAINER_RESUME_FROM_CHECKPOINT", None)  # get rid of env var if set
         
     # build trainer with kwargs
     trainer = pl.Trainer(**trainer_kwargs)

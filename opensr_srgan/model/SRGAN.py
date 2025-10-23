@@ -186,13 +186,13 @@ class SRGAN_model(pl.LightningModule):
         # Check for PL version - Define PL Hooks accordingly
         if self.pl_version >= (2,0,0):
             self.automatic_optimization = False  # manual optimization for PL 2.x
-        # Set up Training Step
-            from opensr_srgan.model.training_step_PL import training_step_PL1 as training_step_PL
+            # Set up Training Step
+            from opensr_srgan.model.training_step_PL import training_step_PL2 as training_step_PL
             self._training_step_implementation = MethodType(training_step_PL, self)
         elif self.pl_version < (2,0,0):
             assert self.automatic_optimization is True, "For PL <2.0, automatic_optimization must be True."
             # Set up Training Step
-            from opensr_srgan.model.training_step_PL import training_step_PL2 as training_step_PL
+            from opensr_srgan.model.training_step_PL import training_step_PL1 as training_step_PL
             self._training_step_implementation = MethodType(training_step_PL, self)
         else:
             raise RuntimeError(f"Unsupported PyTorch Lightning version: {pl.__version__}")

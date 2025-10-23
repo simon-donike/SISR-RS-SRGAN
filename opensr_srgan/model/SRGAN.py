@@ -3,6 +3,8 @@ import math
 import time
 from contextlib import nullcontext
 from pathlib import Path
+from types import MethodType
+
 
 import numpy as np
 import pytorch_lightning as pl
@@ -54,14 +56,29 @@ class SRGAN_model(pl.LightningModule):
             raise TypeError("Config must be a filepath (str or Path), dict, or OmegaConf object.")
         assert mode in {"train", "eval"}, "Mode must be 'train' or 'eval'"  # validate mode
         
+        
+        # ======================================================================
+        # SECTION: Set Variables
+        # Purpose: Set config and mode variables model-wide, including PL version.
+        # ======================================================================    
         self.config = config
-        self.mode = mode                                # store mode (train/eval)
+        self.mode = mode          
+        self.pl_version = tuple(int(x) for x in pl.__version__.split("."))
 
-        # --- Training settings ---
+        # ======================================================================
+        # SECTION: Get Training settings
+        # Purpose: Define model variables to enable training strategies.
+        # ======================================================================        
         self.pretrain_g_only = bool(getattr(self.config.Training, "pretrain_g_only", False))  # pretrain generator only (default False)
         self.g_pretrain_steps = int(getattr(self.config.Training, "g_pretrain_steps", 0))     # number of steps for G pretraining
         self.adv_loss_ramp_steps = int(getattr(self.config.Training, "adv_loss_ramp_steps", 20000))  # linear ramp-up steps for adversarial loss
         self.adv_target = 0.9 if getattr(self.config.Training, "label_smoothing", False) else 1.0    # use 0.9 if label smoothing enabled, else 1.0
+        
+        # ======================================================================
+        # SECTION: Set up Training Strategy
+        # Purpose: Depending on PL version, set up optimizers, schedulers, etc.
+        # ======================================================================
+        self.setup_lightning()  # dynamically builds and attaches generator + discriminator
 
         # ======================================================================
         # SECTION: Initialize Generator
@@ -73,20 +90,7 @@ class SRGAN_model(pl.LightningModule):
         # SECTION: Initialize EMA
         # Purpose: Optional exponential moving average (EMA) tracking for generator weights
         # ======================================================================
-        ema_cfg = getattr(self.config.Training, "EMA", None)
-        self.ema: ExponentialMovingAverage | None = None
-        self._ema_update_after_step = 0
-        self._ema_applied = False
-        if ema_cfg is not None and getattr(ema_cfg, "enabled", False):
-            ema_decay = float(getattr(ema_cfg, "decay", 0.999))
-            ema_device = getattr(ema_cfg, "device", None)
-            use_num_updates = bool(getattr(ema_cfg, "use_num_updates", True))
-            self.ema = ExponentialMovingAverage(
-                self.generator,
-                decay=ema_decay,
-                use_num_updates=use_num_updates,
-            )
-            self._ema_update_after_step = int(getattr(ema_cfg, "update_after_step", 0))
+        self.initialize_ema()
 
         # ======================================================================
         # SECTION: Define Loss Functions
@@ -178,6 +182,40 @@ class SRGAN_model(pl.LightningModule):
             else:
                 raise ValueError(f"Unknown discriminator model type: {discriminator_type}")
 
+    def setup_lightning(self):
+        """
+        Check for Versioning and Set options accordingly.
+        - For PL 2.x, set manual optimization for GAN training.
+        """
+        # Check for PL version - Define PL Hooks accordingly
+        if self.pl_version >= (2,0,0):
+            self.automatic_optimization = False  # manual optimization for PL 2.x
+            # Set up Training Step
+            from opensr_srgan.model.training_step_PL import training_step_PL2
+            self._training_step_implementation = MethodType(training_step_PL2, self)
+        elif self.pl_version < (2,0,0):
+            assert self.automatic_optimization is True, "For PL <2.0, automatic_optimization must be True."
+            # Set up Training Step
+            from opensr_srgan.model.training_step_PL import training_step_PL1
+            self._training_step_implementation = MethodType(training_step_PL1, self)
+        else:
+            raise RuntimeError(f"Unsupported PyTorch Lightning version: {pl.__version__}")
+
+    def initialize_ema(self):
+        ema_cfg = getattr(self.config.Training, "EMA", None)
+        self.ema: ExponentialMovingAverage | None = None
+        self._ema_update_after_step = 0
+        self._ema_applied = False
+        if ema_cfg is not None and getattr(ema_cfg, "enabled", False):
+            ema_decay = float(getattr(ema_cfg, "decay", 0.999))
+            ema_device = getattr(ema_cfg, "device", None)
+            use_num_updates = bool(getattr(ema_cfg, "use_num_updates", True))
+            self.ema = ExponentialMovingAverage(
+                self.generator,
+                decay=ema_decay,
+                use_num_updates=use_num_updates,
+            )
+            self._ema_update_after_step = int(getattr(ema_cfg, "update_after_step", 0))
 
     def forward(self, lr_imgs):
         # perform generative step (LR → SR)
@@ -221,158 +259,48 @@ class SRGAN_model(pl.LightningModule):
         return sr_imgs
 
 
-    def training_step(self,batch,batch_idx,optimizer_idx):
-        # ======================================================================
-        # SECTION: Forward pass + metric logging (no gradients for metrics)
-        # Purpose: compute SR prediction, evaluate training metrics, log them.
-        # ======================================================================
-
-        # -------- CREATE SR DATA --------
-        lr_imgs, hr_imgs = batch                                  # unpack LR/HR tensors from dataloader batch
-        sr_imgs = self.forward(lr_imgs)                          # forward pass of the generator to produce SR from LR
-
-        # ======================================================================
-        # SECTION: Pretraining phase gate
-        # Purpose: decide if we are in the content-only pretrain stage.
-        # ======================================================================
-
-        # -------- DETERMINE PRETRAINING --------
-        pretrain_phase = self._pretrain_check()                  # check schedule: True => content-only pretraining
-        if optimizer_idx == 1:  # log whether pretraining is active or not
-            self.log("training/pretrain_phase", float(pretrain_phase), prog_bar=False,sync_dist=True)  # log once per G step to track phase state
-
-        # ======================================================================
-        # SECTION: Pretraining branch (delegated)
-        # Purpose: during pretrain, only content loss for G and dummy logging for D.
-        # ======================================================================
-
-        # -------- IF PRETRAIN: delegate --------
-        if pretrain_phase:
-            # run pretrain step separately and return loss here
-            return self.pretraining_training_step(lr_imgs=lr_imgs, hr_imgs=hr_imgs, sr_imgs=sr_imgs, optimizer_idx=optimizer_idx)  # delegate pretrain logic (no forward here)
-
-        # ======================================================================
-        # SECTION: Adversarial training — Discriminator step
-        # Purpose: update D to distinguish HR (real) vs SR (fake).
-        # ======================================================================
-
-        # -------- Normal Train: Discriminator Step  --------
-        if optimizer_idx==0:
-            # run discriminator and get loss between pred labels and true labels
-            hr_discriminated = self.discriminator(hr_imgs)       # D(real): logits for HR images
-            sr_discriminated = self.discriminator(sr_imgs.detach()) # detach so G doesn’t get gradients from D’s step
-
-            # targets
-            real_target = torch.full_like(hr_discriminated, self.adv_target) # get labels/fuzzy labels
-            fake_target = torch.zeros_like(sr_discriminated) # zeros, since generative prediction
-
-            # Binary Cross-Entropy loss
-            loss_real = self.adversarial_loss_criterion(hr_discriminated, real_target)   # BCEWithLogitsLoss for D(G(x))
-            loss_fake = self.adversarial_loss_criterion(sr_discriminated, fake_target)  # BCEWithLogitsLoss for D(y)
-            adversarial_loss = loss_real + loss_fake # Sum up losses
-            self.log("discriminator/adversarial_loss",adversarial_loss,sync_dist=True) # log weighted loss
-
-            # [LOG-B] Always log D opinions: real probs in normal training
-            with torch.no_grad():
-                d_real_prob = torch.sigmoid(hr_discriminated).mean()   # estimate mean real probability
-                d_fake_prob = torch.sigmoid(sr_discriminated).mean()   # estimate mean fake probability
-            self.log("discriminator/D(y)_prob", d_real_prob, prog_bar=True,sync_dist=True)      # log D(real) confidence
-            self.log("discriminator/D(G(x))_prob", d_fake_prob, prog_bar=True,sync_dist=True)   # log D(fake) confidence
-
-            # return weighted discriminator loss
-            return adversarial_loss                                # PL will use this to step the D optimizer
-
-        # ======================================================================
-        # SECTION: Adversarial training — Generator step
-        # Purpose: update G to minimize content loss + (weighted) adversarial loss.
-        # ======================================================================
-
-        # -------- Normal Train: Generator Step  --------
-        if optimizer_idx==1:
-
-            """ 1. Get VGG space loss """
-            # encode images
-            content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)   # perceptual/content criterion (e.g., VGG)
-            self._log_generator_content_loss(content_loss)                             # log content loss for G (consistent args)
-            for key, value in metrics.items():
-                self.log(f"train_metrics/{key}", value,sync_dist=True)                             # log detailed metrics without extra forward passes
-
-
-            """ 2. Get Discriminator Opinion and loss """
-            # run discriminator and get loss between pred labels and true labels
-            sr_discriminated = self.discriminator(sr_imgs)                             # D(SR): logits for generator outputs
-            adversarial_loss = self.adversarial_loss_criterion(sr_discriminated, torch.ones_like(sr_discriminated)) # keep taargets 1.0 for G loss
-            self.log("generator/adversarial_loss",adversarial_loss,sync_dist=True)     # log unweighted adversarial loss
-
-            """ 3. Weight the losses"""
-            adv_weight = self._adv_loss_weight() # get adversarial weight based on current step
-            adversarial_loss_weighted = (adversarial_loss * adv_weight) # weight adversarial loss
-            total_loss = content_loss + adversarial_loss_weighted # total content loss
-            self.log("generator/total_loss",total_loss,sync_dist=True)                # log combined objective (content + λ_adv * adv)
-
-            # return Generator loss
-            return total_loss                                                         # PL will use this to step the G optimizer
-
+    def training_step(self,batch,batch_idx, *args):
+        # Check what we need to pass to the training function
+        # Depending on PL version, and depending on the manual optimization
+        if self.pl_version >= (2,0,0):
+            return self._training_step_implementation(batch, batch_idx) # no optim_idx
+        else:
+            optimizer_idx = args[0] if len(args) > 0 else 0 # get optim_idx from kwargs
+            return self._training_step_implementation(batch, batch_idx, optimizer_idx) # pass optim_idx
+        
     def optimizer_step(
         self,
         epoch,
         batch_idx,
         optimizer,
-        optimizer_idx,
-        optimizer_closure,
-        on_tpu=False, # these arguments are needed in case we're running on PL>2.0
-        using_lbfgs=False,
-        
+        optimizer_idx=None,
+        optimizer_closure=None,
+        **kwargs,           # absorbs on_tpu/using_lbfgs/etc across PL versions
     ):
-        optimizer.step(closure=optimizer_closure)
+        """
+        Used only when self.automatic_optimization == True (PL 1.x auto-optim).
+        No-op for PL 2 manual because Lightning won't call it there.
+        """
+        # If we're in manual optimization (PL >=2 path), do nothing special.
+        if not self.automatic_optimization:
+            # Let Lightning's default behavior proceed (or simply return).
+            # In manual mode we call opt.step()/zero_grad() in training_step_PL2.
+            return super().optimizer_step(epoch, batch_idx, optimizer, optimizer_idx, optimizer_closure, **kwargs)
+
+        # ---- PL 1.x auto-optimization path ----
+        if optimizer_closure is not None:
+            optimizer.step(closure=optimizer_closure)
+        else:
+            optimizer.step()
         optimizer.zero_grad()
 
+        # EMA after the generator step (assumes G is optimizer_idx == 1)
         if (
             self.ema is not None
             and optimizer_idx == 1
             and self.global_step >= self._ema_update_after_step
         ):
             self.ema.update(self.generator)
-
-    def pretraining_training_step(self, *, lr_imgs, hr_imgs, sr_imgs, optimizer_idx):
-        """
-        Pretraining branch logic (no forward here):
-        - G step (optimizer_idx==1): content-only loss
-        - D step (optimizer_idx==0): dummy loss + zeroed logs so closures run
-        """
-
-        # ======================================================================
-        # SECTION: Generator (G) pretraining step
-        # Purpose: train only the generator using content loss, no adversarial part.
-        # ======================================================================
-        if optimizer_idx == 1:
-            content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)  # compute perceptual/content loss (e.g., VGG or L1)
-            self._log_generator_content_loss(content_loss)                             # log content loss for G (consistent args)
-            for key, value in metrics.items():
-                self.log(f"train_metrics/{key}", value,sync_dist=True)                               # reuse computed metrics for logging
-
-            # Ensure adversarial weight is logged even when not used during pretraining
-            adv_weight = self._compute_adv_loss_weight()
-            self._log_adv_loss_weight(adv_weight)
-            return content_loss                                                        # return loss for optimizer step (G only)
-
-        # ======================================================================
-        # SECTION: Discriminator (D) pretraining step
-        # Purpose: no real training — just log zeros and return dummy loss to satisfy closure.
-        # ======================================================================
-        elif optimizer_idx == 0:
-            device, dtype = hr_imgs.device, hr_imgs.dtype                              # get tensor device and dtype for consistency
-            zero = torch.tensor(0.0, device=device, dtype=dtype)                       # define reusable zero tensor
-
-            # --- Log dummy discriminator "opinions" (always zero during pretrain) ---
-            self.log("discriminator/D(y)_prob",    zero, prog_bar=True,  sync_dist=True)  # fake real-prob (always 0)
-            self.log("discriminator/D(G(x))_prob", zero, prog_bar=True,  sync_dist=True)  # fake fake-prob (always 0)
-
-            # --- Create dummy scalar loss (ensures PL closure runs) ---
-            dummy = torch.zeros((), device=device, dtype=dtype, requires_grad=True)    # dummy value with grad for optimizer compatibility
-            self.log("discriminator/adversarial_loss", dummy, sync_dist=True)          # log dummy adversarial loss (always 0)
-            return dummy                                                               # return dummy loss (keeps Lightning loop intact)
-
 
     @torch.no_grad()
     def validation_step(self, batch, batch_idx):
@@ -398,7 +326,7 @@ class SRGAN_model(pl.LightningModule):
         del metrics_hr_img, metrics_sr_img                   # free cloned tensors from GPU memory
 
         for key, value in metrics.items():                   # iterate over metrics dict
-            self.log(f"{key}", value,sync_dist=True)                        # log each metric to logger (e.g., W&B, TensorBoard)
+            self.log(f"{key}", value,sync_dist=True)         # log each metric to logger (e.g., W&B, TensorBoard)
 
         # ======================================================================
         # SECTION: Optional visualization — Log example SR/HR/LR images
@@ -453,7 +381,6 @@ class SRGAN_model(pl.LightningModule):
                                                                                                                                         torch.ones_like(hr_discriminated))
                 self.log("validation/DISC_adversarial_loss",adversarial_loss,sync_dist=True)
 
-
     def on_validation_epoch_start(self):
         super().on_validation_epoch_start()
         self._apply_generator_ema_weights()
@@ -471,7 +398,6 @@ class SRGAN_model(pl.LightningModule):
         super().on_test_epoch_end()
 
     def configure_optimizers(self):
-
         # configure Generator optimizer (Adam)
         optimizer_g = torch.optim.Adam(
             params=filter(lambda p: p.requires_grad, self.generator.parameters()),  # only trainable params
@@ -541,8 +467,8 @@ class SRGAN_model(pl.LightningModule):
             [optimizer_d, optimizer_g],  # order super important, it's [D, G] and checked in training step
             scheduler_configs,
         ]
-
-
+    
+    
     def on_train_batch_start(self, batch, batch_idx):  # called before each training batch
         pre = self._pretrain_check()                   # check if currently in pretraining phase
         for p in self.discriminator.parameters():      # loop over all discriminator params

@@ -11,10 +11,10 @@
 # ---------------------------------------------------------------------------- #
 Data:
   # Loader parameters
-  train_batch_size: 8        # Batch size for training
-  val_batch_size: 5           # Batch size for validation
-  num_workers: 6              # Number of parallel workers for dataloader
-  prefetch_factor: 2          # Samples prefetched per worker (2 is stable default)
+  train_batch_size: 2        # Batch size for training
+  val_batch_size: 2           # Batch size for validation
+  num_workers: 2              # Number of parallel workers for dataloader
+  prefetch_factor: 1          # Samples prefetched per worker (2 is stable default)
 
   # Dataset configuration
   dataset_type: 'ExampleDataset'       # Choose dataset type: ['ExampleDataset']
@@ -80,7 +80,7 @@ Generator:
   large_kernel_size: 9         # Kernel for head and tail conv layers
   small_kernel_size: 3         # Kernel for intermediate blocks
   n_channels: 64               # Number of feature channels (original 64)
-  n_blocks: 32                 # Number of residual/attention blocks (original 16)
+  n_blocks: 16                 # Number of residual/attention blocks (original 16)
   scaling_factor: 4            # Upscaling factor (e.g., 2×, 4×, 8×)
 
 Discriminator:

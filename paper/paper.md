@@ -146,14 +146,13 @@ $$
 x' = \mathrm{Upsample}\!\left( \mathrm{Conv}_{\text{tail}}\!\left(\mathrm{Body}(x_{\text{head}}) + x_{\text{head}}\right)\! \right)
 $$
 
-This modular structure allows researchers to experiment with different block designs—standard residual, channel attention (RCAB), dense residual (RRDB), large-kernel attention (LKA), or noise-conditioned variants—without altering the training pipeline or configuration schema.  
-All models share identical input–output interfaces and residual scaling for stability, ensuring drop-in interchangeability across experiments.
+This modular structure allows researchers to experiment with different block designs—standard residual, channel attention (RCAB), dense residual (RRDB), large-kernel attention (LKA), or noise-augmented variants without altering the training pipeline or configuration schema.  
+All models share identical input-output interfaces and residual scaling for stability, ensuring drop-in interchangeability across experiments.
 
 #### Conditional Generator with Noise Injection
 
 The `cgan` variant extends the standard generator by conditioning on both the low-resolution image and a latent noise vector $z$.  
-It replaces standard residual blocks with *NoiseResBlocks*, which introduce controlled stochasticity through feature modulation.  
-Each `NoiseResBlock` uses a small Multi-Layer Perceptron (MLP) to project the noise code $z\!\in\!\mathbb{R}^{d}$ into per-channel scale and bias parameters $(\gamma, \beta)$ that modulate intermediate activations before the nonlinearity:
+It replaces standard residual blocks with *NoiseResBlocks*, which introduce controlled stochasticity. Each `NoiseResBlock` uses a small Multi-Layer Perceptron (MLP) to project the noise code $z\!\in\!\mathbb{R}^{d}$ into per-channel scale and bias parameters $(\gamma, \beta)$ that modulate intermediate activations before the nonlinearity:
 
 $$
 x_{\text{mod}} = (1 + \gamma)\odot \mathrm{Conv}_1(x) + \beta
@@ -165,9 +164,7 @@ $$
 x' = x + \mathrm{Conv}(\mathrm{PReLU}(x_{\text{mod}})) \cdot s
 $$
 
-where $s$ is a residual scaling factor.  
-This mechanism maintains spatial coherence while enabling the generation of multiple plausible high-frequency realizations for the same LR input.  
-During training, a random noise vector is sampled per image; during inference, users may supply explicit latent codes or fix random seeds for deterministic behavior.  
+where $s$ is a residual scaling factor. This mechanism maintains spatial coherence while enabling the generation of multiple plausible high-frequency realizations for the same LR input. During training, a random noise vector is sampled per image; during inference, users may supply explicit latent codes or fix random seeds for deterministic behavior.  
 The module also exposes `sample_noise(batch_size)` and a `return_noise` flag for reproducibility and logging.  
 
 
@@ -231,9 +228,7 @@ $$
 \hat{y}_{\text{SR}} = G(x; \theta_{\text{EMA}})
 $$
 
-where $\hat{y}_{\text{SR}}$ denotes the final super-resolved output produced by the EMA-stabilised generator.  
-
-Empirically, applying EMA has been shown to stabilise adversarial training by mitigating oscillations between the generator and discriminator and by improving the perceptual smoothness and reproducibility of the resulting super-resolved images [@ema2].
+where $\hat{y}_{\text{SR}}$ denotes the final super-resolved output produced by the EMA-stabilised generator. Empirically, applying EMA has been shown to stabilise adversarial training by mitigating oscillations between the generator and discriminator and by improving the perceptual smoothness and reproducibility of the resulting super-resolved images [@ema2].
 
 
 ### Loss Functions

@@ -1,5 +1,4 @@
 import torch
-from opensr_srgan.model.pretraining_step_PL import pretraining_training_step
 
 def training_step_PL1x(self, batch, batch_idx, optimizer_idx):
     # -------- CREATE SR DATA --------

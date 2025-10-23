@@ -91,6 +91,9 @@ def training_step_PL1x(self, batch, batch_idx, optimizer_idx):
         return total_loss         
     
     
-    
-def training_step_PL2x(**kwargs):
-    return None
+def training_step_PL2x(self, *_, **__):
+    """Placeholder for PyTorch Lightning >= 2.0."""
+
+    raise NotImplementedError(
+        "PyTorch Lightning >= 2.0 support for training_step is not implemented yet."
+    )

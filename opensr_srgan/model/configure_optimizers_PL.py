@@ -75,4 +75,8 @@ def configure_optimizers_PL1x(self):
     ]
     
 def configure_optimizers_PL2x(self):
-    return None
+    """Placeholder for PyTorch Lightning >= 2.0."""
+
+    raise NotImplementedError(
+        "PyTorch Lightning >= 2.0 support for configure_optimizers is not implemented yet."
+    )

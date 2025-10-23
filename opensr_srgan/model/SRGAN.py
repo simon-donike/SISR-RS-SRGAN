@@ -73,25 +73,18 @@ class SRGAN_model(pl.LightningModule):
         # Purpose: Build generator network depending on selected architecture.
         # ======================================================================
         self.get_models(mode=self.mode)  # dynamically builds and attaches generator + discriminator
+        
+        # ======================================================================
+        # SECTION: Set up Training Strategy
+        # Purpose: Depending on PL version, set up optimizers, schedulers, etc.
+        # ======================================================================
+        self.setup_lightning()  # dynamically builds and attaches generator + discriminator
 
         # ======================================================================
         # SECTION: Initialize EMA
         # Purpose: Optional exponential moving average (EMA) tracking for generator weights
         # ======================================================================
-        ema_cfg = getattr(self.config.Training, "EMA", None)
-        self.ema: ExponentialMovingAverage | None = None
-        self._ema_update_after_step = 0
-        self._ema_applied = False
-        if ema_cfg is not None and getattr(ema_cfg, "enabled", False):
-            ema_decay = float(getattr(ema_cfg, "decay", 0.999))
-            ema_device = getattr(ema_cfg, "device", None)
-            use_num_updates = bool(getattr(ema_cfg, "use_num_updates", True))
-            self.ema = ExponentialMovingAverage(
-                self.generator,
-                decay=ema_decay,
-                use_num_updates=use_num_updates,
-            )
-            self._ema_update_after_step = int(getattr(ema_cfg, "update_after_step", 0))
+        self.initialize_ema()
 
         # ======================================================================
         # SECTION: Define Loss Functions
@@ -183,6 +176,44 @@ class SRGAN_model(pl.LightningModule):
             else:
                 raise ValueError(f"Unknown discriminator model type: {discriminator_type}")
 
+    def setup_lightning(self):
+        """
+        Set up optimizers, schedulers, and other training components based on PL version.
+        """
+
+        # Check for PL version - Define PL Hooks accordingly
+        if self.pl_version >= (2,0,0):
+            # Set up training Step for PL 2.x
+            from opensr_srgan.model.training_step_PL import training_step_PL2x
+            self._training_step_implementation = training_step_PL2x
+            # Set up optimizers for PL 2.x
+            from opensr_srgan.model.configure_optimizers_PL import configure_optimizers_PL2x
+            self._configure_optimizers_implementation = configure_optimizers_PL2x
+        elif self.pl_version < (2,0,0):
+            # Set up training Step for PL 1.x
+            from opensr_srgan.model.training_step_PL import training_step_PL1x
+            self._training_step_implementation = training_step_PL1x
+            # Set up optimizers for PL 1.x
+            from opensr_srgan.model.configure_optimizers_PL import configure_optimizers_PL1
+            self._configure_optimizers_implementation = configure_optimizers_PL1
+        else:
+            raise ValueError(f"Unsupported PyTorch Lightning version: {pl.__version__}")
+
+    def initialize_ema(self):
+        ema_cfg = getattr(self.config.Training, "EMA", None)
+        self.ema: ExponentialMovingAverage | None = None
+        self._ema_update_after_step = 0
+        self._ema_applied = False
+        if ema_cfg is not None and getattr(ema_cfg, "enabled", False):
+            ema_decay = float(getattr(ema_cfg, "decay", 0.999))
+            ema_device = getattr(ema_cfg, "device", None)
+            use_num_updates = bool(getattr(ema_cfg, "use_num_updates", True))
+            self.ema = ExponentialMovingAverage(
+                self.generator,
+                decay=ema_decay,
+                use_num_updates=use_num_updates,
+            )
+            self._ema_update_after_step = int(getattr(ema_cfg, "update_after_step", 0))
 
     def forward(self, lr_imgs):
         # perform generative step (LR → SR)
@@ -227,21 +258,8 @@ class SRGAN_model(pl.LightningModule):
 
 
     def training_step(self,batch,batch_idx,optimizer_idx):
-        # ======================================================================
-        # SECTION: Forward pass + metric logging (no gradients for metrics)
-        # Purpose: compute SR prediction, evaluate training metrics, log them.
-        # ======================================================================
-
-        # Check for PL version - define training step accordingly
-        if self.pl_version >= (2,0,0):
-            from opensr_srgan.model.training_step_PL import training_step_PL2x
-            return training_step_PL2x(self, batch, batch_idx, optimizer_idx)
-        elif self.pl_version < (2,0,0):
-            from opensr_srgan.model.training_step_PL import training_step_PL1x
-            return training_step_PL1x(self, batch, batch_idx, optimizer_idx)
+        return self._training_step_implementation(batch, batch_idx, optimizer_idx)
         
-        
-
     def optimizer_step(
         self,
         epoch,
@@ -360,15 +378,7 @@ class SRGAN_model(pl.LightningModule):
         super().on_test_epoch_end()
 
     def configure_optimizers(self):
-
-        # check for PL version - define optimisers accordingly
-        if self.pl_version >= (2,0,0):
-            from opensr_srgan.model.configure_optimizers_PL import configure_optimizers_PL2x
-            return configure_optimizers_PL2x(self)
-        elif self.pl_version <= (2,0,0):
-            from opensr_srgan.model.configure_optimizers_PL import configure_optimizers_PL1x
-            return configure_optimizers_PL1x(self)
-            
+        return self._configure_optimizers_implementation(self.config)
 
     def on_train_batch_start(self, batch, batch_idx):  # called before each training batch
         pre = self._pretrain_check()                   # check if currently in pretraining phase

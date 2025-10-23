@@ -57,30 +57,34 @@ class SRGAN_model(pl.LightningModule):
         assert mode in {"train", "eval"}, "Mode must be 'train' or 'eval'"  # validate mode
         
         
-        # Set attributes
+        # ======================================================================
+        # SECTION: Set Variables
+        # Purpose: Set config and mode variables model-wide, including PL version.
+        # ======================================================================    
         self.config = config
         self.mode = mode          
-        
-        # Get PL version
         self.pl_version = tuple(int(x) for x in pl.__version__.split("."))
 
-        # --- Training settings ---
+        # ======================================================================
+        # SECTION: Get Training settings
+        # Purpose: Define model variables to enable training strategies.
+        # ======================================================================        
         self.pretrain_g_only = bool(getattr(self.config.Training, "pretrain_g_only", False))  # pretrain generator only (default False)
         self.g_pretrain_steps = int(getattr(self.config.Training, "g_pretrain_steps", 0))     # number of steps for G pretraining
         self.adv_loss_ramp_steps = int(getattr(self.config.Training, "adv_loss_ramp_steps", 20000))  # linear ramp-up steps for adversarial loss
         self.adv_target = 0.9 if getattr(self.config.Training, "label_smoothing", False) else 1.0    # use 0.9 if label smoothing enabled, else 1.0
-
-        # ======================================================================
-        # SECTION: Initialize Generator
-        # Purpose: Build generator network depending on selected architecture.
-        # ======================================================================
-        self.get_models(mode=self.mode)  # dynamically builds and attaches generator + discriminator
         
         # ======================================================================
         # SECTION: Set up Training Strategy
         # Purpose: Depending on PL version, set up optimizers, schedulers, etc.
         # ======================================================================
         self.setup_lightning()  # dynamically builds and attaches generator + discriminator
+
+        # ======================================================================
+        # SECTION: Initialize Generator
+        # Purpose: Build generator network depending on selected architecture.
+        # ======================================================================
+        self.get_models(mode=self.mode)  # dynamically builds and attaches generator + discriminator
 
         # ======================================================================
         # SECTION: Initialize EMA
@@ -187,13 +191,13 @@ class SRGAN_model(pl.LightningModule):
         if self.pl_version >= (2,0,0):
             self.automatic_optimization = False  # manual optimization for PL 2.x
             # Set up Training Step
-            from opensr_srgan.model.training_step_PL import training_step_PL2 as training_step_PL
-            self._training_step_implementation = MethodType(training_step_PL, self)
+            from opensr_srgan.model.training_step_PL import training_step_PL2
+            self._training_step_implementation = MethodType(training_step_PL2, self)
         elif self.pl_version < (2,0,0):
             assert self.automatic_optimization is True, "For PL <2.0, automatic_optimization must be True."
             # Set up Training Step
-            from opensr_srgan.model.training_step_PL import training_step_PL1 as training_step_PL
-            self._training_step_implementation = MethodType(training_step_PL, self)
+            from opensr_srgan.model.training_step_PL import training_step_PL1
+            self._training_step_implementation = MethodType(training_step_PL1, self)
         else:
             raise RuntimeError(f"Unsupported PyTorch Lightning version: {pl.__version__}")
 

@@ -117,15 +117,18 @@ def training_step_PL1(self, batch, batch_idx, optimizer_idx):
     
 def training_step_PL2(self, batch, batch_idx):
     """
-    PyTorch Lightning >= 2.x manual-optimization clone of your PL1.x training_step.
+    PyTorch Lightning >= 2.x manual-optimization clone of PL1.x training_step.
     Mirrors:
       - pretrain gate (content-only on G; D logs dummies),
       - normal adversarial training with separate D then G steps,
-      - same logs/keys/ordering as your original function.
+      - same logs/keys/ordering as original function.
     Requires:
-      - self.automatic_optimization = False  (set e.g. in __init__ when PL>=2)
+      - self.automatic_optimization = False (set e.g. in __init__ when PL>=2)
       - configure_optimizers() returns (opt_d, opt_g) in this order (or swap below).
     """
+    assert self.pl_version >= (2,0,0), "training_step_PL2 requires PyTorch Lightning >= 2.x."
+    assert self.automatic_optimization is False, "training_step_PL2 requires manual_optimization."
+    
     # -------- CREATE SR DATA --------
     lr_imgs, hr_imgs = batch
     sr_imgs = self.forward(lr_imgs)

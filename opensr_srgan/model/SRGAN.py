@@ -362,7 +362,6 @@ class SRGAN_model(pl.LightningModule):
                                                                                                                                         torch.ones_like(hr_discriminated))
                 self.log("validation/DISC_adversarial_loss",adversarial_loss,sync_dist=True)
 
-
     def on_validation_epoch_start(self):
         super().on_validation_epoch_start()
         self._apply_generator_ema_weights()

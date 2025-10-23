@@ -190,13 +190,10 @@ class SRGAN_model(pl.LightningModule):
         """
         # Check for PL version - Define PL Hooks accordingly
         if self.pl_version >= (2,0,0):
-            print("We're on Python Lightning version:", pl.__version__,"self.pl_version =", self.pl_version)
-            print("Setting up manual optimization for PL 2.x")
             self.automatic_optimization = False  # manual optimization for PL 2.x
             # Set up Training Step
             from opensr_srgan.model.training_step_PL import training_step_PL2
             self._training_step_implementation = MethodType(training_step_PL2, self)
-            print("self._training_step_implementation set to training_step_PL2:", self._training_step_implementation)
         elif self.pl_version < (2,0,0):
             assert self.automatic_optimization is True, "For PL <2.0, automatic_optimization must be True."
             # Set up Training Step

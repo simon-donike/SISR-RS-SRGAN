@@ -1,6 +1,6 @@
 import torch
 
-def training_step_PL1x(self, batch, batch_idx, optimizer_idx):
+def training_step_PL1(self, batch, batch_idx, optimizer_idx):
     # -------- CREATE SR DATA --------
     lr_imgs, hr_imgs = batch                                  # unpack LR/HR tensors from dataloader batch
     sr_imgs = self.forward(lr_imgs)                          # forward pass of the generator to produce SR from LR
@@ -109,11 +109,136 @@ def training_step_PL1x(self, batch, batch_idx, optimizer_idx):
         adv_weight = self._adv_loss_weight() # get adversarial weight based on current step
         adversarial_loss_weighted = (adversarial_loss * adv_weight) # weight adversarial loss
         total_loss = content_loss + adversarial_loss_weighted # total content loss
-        self.log("generator/total_loss",total_loss,sync_dist=True)                # log combined objective (content + λ_adv * adv)
+        self.log("generator/total_loss",total_loss,sync_dist=True)  # log combined objective (content + λ_adv * adv)
 
         # return Generator loss
         return total_loss         
     
     
-def training_step_PL2x(**kwargs):
-    raise NotImplementedError("training_step_PL2x is not yet implemented.")
+def training_step_PL2(self, batch, batch_idx):
+    """
+    PyTorch Lightning >= 2.x manual-optimization clone of PL1.x training_step.
+    Mirrors:
+      - pretrain gate (content-only on G; D logs dummies),
+      - normal adversarial training with separate D then G steps,
+      - same logs/keys/ordering as original function.
+    Requires:
+      - self.automatic_optimization = False (set e.g. in __init__ when PL>=2)
+      - configure_optimizers() returns (opt_d, opt_g) in this order (or swap below).
+    """
+    assert self.pl_version >= (2,0,0), "training_step_PL2 requires PyTorch Lightning >= 2.x."
+    assert self.automatic_optimization is False, "training_step_PL2 requires manual_optimization."
+    
+    # -------- CREATE SR DATA --------
+    lr_imgs, hr_imgs = batch
+    sr_imgs = self.forward(lr_imgs)
+
+    # --- helper to resolve adv-weight function name mismatches ---
+    def _adv_weight():
+        if hasattr(self, "_adv_loss_weight"):
+            return self._adv_loss_weight()
+        return self._compute_adv_loss_weight()
+
+    # fetch optimizers (expects two)
+    opt_d, opt_g = self.optimizers()
+
+    # ======================================================================
+    # SECTION: Pretraining phase gate
+    # ======================================================================
+    pretrain_phase = self._pretrain_check()
+    # in PL1.x you logged this only on G-step; here we log once per batch
+    self.log("training/pretrain_phase", float(pretrain_phase), prog_bar=False, sync_dist=True)
+
+    # ======================================================================
+    # SECTION: Pretraining branch (content-only on G; D logs dummies)
+    # ======================================================================
+    if pretrain_phase:
+        # --- D dummy logs (no step) to mimic your optimizer_idx==0 branch ---
+        with torch.no_grad():
+            zero = torch.tensor(0.0, device=hr_imgs.device, dtype=hr_imgs.dtype)
+            self.log("discriminator/D(y)_prob",    zero, prog_bar=True,  sync_dist=True)
+            self.log("discriminator/D(G(x))_prob", zero, prog_bar=True,  sync_dist=True)
+            self.log("discriminator/adversarial_loss", zero, sync_dist=True)
+
+        # --- G step: content loss only (identical to your optimizer_idx==1 pretrain) ---
+        content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)
+        self._log_generator_content_loss(content_loss)
+        for key, value in metrics.items():
+            self.log(f"train_metrics/{key}", value, sync_dist=True)
+
+        # ensure adv-weight is still logged like you do in pretrain
+        self._log_adv_loss_weight(_adv_weight())
+
+        # manual optimize G
+        if hasattr(self, "toggle_optimizer"): self.toggle_optimizer(opt_g)
+        opt_g.zero_grad()
+        self.manual_backward(content_loss)
+        opt_g.step()
+        if hasattr(self, "untoggle_optimizer"): self.untoggle_optimizer(opt_g)
+        
+        # EMA in PL2 manual mode
+        if self.ema is not None and self.global_step >= self._ema_update_after_step:
+            self.ema.update(self.generator)
+
+        # return same scalar you’d have returned in PL1.x (content loss)
+        return content_loss
+
+    # ======================================================================
+    # SECTION: Adversarial training — Discriminator step
+    # ======================================================================
+    if hasattr(self, "toggle_optimizer"): self.toggle_optimizer(opt_d)
+    opt_d.zero_grad()
+
+    hr_discriminated = self.discriminator(hr_imgs)              # D(y)
+    sr_discriminated = self.discriminator(sr_imgs.detach())     # D(G(x)) w/o grad to G
+
+    real_target = torch.full_like(hr_discriminated, self.adv_target)
+    fake_target = torch.zeros_like(sr_discriminated)
+
+    loss_real = self.adversarial_loss_criterion(hr_discriminated, real_target)
+    loss_fake = self.adversarial_loss_criterion(sr_discriminated, fake_target)
+    adversarial_loss = loss_real + loss_fake
+    self.log("discriminator/adversarial_loss", adversarial_loss, sync_dist=True)
+
+    with torch.no_grad():
+        d_real_prob = torch.sigmoid(hr_discriminated).mean()
+        d_fake_prob = torch.sigmoid(sr_discriminated).mean()
+    self.log("discriminator/D(y)_prob", d_real_prob, prog_bar=True,  sync_dist=True)
+    self.log("discriminator/D(G(x))_prob", d_fake_prob, prog_bar=True, sync_dist=True)
+
+    self.manual_backward(adversarial_loss)
+    opt_d.step()
+    if hasattr(self, "untoggle_optimizer"): self.untoggle_optimizer(opt_d)
+
+    # ======================================================================
+    # SECTION: Adversarial training — Generator step
+    # ======================================================================
+    if hasattr(self, "toggle_optimizer"): self.toggle_optimizer(opt_g)
+    opt_g.zero_grad()
+
+    # 1) content loss (identical to original)
+    content_loss, metrics = self.content_loss_criterion.return_loss(sr_imgs, hr_imgs)
+    self._log_generator_content_loss(content_loss)
+    for key, value in metrics.items():
+        self.log(f"train_metrics/{key}", value, sync_dist=True)
+
+    # 2) adversarial loss against ones
+    sr_discriminated_for_g = self.discriminator(sr_imgs)
+    g_adv = self.adversarial_loss_criterion(sr_discriminated_for_g, torch.ones_like(sr_discriminated_for_g))
+    self.log("generator/adversarial_loss", g_adv, sync_dist=True)
+
+    # 3) weighted total
+    adv_weight = _adv_weight()
+    total_loss = content_loss + (g_adv * adv_weight)
+    self.log("generator/total_loss", total_loss, sync_dist=True)
+
+    self.manual_backward(total_loss)
+    opt_g.step()
+    if hasattr(self, "untoggle_optimizer"): self.untoggle_optimizer(opt_g)
+    
+    # EMA in PL2 manual mode
+    if self.ema is not None and self.global_step >= self._ema_update_after_step:
+        self.ema.update(self.generator)
+
+    # return same scalar you return in PL1.x G path
+    return total_loss

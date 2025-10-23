@@ -77,7 +77,7 @@ The same module exposes `return_metrics()` so validation can log PSNR/SSIM-style
 ## Data flow and normalisation
 
 The Lightning module expects batches of `(lr_imgs, hr_imgs)` tensors supplied by the `LightningDataModule` returned from
-`opensr_srgan/data/data_utils.py`. `predict_step()` and the validation hooks rely on two utilities from `opensr_srgan.utils.spectral_helpers`:
+`opensr_srgan/data/dataset_selector.py`. `predict_step()` and the validation hooks rely on two utilities from `opensr_srgan.utils.spectral_helpers`:
 
 * `normalise_10k`: Converts Sentinel-2 style reflectance values between `[0, 10000]` and `[0, 1]`.
 * `histogram`: Matches the SR histogram to the LR reference to minimise domain gaps during inference.

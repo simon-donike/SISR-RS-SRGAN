@@ -64,7 +64,6 @@ class SRGAN_model(pl.LightningModule):
         self.config = config
         self.mode = mode          
         self.pl_version = tuple(int(x) for x in pl.__version__.split("."))
-        print("We're on Python Lightning version:", pl.__version__,"self.pl_version =", self.pl_version)
 
         # ======================================================================
         # SECTION: Get Training settings

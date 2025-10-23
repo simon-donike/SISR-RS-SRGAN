@@ -180,26 +180,22 @@ class SRGAN_model(pl.LightningModule):
 
     def setup_lightning(self):
         """
-        Set up optimizers, schedulers, and other training components based on PL version.
+        Check for Versioning and Set options accordingly.
+        - For PL 2.x, set manual optimization for GAN training.
         """
-
         # Check for PL version - Define PL Hooks accordingly
         if self.pl_version >= (2,0,0):
-            # Set up training Step for PL 2.x
-            from opensr_srgan.model.training_step_PL import training_step_PL2x
-            self._training_step_implementation = MethodType(training_step_PL2x, self)
-            # Set up optimizers for PL 2.x
-            from opensr_srgan.model.configure_optimizers_PL import configure_optimizers_PL2x
-            self._configure_optimizers_implementation =  MethodType(configure_optimizers_PL2x, self)
+            self.automatic_optimization = False  # manual optimization for PL 2.x
+        # Set up Training Step
+            from opensr_srgan.model.training_step_PL import training_step_PL1 as training_step_PL
+            self._training_step_implementation = MethodType(training_step_PL, self)
         elif self.pl_version < (2,0,0):
-            # Set up training Step for PL 1.x
-            from opensr_srgan.model.training_step_PL import training_step_PL1x
-            self._training_step_implementation = MethodType(training_step_PL1x, self)
-            # Set up optimizers for PL 1.x
-            from opensr_srgan.model.configure_optimizers_PL import configure_optimizers_PL1
-            self._configure_optimizers_implementation =  MethodType(configure_optimizers_PL1, self)
+            assert self.automatic_optimization is True, "For PL <2.0, automatic_optimization must be True."
+            # Set up Training Step
+            from opensr_srgan.model.training_step_PL import training_step_PL2 as training_step_PL
+            self._training_step_implementation = MethodType(training_step_PL, self)
         else:
-            raise ValueError(f"Unsupported PyTorch Lightning version: {pl.__version__}")
+            raise RuntimeError(f"Unsupported PyTorch Lightning version: {pl.__version__}")
 
     def initialize_ema(self):
         ema_cfg = getattr(self.config.Training, "EMA", None)
@@ -259,23 +255,42 @@ class SRGAN_model(pl.LightningModule):
         return sr_imgs
 
 
-    def training_step(self,batch,batch_idx,optimizer_idx):
-        return self._training_step_implementation(batch, batch_idx, optimizer_idx)
+    def training_step(self,batch,batch_idx, *args):
+        # Check what we need to pass to the training function
+        # Depending on PL version, and depending on the manual optimization
+        if self.pl_version >= (2,0,0):
+            return self._training_step_implementation(batch, batch_idx) # no optim_idx
+        else:
+            optimizer_idx = args[0] if len(args) > 0 else 0 # get optim_idx from kwargs
+            return self._training_step_implementation(batch, batch_idx, optimizer_idx) # pass optim_idx
         
     def optimizer_step(
         self,
         epoch,
         batch_idx,
         optimizer,
-        optimizer_idx,
-        optimizer_closure,
-        on_tpu=False, # these arguments are needed in case we're running on PL>2.0
-        using_lbfgs=False,
-        
+        optimizer_idx=None,
+        optimizer_closure=None,
+        **kwargs,           # absorbs on_tpu/using_lbfgs/etc across PL versions
     ):
-        optimizer.step(closure=optimizer_closure)
+        """
+        Used only when self.automatic_optimization == True (PL 1.x auto-optim).
+        No-op for PL 2 manual because Lightning won't call it there.
+        """
+        # If we're in manual optimization (PL >=2 path), do nothing special.
+        if not self.automatic_optimization:
+            # Let Lightning's default behavior proceed (or simply return).
+            # In manual mode we call opt.step()/zero_grad() in training_step_PL2.
+            return super().optimizer_step(epoch, batch_idx, optimizer, optimizer_idx, optimizer_closure, **kwargs)
+
+        # ---- PL 1.x auto-optimization path ----
+        if optimizer_closure is not None:
+            optimizer.step(closure=optimizer_closure)
+        else:
+            optimizer.step()
         optimizer.zero_grad()
 
+        # EMA after the generator step (assumes G is optimizer_idx == 1)
         if (
             self.ema is not None
             and optimizer_idx == 1
@@ -379,8 +394,77 @@ class SRGAN_model(pl.LightningModule):
         super().on_test_epoch_end()
 
     def configure_optimizers(self):
-        return self._configure_optimizers_implementation() # call the dynamically assigned method
+        # configure Generator optimizer (Adam)
+        optimizer_g = torch.optim.Adam(
+            params=filter(lambda p: p.requires_grad, self.generator.parameters()),  # only trainable params
+            lr=self.config.Optimizers.optim_g_lr                                     # LR from config
+        )
 
+        # configure Discriminator optimizer (Adam)
+        optimizer_d = torch.optim.Adam(
+            params=filter(lambda p: p.requires_grad, self.discriminator.parameters()),  # only trainable params
+            lr=self.config.Optimizers.optim_d_lr                                       # LR from config
+        )
+
+        # learning rate schedulers (ReduceLROnPlateau)
+        scheduler_g = ReduceLROnPlateau(
+            optimizer_g, mode='min',
+            factor=self.config.Schedulers.factor_g,
+            patience=self.config.Schedulers.patience_g,
+            #verbose=self.config.Schedulers.verbose
+        )
+        scheduler_d = ReduceLROnPlateau(
+            optimizer_d, mode='min',
+            factor=self.config.Schedulers.factor_d,
+            patience=self.config.Schedulers.patience_d,
+            #verbose=self.config.Schedulers.verbose
+        )
+
+        # optional generator warmup scheduler (step-based)
+        warmup_steps = int(getattr(self.config.Schedulers, "g_warmup_steps", 0))
+        warmup_type = getattr(self.config.Schedulers, "g_warmup_type", "none").lower()
+
+        warmup_scheduler_config = None
+        if warmup_steps > 0 and warmup_type in {"cosine", "linear"}:
+
+            def _generator_warmup_lambda(current_step: int) -> float:
+                if current_step >= warmup_steps:
+                    return 1.0
+
+                progress = (current_step + 1) / float(max(1, warmup_steps))
+                if warmup_type == "linear":
+                    return progress
+
+                # default to cosine warmup for smoother start
+                return 0.5 * (1.0 - math.cos(math.pi * progress))
+
+            warmup_scheduler = torch.optim.lr_scheduler.LambdaLR(
+                optimizer_g,
+                lr_lambda=_generator_warmup_lambda,
+            )
+
+            warmup_scheduler_config = {
+                'scheduler': warmup_scheduler,
+                'interval': 'step',
+                'frequency': 1,
+                'name': 'generator_warmup',
+            }
+
+        scheduler_configs = [
+            {'scheduler': scheduler_d, 'monitor': self.config.Schedulers.metric, 'reduce_on_plateau': True, 'interval': 'epoch', 'frequency': 1},
+            {'scheduler': scheduler_g, 'monitor': self.config.Schedulers.metric, 'reduce_on_plateau': True, 'interval': 'epoch', 'frequency': 1}
+        ]
+
+        if warmup_scheduler_config is not None:
+            scheduler_configs.append(warmup_scheduler_config)
+
+        # return both optimizers + schedulers for PL
+        return [
+            [optimizer_d, optimizer_g],  # order super important, it's [D, G] and checked in training step
+            scheduler_configs,
+        ]
+    
+    
     def on_train_batch_start(self, batch, batch_idx):  # called before each training batch
         pre = self._pretrain_check()                   # check if currently in pretraining phase
         for p in self.discriminator.parameters():      # loop over all discriminator params

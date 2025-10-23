@@ -3,6 +3,8 @@ import math
 import time
 from contextlib import nullcontext
 from pathlib import Path
+from types import MethodType
+
 
 import numpy as np
 import pytorch_lightning as pl
@@ -185,17 +187,17 @@ class SRGAN_model(pl.LightningModule):
         if self.pl_version >= (2,0,0):
             # Set up training Step for PL 2.x
             from opensr_srgan.model.training_step_PL import training_step_PL2x
-            self._training_step_implementation = training_step_PL2x
+            self._training_step_implementation = MethodType(training_step_PL2x, self)
             # Set up optimizers for PL 2.x
             from opensr_srgan.model.configure_optimizers_PL import configure_optimizers_PL2x
-            self._configure_optimizers_implementation = configure_optimizers_PL2x
+            self._configure_optimizers_implementation =  MethodType(configure_optimizers_PL2x, self)
         elif self.pl_version < (2,0,0):
             # Set up training Step for PL 1.x
             from opensr_srgan.model.training_step_PL import training_step_PL1x
-            self._training_step_implementation = training_step_PL1x
+            self._training_step_implementation = MethodType(training_step_PL1x, self)
             # Set up optimizers for PL 1.x
             from opensr_srgan.model.configure_optimizers_PL import configure_optimizers_PL1
-            self._configure_optimizers_implementation = configure_optimizers_PL1
+            self._configure_optimizers_implementation =  MethodType(configure_optimizers_PL1, self)
         else:
             raise ValueError(f"Unsupported PyTorch Lightning version: {pl.__version__}")
 
@@ -305,7 +307,7 @@ class SRGAN_model(pl.LightningModule):
         del metrics_hr_img, metrics_sr_img                   # free cloned tensors from GPU memory
 
         for key, value in metrics.items():                   # iterate over metrics dict
-            self.log(f"{key}", value,sync_dist=True)                        # log each metric to logger (e.g., W&B, TensorBoard)
+            self.log(f"{key}", value,sync_dist=True)         # log each metric to logger (e.g., W&B, TensorBoard)
 
         # ======================================================================
         # SECTION: Optional visualization — Log example SR/HR/LR images
@@ -378,7 +380,7 @@ class SRGAN_model(pl.LightningModule):
         super().on_test_epoch_end()
 
     def configure_optimizers(self):
-        return self._configure_optimizers_implementation(self.config)
+        return self._configure_optimizers_implementation() # call the dynamically assigned method
 
     def on_train_batch_start(self, batch, batch_idx):  # called before each training batch
         pre = self._pretrain_check()                   # check if currently in pretraining phase

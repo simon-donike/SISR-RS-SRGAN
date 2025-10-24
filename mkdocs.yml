@@ -45,13 +45,21 @@ markdown_extensions:
   - pymdownx.superfences
 
 nav:
-  - Overview: index.md
-  - Getting Started: getting-started.md
-  - Inference: inference.md
-  - Architecture: architecture.md
-  - Configuration: configuration.md
-  - Data: data.md
-  - Training: training.md
-  - Trainer Details: trainer-details.md
-  - Training Guideline: training-guideline.md
-  - Results: results.md
+  - Home:
+      - Overview: index.md
+      - Getting Started: getting-started.md
+      - Inference Guide: inference.md
+      - Architecture: architecture.md
+      - Configuration: configuration.md
+      - Data Preparation: data.md
+      - Training Workflow: training.md
+      - Trainer Details: trainer-details.md
+      - Training Guideline: training-guideline.md
+      - Results: results.md
+  - API reference:
+      - Overview: api-reference/index.md
+      - Inference API: api-reference/inference.md
+      - Training API: api-reference/training.md
+      - Model Components: api-reference/model.md
+      - Data Pipeline: api-reference/data.md
+      - Utility Helpers: api-reference/utils.md

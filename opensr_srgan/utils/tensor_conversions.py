@@ -21,13 +21,25 @@ _TORCH_TO_NUMPY_DTYPE = {
 
 
 def tensor_to_numpy(tensor: torch.Tensor) -> np.ndarray:
-    """Return a NumPy view or copy of ``tensor`` regardless of PyTorch build.
+    """Convert a PyTorch tensor to a NumPy array safely across environments.
 
-    Minimal CPU-only wheels of PyTorch that ship without NumPy bindings raise a
-    ``RuntimeError`` when :meth:`torch.Tensor.numpy` or :func:`numpy.array`
-    attempt to materialise an array.  The tests in this project rely on NumPy
-    arrays for verification, so we provide a graceful fallback that goes via
-    Python lists when the direct conversion is unavailable.
+    Provides a robust fallback for minimal or CPU-only PyTorch builds that lack
+    NumPy bindings (where ``tensor.numpy()`` raises ``RuntimeError: Numpy is not available``).
+    Ensures tensors are detached, moved to CPU, and contiguous before conversion.
+
+    Args:
+        tensor (torch.Tensor): Input tensor to convert.
+
+    Returns:
+        numpy.ndarray: NumPy array representation of the tensor.  
+        Falls back to ``tensor.tolist()`` conversion if direct bindings are unavailable.
+
+    Raises:
+        RuntimeError: Re-raises conversion errors not related to missing NumPy bindings.
+
+    Notes:
+        - Keeps dtype consistency between PyTorch and NumPy via a lookup table.
+        - Returns a view when possible, or a copy when conversion via list fallback is used.
     """
 
     tensor_cpu = tensor.detach().cpu()

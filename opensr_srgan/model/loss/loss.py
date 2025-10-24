@@ -8,6 +8,19 @@ import kornia.metrics as km
 from ...data.utils import Normalizer
 
 def _cfg_get(cfg, keys, default=None):
+    """Safely retrieve a nested configuration value.
+
+    Traverses a mixture of dict-like and attribute-based configs using a list
+    of keys, returning ``default`` if any link in the chain is missing.
+
+    Args:
+        cfg: Root configuration object (supports ``.__getattr__`` and/or mapping).
+        keys (Iterable[str]): Sequence of keys/attributes to traverse.
+        default (Any, optional): Fallback value if the path is absent. Defaults to ``None``.
+
+    Returns:
+        Any: The found value or ``default`` if not present.
+    """
     cur = cfg
     for k in keys:
         if cur is None:
@@ -19,9 +32,33 @@ def _cfg_get(cfg, keys, default=None):
     return default if cur is None else cur
 
 class GeneratorContentLoss(nn.Module):
-    """
-    Composite generator content loss that self-instantiates the configured perceptual metric.
-    total = l1_w*L1 + sam_w*SAM + perc_w*Perceptual + tv_w*TV
+    """Composite generator content loss with perceptual metric selection.
+
+    Combines multiple terms to form the generator's content objective:
+    ``total = l1_w * L1 + sam_w * SAM + perc_w * Perceptual + tv_w * TV``.
+    Also computes auxiliary quality metrics (PSNR/SSIM) for logging/evaluation.
+
+    Loss weights, max value, window sizes, band selection settings, and the
+    perceptual backend (VGG or LPIPS) are read from the provided config.
+
+    Args:
+        cfg: Configuration object (OmegaConf/dict-like) with fields under:
+            - ``Training.Losses.{l1_weight,sam_weight,perceptual_weight,tv_weight}``
+            - ``Training.Losses.{max_val,ssim_win,randomize_bands,fixed_idx}``
+            - ``Training.Losses.perceptual_metric`` in {``"vgg"``, ``"lpips"``}
+            - ``TruncatedVGG.{i,j}`` (if VGG is used)
+        testing (bool, optional): If True, do not load pretrained VGG weights
+            (avoids downloads in CI/tests). Defaults to False.
+
+    Attributes:
+        l1_w, sam_w, perc_w, tv_w (float): Loss term weights.
+        max_val (float): Dynamic range for PSNR/SSIM.
+        ssim_win (int): Window size for SSIM.
+        randomize_bands (bool): Whether to sample random bands for perceptual loss.
+        fixed_idx (torch.LongTensor|None): Fixed 3-channel indices if not randomized.
+        perc_metric (str): Selected perceptual backend (``"vgg"`` or ``"lpips"``).
+        perceptual_model (nn.Module): Back-end feature network/metric.
+        normalizer (Normalizer): Shared normalizer for evaluation metrics.
     """
 
     def __init__(self, cfg, testing=False):
@@ -74,7 +111,21 @@ class GeneratorContentLoss(nn.Module):
     def return_loss(
         self, sr: torch.Tensor, hr: torch.Tensor
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        """Compute the weighted generator loss and return accompanying raw metrics."""
+        """Compute the weighted content loss and return raw component metrics.
+
+        Builds the autograd graph for terms with non-zero weights and returns the
+        scalar total along with a dict of unweighted component values.
+
+        Args:
+            sr (torch.Tensor): Super-resolved prediction, shape ``(B, C, H, W)``.
+            hr (torch.Tensor): High-resolution target, shape ``(B, C, H, W)``.
+
+        Returns:
+            Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+                - Total loss tensor (requires grad).
+                - Dict with component tensors: ``{"l1","sam","perceptual","tv", "psnr","ssim"}``
+                (component values detached except the ones used in the graph).
+        """
         comps = self._compute_components(sr, hr, build_graph=True)
         loss = (
             self.l1_w   * comps["l1"] +
@@ -106,12 +157,35 @@ class GeneratorContentLoss(nn.Module):
     # ---------- internals ----------
     @staticmethod
     def _tv_loss(x: torch.Tensor) -> torch.Tensor:
+        """Total variation (TV) regularizer.
+
+        Computes the L1 norm of first-order finite differences along height and width.
+
+        Args:
+            x (torch.Tensor): Input tensor, shape ``(B, C, H, W)``.
+
+        Returns:
+            torch.Tensor: Scalar TV loss (mean over batch/channels/pixels).
+        """
         dh = (x[:, :, 1:, :] - x[:, :, :-1, :]).abs().mean()
         dw = (x[:, :, :, 1:] - x[:, :, :, :-1]).abs().mean()
         return dh + dw
 
     @staticmethod
     def _sam_loss(sr: torch.Tensor, hr: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
+        """Spectral Angle Mapper (SAM) in radians.
+
+        Flattens spatial dims and computes the mean angle between spectral vectors
+        of SR and HR across all pixels.
+
+        Args:
+            sr (torch.Tensor): Super-resolved tensor, shape ``(B, C, H, W)``.
+            hr (torch.Tensor): Target tensor, shape ``(B, C, H, W)``.
+            eps (float, optional): Numerical stability epsilon. Defaults to ``1e-8``.
+
+        Returns:
+            torch.Tensor: Scalar mean SAM (radians).
+        """
         B, C, H, W = sr.shape
         sr_f = sr.view(B, C, -1)
         hr_f = hr.view(B, C, -1)
@@ -123,6 +197,21 @@ class GeneratorContentLoss(nn.Module):
         return ang.mean()
 
     def _pick_rgb(self, x: torch.Tensor) -> torch.Tensor:
+        """Select three channels for perceptual computation.
+
+        If the input has exactly 3 channels, returns them unchanged. Otherwise,
+        selects either random unique indices (when ``randomize_bands=True``) or
+        the fixed indices stored in ``self.fixed_idx``.
+
+        Args:
+            x (torch.Tensor): Input tensor, shape ``(B, C, H, W)``.
+
+        Returns:
+            torch.Tensor: Tensor with three channels, shape ``(B, 3, H, W)``.
+
+        Raises:
+            AssertionError: If ``randomize_bands=False`` and ``fixed_idx`` is missing.
+        """
         B, C, H, W = x.shape
         if C == 3:
             return x
@@ -134,6 +223,23 @@ class GeneratorContentLoss(nn.Module):
         return x[:, idx, :, :]
 
     def _perceptual_distance(self, sr_3: torch.Tensor, hr_3: torch.Tensor, *, build_graph: bool) -> torch.Tensor:
+        """Compute perceptual distance between SR and HR (3-channel inputs).
+
+        Uses the configured backend:
+            - ``"vgg"``: MSE between intermediate VGG features.
+            - ``"lpips"``: Learned LPIPS distance (expects inputs in [-1, 1]).
+
+        The computation detaches HR features and optionally detaches SR path if
+        ``build_graph`` is False or the perceptual weight is zero.
+
+        Args:
+            sr_3 (torch.Tensor): SR slice with 3 channels, shape ``(B, 3, H, W)``, values in [0, 1].
+            hr_3 (torch.Tensor): HR slice with 3 channels, shape ``(B, 3, H, W)``, values in [0, 1].
+            build_graph (bool): Whether to keep gradients for SR.
+
+        Returns:
+            torch.Tensor: Scalar perceptual distance (mean over batch/spatial).
+        """
         requires_grad = build_graph and self.perc_w != 0.0
 
         if self.perc_metric == "vgg":
@@ -163,7 +269,23 @@ class GeneratorContentLoss(nn.Module):
 
     def _compute_components(
         self, sr: torch.Tensor, hr: torch.Tensor, *, build_graph: bool
-    ) -> dict[str, torch.Tensor]:
+        ) -> dict[str, torch.Tensor]:
+        
+        """Compute individual content components and auxiliary quality metrics.
+
+        Produces a dictionary with: L1, SAM, Perceptual, TV (optionally with grads),
+        and PSNR/SSIM (always without grads). Per-component autograd is enabled only
+        if ``build_graph`` is True and the corresponding weight is non-zero.
+
+        Args:
+            sr (torch.Tensor): Super-resolved prediction, shape ``(B, C, H, W)``.
+            hr (torch.Tensor): High-resolution target, shape ``(B, C, H, W)``.
+            build_graph (bool): Whether to allow gradients for weighted components.
+
+        Returns:
+            Dict[str, torch.Tensor]: Keys ``{"l1","sam","perceptual","tv","psnr","ssim"}``.
+            Component tensors are scalar means; PSNR/SSIM are detached.
+        """
         comps: dict[str, torch.Tensor] = {}
 
         def _compute(weight: float, fn) -> torch.Tensor:

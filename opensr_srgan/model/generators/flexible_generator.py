@@ -44,8 +44,43 @@ _BLOCK_REGISTRY: Dict[str, Callable[[int, int], nn.Module]] = {
 
 
 class FlexibleGenerator(nn.Module):
-    """Drop-in SR generator supporting multiple residual block types."""
+    """Modular super-resolution generator with pluggable residual blocks.
 
+    Provides a single, drop-in generator backbone that can be instantiated with
+    different residual block families—**res**, **rcab**, **rrdb**, or **lka**—all
+    built from a shared interface. The network follows a head → body → tail
+    design with learnable upsampling:
+
+        Head (large-kernel conv) → N × Block(type=block_type) → Body tail conv
+        → Skip add → Upsampler (×2/×4/×8) → Output conv
+
+    Use this when you want to compare architectural choices or sweep hyper-
+    parameters without changing call sites.
+
+    Args:
+        in_channels (int): Number of input channels (e.g., RGB=3, RGB-NIR=4/6).
+        n_channels (int): Base feature width used throughout the backbone.
+        n_blocks (int): Number of residual blocks in the body.
+        small_kernel (int): Kernel size for body/ tail convolutions.
+        large_kernel (int): Kernel size for head/ output convolutions.
+        scale (int): Upscaling factor; one of {2, 4, 8}.
+        block_type (str): Residual block family in {"res","rcab","rrdb","lka"}.
+
+    Attributes:
+        head (nn.Sequential): Large-receptive-field stem conv + activation.
+        body (nn.Sequential): Sequence of residual blocks of the selected type.
+        body_tail (nn.Conv2d): Fusion conv after the residual stack.
+        upsampler (nn.Module): PixelShuffle-style learnable upsampling to `scale`.
+        tail (nn.Conv2d): Final projection to `in_channels`.
+
+    Raises:
+        ValueError: If `scale` is not in {2, 4, 8} or `block_type` is unknown.
+
+    Example:
+        >>> g = FlexibleGenerator(in_channels=3, block_type="rcab", scale=4)
+        >>> x = torch.randn(1, 3, 64, 64)
+        >>> y = g(x)  # (1, 3, 256, 256)
+    """
     def __init__(
         self,
         in_channels: int = 6,

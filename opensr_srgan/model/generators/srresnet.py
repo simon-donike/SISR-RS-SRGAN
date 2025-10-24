@@ -12,8 +12,30 @@ from ..model_blocks import (
 
 
 class SRResNet(nn.Module):
-    """The SRResNet, as defined in the paper."""
+    """Canonical SRResNet generator for single-image super-resolution.
 
+    Implements the SRResNet backbone with:
+        1) Large-kernel stem conv (+PReLU)
+        2) N × residual blocks (small-kernel, no upsampling)
+        3) Conv for global residual fusion
+        4) Log2(scaling_factor) × SubPixelConvolutionalBlock (×2 each)
+        5) Large-kernel output conv (+Tanh)
+
+    Args:
+        in_channels (int): Input channels (e.g., 3 for RGB).
+        large_kernel_size (int): Kernel size for head/tail convolutions.
+        small_kernel_size (int): Kernel size used inside residual/upsampling blocks.
+        n_channels (int): Feature width across the network.
+        n_blocks (int): Number of residual blocks in the trunk.
+        scaling_factor (int): Upscale factor (must be one of {2, 4, 8}).
+
+    Returns:
+        torch.Tensor: Super-resolved image of shape (B, in_channels, H*scale, W*scale).
+
+    Notes:
+        - The network uses a global skip connection around the residual stack.
+        - Upsampling is performed by PixelShuffle via sub-pixel convolution blocks.
+    """
     def __init__(
         self,
         in_channels: int = 3,
@@ -89,8 +111,24 @@ class SRResNet(nn.Module):
 
 
 class Generator(nn.Module):
-    """The SRGAN generator which wraps :class:`SRResNet`."""
+    """SRGAN generator wrapper around :class:`SRResNet`.
 
+    Provides a thin adapter that:
+        - Builds an internal :class:`SRResNet` with the given hyperparameters.
+        - Optionally initializes weights from a pretrained SRResNet checkpoint.
+        - Exposes a unified forward for SRGAN pipelines.
+
+    Args:
+        in_channels (int): Input channels (e.g., 3 for RGB).
+        large_kernel_size (int): Kernel size for head/tail convolutions.
+        small_kernel_size (int): Kernel size used inside residual/upsampling blocks.
+        n_channels (int): Feature width across the network.
+        n_blocks (int): Number of residual blocks in the trunk.
+        scaling_factor (int): Upscale factor (must be one of {2, 4, 8}).
+
+    Returns:
+        torch.Tensor: Super-resolved image produced by the wrapped SRResNet.
+    """
     def __init__(
         self,
         in_channels: int = 3,

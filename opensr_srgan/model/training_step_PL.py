@@ -1,6 +1,45 @@
 import torch
 
 def training_step_PL1(self, batch, batch_idx, optimizer_idx):
+    """One training step for PL < 2.0 using automatic optimization and multi-optimizers.
+
+    Implements GAN training with two optimizers (D first, then G) and a
+    pretraining gate. During the **pretraining phase**, only the generator
+    (optimizer_idx == 1) is optimized with content loss; the discriminator
+    branch returns a dummy loss and logs zeros. During **adversarial training**,
+    the discriminator minimizes BCE on real HR vs. fake SR logits, and the
+    generator minimizes content loss plus a ramped adversarial loss.
+
+    Args:
+        batch (Tuple[torch.Tensor, torch.Tensor]): `(lr_imgs, hr_imgs)` with shape `(B, C, H, W)`.
+        batch_idx (int): Global batch index for the current epoch.
+        optimizer_idx (int): Active optimizer index provided by Lightning:
+            - `0`: Discriminator step.
+            - `1`: Generator step.
+
+    Returns:
+        torch.Tensor:
+            - **Pretraining**:
+              - `optimizer_idx == 1`: content loss tensor for the generator.
+              - `optimizer_idx == 0`: dummy scalar tensor with `requires_grad=True`.
+            - **Adversarial training**:
+              - `optimizer_idx == 0`: discriminator BCE loss (real + fake).
+              - `optimizer_idx == 1`: generator total loss = content + λ_adv · BCE(G).
+
+    Logged Metrics (selection):
+        - `"training/pretrain_phase"`: 1.0 during pretraining (logged on G step).
+        - `"train_metrics/*"`: content metrics from the content loss criterion.
+        - `"generator/content_loss"`, `"generator/adversarial_loss"`, `"generator/total_loss"`.
+        - `"discriminator/adversarial_loss"`, `"discriminator/D(y)_prob"`,
+          `"discriminator/D(G(x))_prob"`.
+        - `"training/adv_loss_weight"`: current λ_adv from the ramp scheduler.
+
+    Notes:
+        - Discriminator step uses `sr_imgs.detach()` to prevent G gradients.
+        - Adversarial loss weight λ_adv ramps from 0 → `adv_loss_beta` per configured schedule.
+        - Assumes optimizers are ordered as `[D, G]` in `configure_optimizers()`.
+    """
+    
     # -------- CREATE SR DATA --------
     lr_imgs, hr_imgs = batch                                  # unpack LR/HR tensors from dataloader batch
     sr_imgs = self.forward(lr_imgs)                          # forward pass of the generator to produce SR from LR
@@ -116,15 +155,38 @@ def training_step_PL1(self, batch, batch_idx, optimizer_idx):
     
     
 def training_step_PL2(self, batch, batch_idx):
-    """
-    PyTorch Lightning >= 2.x manual-optimization clone of PL1.x training_step.
-    Mirrors:
-      - pretrain gate (content-only on G; D logs dummies),
-      - normal adversarial training with separate D then G steps,
-      - same logs/keys/ordering as original function.
-    Requires:
-      - self.automatic_optimization = False (set e.g. in __init__ when PL>=2)
-      - configure_optimizers() returns (opt_d, opt_g) in this order (or swap below).
+    """Manual-optimization training step for PyTorch Lightning ≥ 2.0.
+
+    Mirrors the PL1.x logic with explicit optimizer control:
+    - **Pretraining phase**: Discriminator logs dummies; Generator is optimized with
+      content loss only (no adversarial term), and EMA optionally updates.
+    - **Adversarial phase**: Performs a Discriminator step (real vs. fake BCE),
+      followed by a Generator step (content + λ_adv · BCE against ones). Uses the
+      same log keys and ordering as the PL1.x path.
+
+    Assumptions:
+        - `self.automatic_optimization` is `False` (manual opt).
+        - `configure_optimizers()` returns optimizers in order `[opt_d, opt_g]`.
+        - EMA updates occur after `self._ema_update_after_step`.
+
+    Args:
+        batch (Tuple[torch.Tensor, torch.Tensor]): `(lr_imgs, hr_imgs)` tensors with shape `(B, C, H, W)`.
+        batch_idx (int): Index of the current batch.
+
+    Returns:
+        torch.Tensor:
+            - **Pretraining**: content loss (Generator-only step).
+            - **Adversarial**: total generator loss = content + λ_adv · BCE(G).
+
+    Logged metrics (selection):
+        - `"training/pretrain_phase"` (0/1)
+        - `"train_metrics/*"` (from content criterion)
+        - `"generator/content_loss"`, `"generator/adversarial_loss"`, `"generator/total_loss"`
+        - `"discriminator/adversarial_loss"`, `"discriminator/D(y)_prob"`, `"discriminator/D(G(x))_prob"`
+        - `"training/adv_loss_weight"` (λ_adv from ramp schedule)
+
+    Raises:
+        AssertionError: If PL version < 2.0 or `automatic_optimization` is True.
     """
     assert self.pl_version >= (2,0,0), "training_step_PL2 requires PyTorch Lightning >= 2.x."
     assert self.automatic_optimization is False, "training_step_PL2 requires manual_optimization."

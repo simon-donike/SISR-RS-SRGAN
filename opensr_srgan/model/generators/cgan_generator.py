@@ -13,8 +13,25 @@ __all__ = ["ConditionalGANGenerator"]
 
 
 class NoiseResBlock(nn.Module):
-    """Residual block that modulates intermediate features using a latent code."""
+    """Residual convolutional block with latent noise modulation.
 
+    Introduces stochastic variability into intermediate feature maps by conditioning
+    each residual block on a latent noise vector. The latent code is transformed
+    through a small MLP to produce per-channel affine parameters (γ, β) that modulate
+    the convolutional activations in a style-based manner:
+    ```
+    y = Conv(x) * (1 + γ) + β
+    ```
+    This enables controlled diversity and more expressive texture synthesis while
+    maintaining residual stability via a configurable scaling factor.
+
+    Args:
+        n_channels (int): Number of feature channels in the block.
+        kernel_size (int): Convolutional kernel size for both layers.
+        noise_dim (int): Dimensionality of the latent noise vector.
+        res_scale (float, optional): Residual scaling factor (typically 0.2).
+            Controls the contribution of the residual path to the output.
+    """
     def __init__(
         self,
         n_channels: int,
@@ -48,12 +65,41 @@ class NoiseResBlock(nn.Module):
 
 
 class ConditionalGANGenerator(nn.Module):
-    """Generator that conditions on the LR image while injecting stochastic latent noise.
+    """Conditional generator with latent noise modulation for super-resolution.
 
-    The forward pass accepts an LR tensor and an optional latent vector. If no latent
-    vector is provided, the module samples one from a unit Gaussian. This allows the
-    generator to act as a drop-in replacement for existing deterministic generators
-    while still supporting explicit control of the random seed during inference.
+    Extends a standard SR generator by injecting stochastic latent noise through
+    `NoiseResBlock`s, enabling diverse texture generation conditioned on the same
+    low-resolution (LR) input. When no latent vector is provided, one is sampled
+    internally from a standard normal distribution, allowing both deterministic
+    and stochastic inference modes.
+
+    The architecture follows a residual backbone with:
+        - A wide receptive-field head convolution.
+        - Multiple noise-modulated residual blocks.
+        - A tail convolution with learnable upsampling.
+        - Configurable scaling factor (×2, ×4, or ×8).
+
+    Args:
+        in_channels (int): Number of input channels (e.g., RGB+NIR = 4 or 6).
+        n_channels (int): Base number of feature channels in the generator.
+        n_blocks (int): Number of noise-modulated residual blocks.
+        small_kernel (int): Kernel size for body convolutions.
+        large_kernel (int): Kernel size for head/tail convolutions.
+        scale (int): Upscaling factor (must be one of {2, 4, 8}).
+        noise_dim (int): Dimensionality of the latent vector z.
+        res_scale (float): Residual scaling factor for block stability.
+
+    Attributes:
+        noise_dim (int): Dimensionality of latent vector z.
+        head (nn.Sequential): Initial convolutional stem.
+        body (nn.ModuleList): Sequence of `NoiseResBlock`s.
+        upsampler (nn.Module): PixelShuffle-based upsampling module.
+        tail (nn.Conv2d): Final convolution projecting to output space.
+
+    Example:
+        >>> g = ConditionalGANGenerator(in_channels=3, scale=4)
+        >>> lr = torch.randn(1, 3, 64, 64)
+        >>> sr, noise = g(lr, return_noise=True)
     """
 
     def __init__(

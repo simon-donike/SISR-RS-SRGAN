@@ -102,9 +102,27 @@ class SRGAN_model(pl.LightningModule):
             self.adversarial_loss_criterion = torch.nn.BCEWithLogitsLoss()   # binary cross-entropy for D/G
 
     def get_models(self, mode):
-        """
-        Initialize and attach Generator and Discriminator models based on config.
-        Supports multiple generator architectures (SRResNet, RCAB, RRDB, etc.).
+        """Initialize and attach the Generator and (optionally) Discriminator models.
+
+        This method builds the generator and discriminator architectures based on
+        the configuration provided in `self.config`. It supports multiple generator
+        backbones (e.g., SRResNet, RCAB, RRDB, LKA) and discriminator types
+        (standard, PatchGAN). The discriminator is only initialized when the mode
+        is set to `"train"`.
+
+        Args:
+            mode (str): Operational mode of the model. Must be one of:
+                - `"train"`: Initializes both generator and discriminator.
+                - Any other value: Initializes only the generator.
+
+        Raises:
+            ValueError: If an unknown generator or discriminator type is specified
+                in the configuration.
+
+        Attributes:
+            generator (nn.Module): The initialized generator network instance.
+            discriminator (nn.Module, optional): The initialized discriminator
+                network instance (only present if `mode == "train"`).
         """
 
         # ======================================================================
@@ -183,9 +201,27 @@ class SRGAN_model(pl.LightningModule):
                 raise ValueError(f"Unknown discriminator model type: {discriminator_type}")
 
     def setup_lightning(self):
-        """
-        Check for Versioning and Set options accordingly.
-        - For PL 2.x, set manual optimization for GAN training.
+        """Configure PyTorch Lightning behavior based on the detected version.
+
+        This method ensures compatibility between different versions of
+        PyTorch Lightning (PL) by setting appropriate optimization modes
+        and binding the correct training step implementation.
+
+        - For PL ≥ 2.0: Enables **manual optimization**, required for GAN training.
+        - For PL < 2.0: Uses **automatic optimization** and the legacy training step.
+
+        The selected training step function (`training_step_PL1` or `training_step_PL2`)
+        is dynamically attached to the model as `_training_step_implementation`.
+
+        Raises:
+            AssertionError: If `automatic_optimization` is incorrectly set for PL < 2.0.
+            RuntimeError: If the detected PyTorch Lightning version is unsupported.
+
+        Attributes:
+            automatic_optimization (bool): Indicates whether Lightning manages
+                optimizer steps automatically.
+            _training_step_implementation (Callable): Bound training step function
+                corresponding to the active PL version.
         """
         # Check for PL version - Define PL Hooks accordingly
         if self.pl_version >= (2,0,0):
@@ -202,6 +238,27 @@ class SRGAN_model(pl.LightningModule):
             raise RuntimeError(f"Unsupported PyTorch Lightning version: {pl.__version__}")
 
     def initialize_ema(self):
+        """Initialize the Exponential Moving Average (EMA) mechanism for the generator.
+
+        This method sets up an EMA shadow copy of the generator parameters to
+        stabilize training and improve the quality of generated outputs. EMA is
+        enabled only if specified in the training configuration.
+
+        The EMA model tracks the moving average of generator weights with a
+        configurable decay factor and update schedule.
+
+        Configuration fields under `config.Training.EMA`:
+            - `enabled` (bool): Whether to enable EMA tracking.
+            - `decay` (float): Exponential decay factor for weight averaging (default: 0.999).
+            - `device` (str | None): Device to store the EMA weights on.
+            - `use_num_updates` (bool): Whether to use step-based update counting.
+            - `update_after_step` (int): Number of steps to wait before starting updates.
+
+        Attributes:
+            ema (ExponentialMovingAverage | None): EMA object tracking generator parameters.
+            _ema_update_after_step (int): Step count threshold before EMA updates begin.
+            _ema_applied (bool): Indicates whether EMA weights are currently applied to the generator.
+        """
         ema_cfg = getattr(self.config.Training, "EMA", None)
         self.ema: ExponentialMovingAverage | None = None
         self._ema_update_after_step = 0
@@ -218,18 +275,47 @@ class SRGAN_model(pl.LightningModule):
             self._ema_update_after_step = int(getattr(ema_cfg, "update_after_step", 0))
 
     def forward(self, lr_imgs):
-        # perform generative step (LR → SR)
+        """Forward pass through the generator network.
+
+        Takes a batch of low-resolution (LR) input images and produces
+        their corresponding super-resolved (SR) outputs using the generator model.
+
+        Args:
+            lr_imgs (torch.Tensor): Batch of input low-resolution images
+                with shape `(B, C, H, W)` where:
+                - `B`: batch size
+                - `C`: number of channels
+                - `H`, `W`: spatial dimensions.
+
+        Returns:
+            torch.Tensor: Super-resolved output images with increased spatial resolution,
+            typically scaled by the model's configured upsampling factor.
+        """
         sr_imgs = self.generator(lr_imgs)   # pass LR input through generator network
         return sr_imgs                      # return super-resolved output
 
     @torch.no_grad()
     def predict_step(self, lr_imgs):
-        """
-        Prediction for deployment:
-        - Automatically detects whether normalization is needed.
-        - If input range ≈ [0,1] → skip normalization.
-        - If input range ≈ [0,10000] → apply normalization.
-        - Handles inference, histogram matching, and denormalization.
+        """Run a single super-resolution inference step.
+
+        Performs forward inference using the generator (optionally under EMA weights)
+        to produce super-resolved (SR) outputs from low-resolution (LR) inputs.
+        The method automatically normalizes input values if required (e.g., raw
+        Sentinel-2 reflectance), applies histogram matching, and denormalizes the
+        outputs back to their original scale.
+
+        Args:
+            lr_imgs (torch.Tensor): Batch of input low-resolution images
+                with shape `(B, C, H, W)`. Pixel value ranges may vary depending
+                on preprocessing (e.g., 0–10000 for Sentinel-2 reflectance).
+
+        Returns:
+            torch.Tensor: Super-resolved output images with matched histograms
+            and restored value range, detached from the computation graph and
+            placed on CPU memory.
+
+        Raises:
+            AssertionError: If the generator is not in evaluation mode (`.eval()`).
         """
         assert self.generator.training is False, "Generator must be in eval mode for prediction."  # ensure eval mode
         lr_imgs = lr_imgs.to(self.device)  # move to device (GPU or CPU)
@@ -260,6 +346,25 @@ class SRGAN_model(pl.LightningModule):
 
 
     def training_step(self,batch,batch_idx, optimizer_idx: Optional[int] = None, *args):
+        """Dispatch the correct training step implementation based on PyTorch Lightning version.
+
+        This method acts as a compatibility layer between different PyTorch Lightning
+        versions that handle multi-optimizer GAN training differently.
+
+        - For PL ≥ 2.0: Manual optimization is used, and the optimizer index is not passed.
+        - For PL < 2.0: Automatic optimization is used, and the optimizer index is passed
+        to handle generator/discriminator updates separately.
+
+        Args:
+            batch (Any): A batch of training data (input tensors and targets as defined by the DataModule).
+            batch_idx (int): Index of the current batch within the epoch.
+            optimizer_idx (int | None, optional): Index of the active optimizer (0 for generator,
+                1 for discriminator) when using PL < 2.0.
+            *args: Additional arguments that may be passed by older Lightning versions.
+
+        Returns:
+            Any: The output of the active training step implementation, loss value.
+        """
         # Depending on PL version, and depending on the manual optimization
         if self.pl_version >= (2,0,0):
             # In PL2.x, optimizer_idx is not passed, manual optimization is performed
@@ -277,9 +382,33 @@ class SRGAN_model(pl.LightningModule):
         optimizer_closure=None,
         **kwargs,           # absorbs on_tpu/using_lbfgs/etc across PL versions
     ):
-        """
-        Used only when self.automatic_optimization == True (PL 1.x auto-optim).
-        No-op for PL 2 manual because Lightning won't call it there.
+        """Custom optimizer step handling for PL 1.x automatic optimization.
+
+        This method ensures correct behavior across different PyTorch Lightning
+        versions and training modes. It is invoked automatically during training
+        in PL < 2.0 when `automatic_optimization=True`. For PL ≥ 2.0, where manual
+        optimization is used, this function is effectively bypassed.
+
+        - In **PL ≥ 2.0 (manual optimization)**: The optimizer step is explicitly
+        called within `training_step_PL2()`, including EMA updates.
+        - In **PL < 2.0 (automatic optimization)**: This function manages optimizer
+        stepping, gradient zeroing, and optional EMA updates after generator steps.
+
+        Args:
+            epoch (int): Current training epoch.
+            batch_idx (int): Index of the current batch.
+            optimizer (torch.optim.Optimizer): The active optimizer instance.
+            optimizer_idx (int, optional): Index of the optimizer being stepped
+                (e.g., 0 for discriminator, 1 for generator).
+            optimizer_closure (Callable, optional): Closure for re-evaluating the
+                model and loss before optimizer step (used with some optimizers).
+            **kwargs: Additional arguments passed by PL depending on backend
+                (e.g., TPU flags, LBFGS options).
+
+        Notes:
+            - EMA updates are performed only after generator steps (optimizer_idx == 1).
+            - The update starts after `self._ema_update_after_step` global steps.
+
         """
         # If we're in manual optimization (PL >=2 path), do nothing special.
         if not self.automatic_optimization:
@@ -304,6 +433,36 @@ class SRGAN_model(pl.LightningModule):
 
     @torch.no_grad()
     def validation_step(self, batch, batch_idx):
+        """Run the validation loop for a single batch.
+
+        This method performs super-resolution inference on validation data,
+        computes image quality metrics (e.g., PSNR, SSIM), logs them, and
+        optionally visualizes SR–HR–LR triplets. It also evaluates the
+        discriminator’s adversarial response if applicable.
+
+        Workflow:
+            1. Forward pass (LR → SR) through the generator.
+            2. Compute content-based validation metrics.
+            3. Optionally log visual examples to the logger (e.g., Weights & Biases).
+            4. Compute and log discriminator metrics, unless in pretraining mode.
+
+        Args:
+            batch (Tuple[torch.Tensor, torch.Tensor]): A tuple `(lr_imgs, hr_imgs)` of
+                low-resolution and high-resolution tensors with shape `(B, C, H, W)`.
+            batch_idx (int): Index of the current validation batch.
+
+        Returns:
+            None: Metrics and images are logged via Lightning’s logger interface.
+
+        Raises:
+            AssertionError: If an unexpected number of bands or invalid visualization
+                configuration is encountered.
+
+        Notes:
+            - Validation is executed without gradient tracking.
+            - Only the first `config.Logging.num_val_images` batches are visualized.
+            - If EMA is enabled, the generator predictions reflect the current EMA state.
+        """
         # ======================================================================
         # SECTION: Forward pass — Generate SR prediction from LR input
         # Purpose: Run model inference on validation batch without gradient tracking.
@@ -337,15 +496,28 @@ class SRGAN_model(pl.LightningModule):
             base_lr = lr_imgs                                # use original LR for visualization
 
             # --- Select visualization bands (if multispectral) ---
-            if self.config.Model.in_bands > 3:               # e.g., Sentinel-2 with >3 channels
+            if self.config.Model.in_bands <3:
+                # show only first band
+                lr_vis = base_lr[:, :1, :, :]               # e.g., single-band input
+                hr_vis = hr_imgs[:, :1, :, :]               # subset HR
+                sr_vis = sr_imgs[:, :1, :, :]               # subset SR
+            elif self.config.Model.in_bands == 3:
+                # we can show normally
+                pass
+            elif self.config.Model.in_bands == 4:
+                # assume its RGB-NIR, show RGB
+                lr_vis = base_lr[:, :3, :, :]               # e.g., Sentinel-2 RGB
+                hr_vis = hr_imgs[:, :3, :, :]               # subset HR
+                sr_vis = sr_imgs[:, :3, :, :]               # subset SR
+            elif self.config.Model.in_bands > 4:               # e.g., Sentinel-2 with >3 channels
+                # random selection of bands
                 idx = np.random.choice(sr_imgs.shape[1], 3, replace=False)  # randomly select 3 bands
                 lr_vis = base_lr[:, idx, :, :]               # subset LR
                 hr_vis = hr_imgs[:, idx, :, :]               # subset HR
                 sr_vis = sr_imgs[:, idx, :, :]               # subset SR
             else:
-                lr_vis = base_lr                             # if RGB, just use all bands
-                hr_vis = hr_imgs
-                sr_vis = sr_imgs
+                # should not happen
+                pass
 
             # --- Clone tensors for plotting to avoid affecting main tensors ---
             plot_lr_img = lr_vis.clone()
@@ -382,22 +554,90 @@ class SRGAN_model(pl.LightningModule):
                 self.log("validation/DISC_adversarial_loss",adversarial_loss,sync_dist=True)
 
     def on_validation_epoch_start(self):
+        """Hook executed at the start of each validation epoch.
+
+        Applies the Exponential Moving Average (EMA) weights to the generator
+        before running validation to ensure evaluation uses the smoothed model
+        parameters.
+
+        Notes:
+            - Calls the parent hook via `super().on_validation_epoch_start()`.
+            - Restores original weights at the end of validation.
+        """
         super().on_validation_epoch_start()
         self._apply_generator_ema_weights()
 
     def on_validation_epoch_end(self):
+        """Hook executed at the end of each validation epoch.
+
+        Restores the generator’s original (non-EMA) weights after validation.
+        Ensures subsequent training or testing uses up-to-date parameters.
+
+        Notes:
+            - Calls the parent hook via `super().on_validation_epoch_end()`.
+        """
         self._restore_generator_weights()
         super().on_validation_epoch_end()
 
     def on_test_epoch_start(self):
+        """Hook executed at the start of each testing epoch.
+
+        Applies the Exponential Moving Average (EMA) weights to the generator
+        before running tests to ensure consistent evaluation with the
+        smoothed model parameters.
+
+        Notes:
+            - Calls the parent hook via `super().on_test_epoch_start()`.
+            - Restores original weights at the end of testing.
+        """
         super().on_test_epoch_start()
         self._apply_generator_ema_weights()
 
     def on_test_epoch_end(self):
+        """Hook executed at the end of each testing epoch.
+
+        Restores the generator’s original (non-EMA) weights after testing.
+        Ensures the model is reset to its latest training state.
+
+        Notes:
+            - Calls the parent hook via `super().on_test_epoch_end()`.
+        """
         self._restore_generator_weights()
         super().on_test_epoch_end()
 
     def configure_optimizers(self):
+        """Set up optimizers and learning rate schedulers for GAN training.
+
+        Initializes separate Adam optimizers for the generator and discriminator,
+        along with optional learning rate schedulers. Supports ReduceLROnPlateau
+        schedulers for both models and an optional generator warmup scheduler
+        (linear or cosine) for smoother training initialization.
+
+        Returns:
+            Tuple[List[torch.optim.Optimizer], List[Dict[str, Any]]]:
+                A tuple containing:
+                - A list of optimizers in order `[optimizer_d, optimizer_g]`
+                (order is crucial for multi-optimizer training).
+                - A list of scheduler configurations for PyTorch Lightning.
+
+        Configuration Fields:
+            config.Optimizers:
+                - `optim_g_lr` (float): Learning rate for the generator.
+                - `optim_d_lr` (float): Learning rate for the discriminator.
+
+            config.Schedulers:
+                - `factor_g`, `factor_d` (float): Multiplicative LR reduction factor.
+                - `patience_g`, `patience_d` (int): Epochs to wait before LR reduction.
+                - `metric` (str): Metric name to monitor for ReduceLROnPlateau.
+                - `g_warmup_steps` (int, optional): Steps for warmup phase (default: 0).
+                - `g_warmup_type` (str, optional): Type of warmup schedule (`"linear"` or `"cosine"`).
+
+        Notes:
+            - Uses `ReduceLROnPlateau` for both generator and discriminator.
+            - Optionally applies step-based warmup for the generator learning rate.
+            - The returned order `[D, G]` must match the order expected by the training step.
+        """
+        
         # configure Generator optimizer (Adam)
         optimizer_g = torch.optim.Adam(
             params=filter(lambda p: p.requires_grad, self.generator.parameters()),  # only trainable params
@@ -470,22 +710,49 @@ class SRGAN_model(pl.LightningModule):
     
     
     def on_train_batch_start(self, batch, batch_idx):  # called before each training batch
+        """Hook executed before each training batch.
+
+        Freezes or unfreezes discriminator parameters depending on the
+        current training phase. During pretraining, the discriminator is
+        frozen to allow the generator to learn reconstruction without
+        adversarial pressure.
+
+        Args:
+            batch (Any): The current batch of training data.
+            batch_idx (int): Index of the current batch in the epoch.
+        """
         pre = self._pretrain_check()                   # check if currently in pretraining phase
         for p in self.discriminator.parameters():      # loop over all discriminator params
             p.requires_grad = not pre                  # freeze D during pretrain, unfreeze otherwise
             
     def on_train_batch_end(self, outputs, batch, batch_idx):
+        """Hook executed after each training batch.
+
+        Logs the current learning rates for all active optimizers to
+        the logger for monitoring and debugging purposes.
+
+        Args:
+            outputs (Any): Outputs returned by `training_step`.
+            batch (Any): The batch of data processed.
+            batch_idx (int): Index of the current batch in the epoch.
+        """
         self._log_lrs() # log LR's on each batch end
 
     def on_fit_start(self):  # called once at the start of training
+        """Hook executed once at the beginning of model fitting.
+
+        Performs setup tasks that must occur before training starts:
+        - Moves EMA weights to the correct device.
+        - Prints a model summary (only from global rank 0 in DDP setups).
+
+        Notes:
+            - Calls `super().on_fit_start()` to preserve Lightning’s default behavior.
+            - The model summary is only printed by the global zero process
+            to avoid duplicated output in distributed training.
+        """
         super().on_fit_start()
         if self.ema is not None and self.ema.device is None: # move ema weights
             self.ema.to(self.device)
-            
-            # ======================================================================
-        # SECTION: Print Model Summary
-        # Purpose: Output model architecture and parameter counts (only once).
-        # ======================================================================
         from opensr_srgan.utils.gpu_rank import _is_global_zero
         if _is_global_zero():
             print_model_summary(self)  # print model summary to console
@@ -501,8 +768,16 @@ class SRGAN_model(pl.LightningModule):
 
 
     def _log_ema_setup_metrics(self) -> None:
-        """Log static EMA configuration once training begins."""
+        """Log static Exponential Moving Average (EMA) configuration parameters.
 
+        Records whether EMA is enabled, along with its core hyperparameters
+        (decay rate, activation delay, update mode). This information is
+        logged once when training begins to help track model configuration.
+
+        Notes:
+            - If EMA is disabled, logs `"EMA/enabled" = 0.0`.
+            - Called after the trainer is initialized to ensure logging context.
+        """
         if getattr(self, "trainer", None) is None:
             return
 
@@ -551,8 +826,23 @@ class SRGAN_model(pl.LightningModule):
         )
 
     def _log_ema_step_metrics(self, *, updated: bool) -> None:
-        """Log per-step EMA activity and statistics."""
+        """Log dynamic EMA statistics during training.
 
+        Tracks per-step EMA state, including whether an update occurred,
+        how many steps remain until activation, and the most recent decay value.
+        These metrics provide insight into EMA behavior over time.
+
+        Args:
+            updated (bool): Whether EMA weights were updated in the current step.
+
+        Notes:
+            - If EMA is disabled, this function exits without logging.
+            - Logs include:
+                - `"EMA/is_active"`: Indicates if EMA is currently updating.
+                - `"EMA/steps_until_activation"`: Steps remaining before EMA starts updating.
+                - `"EMA/last_decay"`: Latest applied decay value.
+                - `"EMA/num_updates"`: Total number of EMA updates performed.
+        """
         if self.ema is None:
             return
 
@@ -598,7 +888,17 @@ class SRGAN_model(pl.LightningModule):
             )
 
 
-    def _pretrain_check(self):  # helper to check if still in pretrain phase
+    def _pretrain_check(self) -> bool:
+        """Check whether the model is still in the generator pretraining phase.
+
+        Returns:
+            bool: True if the generator-only pretraining phase is active
+            (i.e., `global_step` < `g_pretrain_steps`), otherwise False.
+
+        Notes:
+            - During pretraining, the discriminator is frozen and only the
+            generator is updated.
+        """
         if self.pretrain_g_only and self.global_step < self.g_pretrain_steps:  # true if pretraining active
             return True
         else:
@@ -606,6 +906,29 @@ class SRGAN_model(pl.LightningModule):
 
         
     def _compute_adv_loss_weight(self) -> float:
+        """Compute the current adversarial loss weighting factor.
+
+        Determines how strongly the adversarial loss contributes to the total
+        generator loss, following a configurable ramp-up schedule. This helps
+        stabilize early training by gradually increasing the influence of the
+        discriminator.
+
+        Returns:
+            float: The current adversarial loss weight for the active step.
+
+        Configuration Fields:
+            config.Training.Losses:
+                - `adv_loss_beta` (float): Maximum scaling factor for adversarial loss.
+                - `adv_loss_schedule` (str): Type of ramp schedule (`"linear"` or `"cosine"`).
+
+        Notes:
+            - Returns `0.0` during pretraining steps (`global_step < g_pretrain_steps`).
+            - After the ramp-up phase, the weight saturates at `beta`.
+            - Cosine schedule provides a smoother ramp-up than linear.
+
+        Raises:
+            ValueError: If an unknown schedule type is provided in the configuration.
+        """
         """Compute the current adversarial loss weight using the configured ramp schedule."""
         beta = float(self.config.Training.Losses.adv_loss_beta)
         schedule = getattr(
@@ -637,15 +960,35 @@ class SRGAN_model(pl.LightningModule):
         )
 
     def _log_adv_loss_weight(self, adv_weight: float) -> None:
-        """Log the current adversarial loss weight."""
+        """Log the current adversarial loss weight.
+
+        Args:
+            adv_weight (float): Scalar multiplier applied to the adversarial loss term.
+        """
         self.log("training/adv_loss_weight", adv_weight,sync_dist=True)
 
-    def _adv_loss_weight(self):
+    def _adv_loss_weight(self) -> float:
+        """Compute and log the current adversarial loss weight.
+
+        Calls the internal scheduler/heuristic to obtain the adversarial loss weight,
+        logs it, and returns the value.
+
+        Returns:
+            float: The computed adversarial loss weight for the current step/epoch.
+        """
         adv_weight = self._compute_adv_loss_weight()
         self._log_adv_loss_weight(adv_weight)
         return adv_weight
 
     def _apply_generator_ema_weights(self) -> None:
+        """Swap the generator's parameters to their EMA-smoothed counterparts.
+
+        Applies EMA weights to the generator for evaluation (e.g., val/test). A no-op if
+        EMA is disabled or already applied. Moves EMA to the correct device if needed.
+
+        Notes:
+            - Sets an internal flag to avoid double application during the same phase.
+        """
         if self.ema is None or self._ema_applied:
             return
         if self.ema.device is None:
@@ -654,22 +997,49 @@ class SRGAN_model(pl.LightningModule):
         self._ema_applied = True
 
     def _restore_generator_weights(self) -> None:
+        """Restore the generator's original (non-EMA) parameters.
+
+        Reverts the parameter swap performed by `_apply_generator_ema_weights()`.
+        A no-op if EMA is disabled or not currently applied.
+
+        Notes:
+            - Clears the internal "applied" flag to enable future swaps.
+        """
         if self.ema is None or not self._ema_applied:
             return
         self.ema.restore(self.generator)
         self._ema_applied = False
 
     def on_save_checkpoint(self, checkpoint: dict) -> None:
+        """Augment the checkpoint with EMA state, if available.
+
+        Adds the EMA buffer/metadata to the checkpoint so that EMA can be restored upon load.
+
+        Args:
+            checkpoint (dict): Mutable checkpoint dictionary provided by Lightning.
+        """
         super().on_save_checkpoint(checkpoint)
         if self.ema is not None:
             checkpoint["ema_state"] = self.ema.state_dict()
 
     def on_load_checkpoint(self, checkpoint: dict) -> None:
+        """Restore EMA state from a checkpoint, if present.
+
+        Args:
+            checkpoint (dict): Checkpoint dictionary provided by Lightning containing
+                model state and optional `"ema_state"` entry.
+        """
         super().on_load_checkpoint(checkpoint)
         if self.ema is not None and "ema_state" in checkpoint:
             self.ema.load_state_dict(checkpoint["ema_state"])
 
-    def _log_lrs(self):
+    def _log_lrs(self) -> None:
+        """Log learning rates for discriminator and generator optimizers.
+
+        Notes:
+            - Assumes optimizers are ordered as `[optimizer_d, optimizer_g]` in the trainer.
+            - Logs both on-step and on-epoch for easier tracking.
+        """
         # order matches your return: [optimizer_d, optimizer_g]
         opt_d = self.trainer.optimizers[0]
         opt_g = self.trainer.optimizers[1]
@@ -678,15 +1048,20 @@ class SRGAN_model(pl.LightningModule):
         self.log("lr_generator", opt_g.param_groups[0]["lr"],
                 on_step=True, on_epoch=True, prog_bar=False, logger=True,sync_dist=True)
     
-    def load_from_checkpoint(self,ckpt_path):
+    def load_from_checkpoint(self,ckpt_path) -> None:
+        """Load model weights from a PyTorch Lightning checkpoint file.
+
+        Loads the `state_dict` from the given checkpoint and maps it to the current device.
+
+        Args:
+            ckpt_path (str | pathlib.Path): Path to the `.ckpt` file saved by Lightning.
+
+        Raises:
+            FileNotFoundError: If the checkpoint path does not exist.
+            KeyError: If the checkpoint does not contain a `'state_dict'` entry.
+        """
         # load ckpt
         ckpt = torch.load(ckpt_path, map_location=self.device)
         self.load_state_dict(ckpt['state_dict'])
         print(f"Loaded checkpoint from {ckpt_path}")
         
-
-if __name__=="__main__":
-    config_path = "opensr_srgan/configs/config_10m.yaml"
-    model = SRGAN_model(config=str(config_path))
-    model.forward(torch.randn(1,4,32,32))
-    

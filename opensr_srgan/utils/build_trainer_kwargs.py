@@ -15,14 +15,47 @@ def build_lightning_kwargs(
     early_stop_callback,
     resume_ckpt: str | None = None,
 ):
-    """Return the ``Trainer`` and ``fit`` keyword arguments required by Lightning.
+    """Return Trainer/fit keyword arguments compatible with Lightning < 2 and ≥ 2.
 
-    The helper centralises all compatibility quirks between Lightning < 2 and >= 2
-    while respecting the runtime device that is specified in the configuration
-    files.  By returning a tuple ``(trainer_kwargs, fit_kwargs)`` the caller can
-    forward the correct values to :class:`pytorch_lightning.Trainer` regardless of
-    the installed version.
+    Builds two dictionaries:
+    1) ``trainer_kwargs`` — safe, version-aware arguments for ``pytorch_lightning.Trainer``.
+    2) ``fit_kwargs`` — arguments for ``Trainer.fit`` (e.g., ``ckpt_path`` on PL ≥ 2).
+
+    The helper normalizes device configuration (CPU/GPU, DDP when multiple GPUs),
+    removes deprecated/None entries, and maps the legacy resume API:
+    - PL < 2: uses ``resume_from_checkpoint`` in ``trainer_kwargs``.
+    - PL ≥ 2: uses ``ckpt_path`` in ``fit_kwargs`` (if supported by signature).
+
+    It also clears the legacy environment variable
+    ``PL_TRAINER_RESUME_FROM_CHECKPOINT`` to avoid non-deterministic resume behavior.
+
+    Args:
+        config: OmegaConf-like config with ``Training`` fields:
+            - ``Training.device`` (str): "auto"|"cpu"|"cuda"/"gpu".
+            - ``Training.gpus`` (int|Sequence[int]|None): device count/IDs.
+            - ``Training.val_check_interval`` (int|float).
+            - ``Training.limit_val_batches`` (int|float).
+            - ``Training.max_epochs`` (int).
+        logger: A Lightning-compatible logger instance.
+        checkpoint_callback: Model checkpoint callback instance.
+        early_stop_callback: Early stopping callback instance.
+        resume_ckpt (str | None): Path to checkpoint to resume from.
+
+    Returns:
+        Tuple[Dict[str, Any], Dict[str, Any]]:
+            - trainer_kwargs: Dict for ``pl.Trainer(**trainer_kwargs)``.
+            - fit_kwargs: Dict for ``trainer.fit(..., **fit_kwargs)`` (may be empty).
+
+    Raises:
+        ValueError: If ``Training.device`` is not one of {"auto","cpu","cuda","gpu"}.
+
+    Notes:
+        - CPU runs force ``devices=1`` and no strategy.
+        - GPU runs honor ``Training.gpus``; DDP is enabled when requesting >1 device.
+        - All ``None`` values are pruned; kwargs are filtered to match the current
+        ``Trainer.__init__`` and ``Trainer.fit`` signatures to stay future-proof.
     """
+
 
     # ---------------------------------------------------------------------
     # 1) Version detection and environment cleanup

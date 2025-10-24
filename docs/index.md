@@ -4,7 +4,7 @@
 
 | **Runtime** | **Docs / License** | **Tests** |
 |:-----------:|:------------------:|:---------:|
-| ![PythonVersion](https://img.shields.io/badge/Python-v3.10%20%E2%80%93%20v3.12-blue.svg)<br>![PLVersion](https://img.shields.io/badge/PyTorch%20Lightning-v1.x%20%E2%80%93%20v2.x-blue.svg) | [![Docs](https://img.shields.io/badge/docs-mkdocs%20material-brightgreen)](https://srgan.opensr.eu)<br>[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE) | [![CI](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml/badge.svg)](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml)<br>[![codecov](https://codecov.io/gh/simon-donike/SISR-RS-SRGAN/graph/badge.svg?token=PWZND7MHRR)](https://codecov.io/gh/simon-donike/SISR-RS-SRGAN) |
+| ![PythonVersion](https://img.shields.io/badge/Python-v3.10%20%E2%80%93%20v3.12-blue.svg)<br>![PLVersion](https://img.shields.io/badge/PyTorch%20Lightning-v1.x%20%E2%80%93%20v2.x-blue.svg) | [![Docs](https://img.shields.io/badge/docs-mkdocs%20material-brightgreen)](https://srgan.opensr.eu)<br>![License: Apache](https://img.shields.io/badge/license-Apache%20License%202.0-blue) | [![CI](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml/badge.svg)](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml)<br>[![codecov](https://codecov.io/gh/simon-donike/SISR-RS-SRGAN/graph/badge.svg?token=PWZND7MHRR)](https://codecov.io/gh/simon-donike/SISR-RS-SRGAN) |
 
 ![Super-resolved Sentinel-2 example](assets/6band_banner.png)
 

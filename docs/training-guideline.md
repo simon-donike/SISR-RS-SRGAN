@@ -26,3 +26,6 @@ As training continues, the generator is trying to fool the discriminator and the
 With further progression of the training, it is important not only to monitor the absolute reconstruction quality of the generator, but also to keep an eye on the balance between the generator and discriminator. Ideally, we try to reach the Nash equilibrium, where the discriminator can not distinguish between real and synthetic anymore, meaning the super-resolution is (at least fdor the discriminator) indistinguishable from the real high-resolution image. This equilibrium is achieved when both $D(y)$ and $D(G(x))$ approach `0.5`.
 ![adv1](assets/discr_y_prob.png)
 ![adv2](assets/discr_x_prob.png)
+
+Also keep an eye out on the example images that are logged at every validation step.
+![ex_log](assets/example_log.png)

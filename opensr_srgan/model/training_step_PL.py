@@ -11,7 +11,7 @@ def training_step_PL1(self, batch, batch_idx, optimizer_idx):
     # ======================================================================
 
     # -------- DETERMINE PRETRAINING --------
-    pretrain_phase = self._pretrain_check()                  # check schedule: True => content-only pretraining
+    pretrain_phase = self._pretrain_check()    # check schedule: True => content-only pretraining
     if optimizer_idx == 1:  # log whether pretraining is active or not
         self.log("training/pretrain_phase", float(pretrain_phase), prog_bar=False,sync_dist=True)  # log once per G step to track phase state
 

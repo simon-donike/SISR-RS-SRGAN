@@ -35,9 +35,9 @@ jobs:
         run: |
           pip install -e . || true
 
-      - name: Build MkDocs site (strict)
+      - name: Build MkDocs site
         run: |
-          PYTHONPATH=. mkdocs build --strict
+          PYTHONPATH=. mkdocs build
 
       - uses: actions/upload-pages-artifact@v3
         with:

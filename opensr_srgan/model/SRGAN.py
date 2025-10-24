@@ -26,17 +26,92 @@ from opensr_srgan.model.model_blocks import ExponentialMovingAverage
 #############################################################################################################
 class SRGAN_model(pl.LightningModule):
     """
-    SRGAN_model — PyTorch Lightning implementation of a Super-Resolution GAN.
-    
-    This class defines a complete SRGAN training setup, including:
-      - Generator and Discriminator model initialization
-      - Optional VGG-based perceptual (content) loss network
-      - Adversarial loss configuration and label smoothing
-      - Support for pretraining and progressive adversarial loss ramp-up
-      - Integration with a YAML-based configuration system
-    
-    Args:
-        config_file_path (str): Path to the YAML configuration file.
+    SRGAN_model
+    ===========
+
+    A flexible, PyTorch Lightning–based SRGAN implementation for single-image super-resolution
+    in remote sensing and general imaging. The model supports multiple generator backbones
+    (SRResNet, RCAB, RRDB, LKA, and a flexible registry-driven variant) and discriminator
+    types (standard, PatchGAN), optional generator-only pretraining, adversarial loss ramp-up,
+    and an Exponential Moving Average (EMA) of generator weights for more stable evaluation.
+
+    Key features
+    ------------
+    - **Backbone flexibility:** Select generator/discriminator architectures via config.
+    - **Training modes:** Generator pretraining, adversarial training, and LR warm-up.
+    - **PL compatibility:** Automatic optimization for PL < 2.0; manual optimization for PL ≥ 2.0.
+    - **EMA support:** Optional EMA tracking with delayed activation and device placement.
+    - **Metrics & logging:** Content/perceptual metrics, LR logging, and optional W&B image logs.
+    - **Inference helpers:** Normalization/denormalization for 0–10000 reflectance and histogram matching.
+
+    Args
+    ----
+    config : str | pathlib.Path | dict | omegaconf.DictConfig, optional
+        Path to a YAML file, an in-memory dict, or an OmegaConf config with sections
+        defining Generator/Discriminator, Training, Optimizers, Schedulers, and Logging.
+        Defaults to `"config.yaml"`.
+    mode : {"train", "eval"}, optional
+        Build both G and D in `"train"` mode; only G in `"eval"`. Defaults to `"train"`.
+
+    Configuration overview (minimal)
+    --------------------------------
+    - **Model**: `in_bands` (int)
+    - **Generator**: `model_type` (`"SRResNet"`, `"res"`, `"rcab"`, `"rrdb"`, `"lka"`, `"conditional_cgan"`), 
+    `n_channels`, `n_blocks`, `large_kernel_size`, `small_kernel_size`, `scaling_factor`
+    - **Discriminator**: `model_type` (`"standard"`, `"patchgan"`), `n_blocks` (optional)
+    - **Training**:
+    - `pretrain_g_only` (bool), `g_pretrain_steps` (int)
+    - `adv_loss_ramp_steps` (int), `label_smoothing` (bool)
+    - `Losses.adv_loss_beta` (float), `Losses.adv_loss_schedule` (`"linear"`|`"cosine"`)
+    - `EMA.enabled` (bool), `EMA.decay` (float), `EMA.use_num_updates` (bool),
+        `EMA.update_after_step` (int), `EMA.device` (str|None)
+    - **Optimizers**: `optim_g_lr` (float), `optim_d_lr` (float)
+    - **Schedulers**: `factor_g`, `factor_d`, `patience_g`, `patience_d`, `metric`,
+    optional `g_warmup_steps`, `g_warmup_type` (`"linear"`|`"cosine"`)
+    - **Logging**: `wandb.enabled` (bool), `num_val_images` (int)
+
+    Behavior & versioning
+    ---------------------
+    - **PL ≥ 2.0**: Manual optimization (`automatic_optimization = False`). The bound
+    `training_step_PL2` performs explicit `zero_grad/step` calls and handles EMA updates.
+    - **PL < 2.0**: Automatic optimization. The legacy `training_step_PL1` is used, and
+    `optimizer_step` coordinates stepping and EMA after generator updates.
+
+    Created attributes (non-exhaustive)
+    -----------------------------------
+    generator : torch.nn.Module
+        Super-resolution generator.
+    discriminator : torch.nn.Module | None
+        Only present in `"train"` mode.
+    ema : ExponentialMovingAverage | None
+        EMA tracker for the generator (if enabled).
+    content_loss_criterion : torch.nn.Module
+        Perceptual/pixel content loss wrapper used in training/validation.
+    adversarial_loss_criterion : torch.nn.Module
+        BCEWithLogits loss for adversarial training (D/G).
+
+    Input/Output conventions
+    ------------------------
+    - **Forward**: `lr_imgs` of shape `(B, C, H, W)` → SR output with spatial scale set by
+    `Generator.scaling_factor`.
+    - **Predict**: Applies optional normalization (0–10000 → 0–1), EMA averaging, histogram
+    matching, and denormalization back to the input range; returns CPU tensors.
+
+    Example
+    -------
+    >>> model = SRGAN_model(config="config.yaml", mode="train")
+    >>> # Trainer handles fit; inference via .predict_step() or forward():
+    >>> model.eval()
+    >>> with torch.no_grad():
+    ...     sr = model(lr_imgs)
+
+    Notes
+    -----
+    - Discriminator is frozen during generator pretraining (`pretrain_g_only=True` and
+    `global_step < g_pretrain_steps`).
+    - The adversarial loss contribution is ramped from 0 to `adv_loss_beta` over
+    `adv_loss_ramp_steps` with linear or cosine schedule.
+    - Learning rate warm-up for the generator is supported via a per-step LambdaLR.
     """
 
     def __init__(self, config="config.yaml", mode="train"):

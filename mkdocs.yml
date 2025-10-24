@@ -9,6 +9,8 @@ docs_dir: docs
 
 theme:
   name: material
+  logo: assets/logo.png
+  favicon: assets/favicon.png
   features:
     - navigation.tabs        # <- top tabs
     - navigation.sections    # sidebar sections
@@ -18,6 +20,19 @@ theme:
     - navigation.sections
     - content.code.copy
     - toc.integrate
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
 
 plugins:
   - search
@@ -30,6 +45,9 @@ plugins:
             show_source: true
 
 markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      linenums_style: pymdownx-inline
   - pymdownx.snippets:
       base_path:
         - .
@@ -47,6 +65,17 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.tasklist
   - pymdownx.superfences
+
+edit_uri: edit/main/docs/
+
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/simon-donike/SISR-RS-SRGAN
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/esaopensr
+  generator: false
 
 nav:  
   - Home:

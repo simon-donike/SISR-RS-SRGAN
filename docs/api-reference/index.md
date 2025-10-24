@@ -1,10 +1,20 @@
 # API Reference
 
-This section documents the public Python API that powers the remote-sensing super-resolution
-workflows in this project. The pages listed in the navigation use
-[mkdocstrings](https://mkdocstrings.github.io/) to render up-to-date class and function
-signatures directly from the source code, ensuring that parameter descriptions stay aligned
-with the implementation.
+The API reference documents the Python entry points that back the configuration-driven
+super-resolution workflows. Each page is rendered with
+[mkdocstrings](https://mkdocstrings.github.io/), ensuring the signatures and docstrings stay in
+sync with the implementation.
 
-Select one of the modules in the sidebar to explore the available entry points for training,
-inference, data handling, and utility helpers.
+## Package overview
+
+::: opensr_srgan
+    handler: python
+    options:
+      show_root_heading: false
+      show_root_full_path: false
+      show_source: true
+      members:
+        - SRGAN_model
+        - train
+        - load_from_config
+        - load_inference_model

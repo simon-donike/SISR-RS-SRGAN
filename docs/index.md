@@ -4,15 +4,13 @@
 
 ![Super-resolved Sentinel-2 example](assets/6band_banner.png)
 
-SISR-RS-SRGAN is a comprehensive toolkit for training and evaluating super-resolution GANs on remote-sensing imagery. It
-packages a flexible generator/discriminator zoo, composable perceptual and reconstruction losses, and the training heuristics
-that make adversarial optimisation tractable—generator warm-up phases, learning-rate scheduling, adversarial-weight ramping, and
-more. All options are driven by concise YAML configuration files so you can explore new architectures or datasets without
+SISR-RS-SRGAN is a comprehensive toolkit for training and evaluating super-resolution GANs on remote-sensing imagery. It packages a flexible generator/discriminator zoo, composable perceptual and reconstruction losses, and the training heuristics
+that make adversarial optimisation tractable—generator warm-up phases, learning-rate scheduling, adversarial-weight ramping, and more. All options are driven by concise YAML configuration files so you can explore new architectures or datasets without
 rewriting pipelines.  
   
 Whether you are reproducing published results, exploring new remote-sensing modalities, or are trying to esablish some benchmarks, SISR-RS-SRGAN gives you a clear and extensible foundation for multispectral super-resolution research.
 
-> This repository and the configs represent the experiences that were made with SR-GAN training for remote sensing imagery. It's neither complete nor claims to perform SOTA SR, but it implements all tweaks and tips that worked for us.
+> This repository and the configs represent the experiences that were made with SR-GAN training for remote sensing imagery. It's neither complete nor claims to perform SOTA SR, but it implements all tweaks and tips that make training SR-GANs easier.
 
 ## Why this repository?
 
@@ -79,5 +77,4 @@ Whether you are reproducing published results, exploring new remote-sensing moda
 * [Results](results.md) showcases results for some generator/discriminator and dataset combinations.
 
 ## ESA OpenSR
-SISR-RS-SRGAN is part of the ESA [OpenSR](https://www.opensr.eu) ecosystem — an open framework for trustworthy super-resolution of multispectral satellite imagery.
-Within this initiative, this repository serves as the adversarial benchmark suite: it provides standardized GAN architectures, training procedures, and evaluation utilities that complement the other model types implemented in the project (diffusion, transformers, regression) and interfaces with from companion packages such as opensr-utils.
+SISR-RS-SRGAN is part of the ESA [OpenSR](https://www.opensr.eu) ecosystem — an open framework for trustworthy super-resolution of multispectral satellite imagery. Within this initiative, this repository serves as the adversarial benchmark suite: it provides standardized GAN architectures, training procedures, and evaluation utilities that complement the other model types implemented in the project (diffusion, transformers, regression) and interfaces with from companion packages such as opensr-utils.

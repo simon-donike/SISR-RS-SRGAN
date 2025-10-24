@@ -4,7 +4,7 @@ import time
 from contextlib import nullcontext
 from pathlib import Path
 from types import MethodType
-
+from typing import Optional
 
 import numpy as np
 import pytorch_lightning as pl
@@ -259,13 +259,13 @@ class SRGAN_model(pl.LightningModule):
         return sr_imgs
 
 
-    def training_step(self,batch,batch_idx, *args):
-        # Check what we need to pass to the training function
+    def training_step(self,batch,batch_idx, optimizer_idx: Optional[int] = None, *args):
         # Depending on PL version, and depending on the manual optimization
         if self.pl_version >= (2,0,0):
+            # In PL2.x, optimizer_idx is not passed, manual optimization is performed
             return self._training_step_implementation(batch, batch_idx) # no optim_idx
         else:
-            optimizer_idx = args[0] if len(args) > 0 else 0 # get optim_idx from kwargs
+            # In Pl1.x, optimizer_idx arrives twice and is passed on
             return self._training_step_implementation(batch, batch_idx, optimizer_idx) # pass optim_idx
         
     def optimizer_step(
@@ -283,8 +283,8 @@ class SRGAN_model(pl.LightningModule):
         """
         # If we're in manual optimization (PL >=2 path), do nothing special.
         if not self.automatic_optimization:
-            # Let Lightning's default behavior proceed (or simply return).
             # In manual mode we call opt.step()/zero_grad() in training_step_PL2.
+            # In manual mode, we update EMA weights manually in training step too.
             return super().optimizer_step(epoch, batch_idx, optimizer, optimizer_idx, optimizer_closure, **kwargs)
 
         # ---- PL 1.x auto-optimization path ----

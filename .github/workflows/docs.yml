@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - "paper/**"
+      - "docs/**"
   workflow_dispatch:     # allow manual runs
 
 permissions:
@@ -31,7 +31,6 @@ jobs:
           pip install --upgrade pip
           pip install mkdocs-material mkdocstrings[python] pymdown-extensions
 
-      # Make your package importable for mkdocstrings (ok if no setup.py/pyproject)
       - name: Make repo importable
         run: |
           pip install -e . || true

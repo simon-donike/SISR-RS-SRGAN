@@ -187,8 +187,10 @@ class GeneratorContentLoss(nn.Module):
 
         # --- Quality metrics ---
         with torch.no_grad():
-            sr_metric = self.normalizer.normalize(sr)
-            hr_metric = self.normalizer.normalize(hr)
+            #sr_metric = self.normalizer.normalize(sr)
+            #hr_metric = self.normalizer.normalize(hr)
+            sr_metric = torch.clamp(sr, 0.0, self.max_val)
+            hr_metric = torch.clamp(hr, 0.0, self.max_val)
             psnr = km.psnr(sr_metric, hr_metric, max_val=self.max_val)
             ssim = km.ssim(
                 sr_metric,

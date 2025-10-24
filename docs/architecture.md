@@ -1,12 +1,10 @@
 # Architecture
 
-This document outlines how ESA OpenSR organises its super-resolution GAN, the major components that make up the model, and how
-each piece interacts during training and inference.
+This document outlines how ESA OpenSR organises its super-resolution GAN, the major components that make up the model, and how each piece interacts during training and inference.
 
 ## SRGAN Lightning module
 
-`opensr_srgan/model/SRGAN.py` defines `SRGAN_model`, a `pytorch_lightning.LightningModule` that encapsulates the full adversarial workflow.
-The module is initialised from a YAML configuration file and provides the following responsibilities:
+`opensr_srgan/model/SRGAN.py` defines `SRGAN_model`, a `pytorch_lightning.LightningModule` that encapsulates the full adversarial workflow. The module is initialised from a YAML configuration file and provides the following responsibilities:
 
 * **Configuration ingestion.** Uses OmegaConf to load hyperparameters, dataset choices, and logging options. Convenience helpers
   such as `_pretrain_check()` and `_compute_adv_loss_weight()` translate config values into runtime behaviour.
@@ -47,8 +45,7 @@ The generator zoo lives under `opensr_srgan/model/generators/` and can be select
 * **Advanced variants (`SRGAN_advanced.py`).** Provides additional block implementations and compatibility aliases exposed in
   `__init__.py` for backwards compatibility.
 
-Common traits across generators include configurable input channel counts (`Model.in_bands`), support for upscaling factors from
-2× to 8×, and residual scaling to stabilise deeper networks.
+Common traits across generators include configurable input channel counts (`Model.in_bands`), support for upscaling factors from 2× to 8×, and residual scaling to stabilise deeper networks.
 
 ## Discriminator options
 
@@ -59,13 +56,11 @@ Common traits across generators include configurable input channel counts (`Mode
 * **PatchGAN discriminator (`patchgan.py`).** Operates on local patches, which can improve high-frequency fidelity when training
   with large images. The depth is controlled by `n_blocks` and defaults to three layers.
 
-Both discriminators use LeakyReLU activations and strided convolutions to progressively downsample the input until a real/fake
-logit map is produced.
+Both discriminators use LeakyReLU activations and strided convolutions to progressively downsample the input until a real/fake logit map is produced.
 
 ## Loss suite and metrics
 
-`opensr_srgan/model/loss` contains the perceptual and pixel-based criteria applied to the generator outputs. The primary entry point is
-`GeneratorContentLoss`, which supports:
+`opensr_srgan/model/loss` contains the perceptual and pixel-based criteria applied to the generator outputs. The primary entry point is `GeneratorContentLoss`, which supports:
 
 * **L1 reconstruction** over all spectral bands.
 * **Spectral Angle Mapper (SAM)** to preserve spectral signatures.
@@ -95,5 +90,4 @@ These helpers allow the generator to operate in a normalised space while still r
 5. When exported, `predict_step()` can be called directly or wrapped in a Lightning `Trainer.predict()` loop for large-scale
    inference.
 
-This modular design keeps the research workflow flexible: swap components with configuration changes, extend the factories with
-new architectures, or plug in custom losses without touching the training loop itself.
+This modular design keeps the research workflow flexible: swap components with configuration changes, extend the factories with new architectures, or plug in custom losses without touching the training loop itself.

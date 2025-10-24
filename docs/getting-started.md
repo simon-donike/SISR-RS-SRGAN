@@ -1,11 +1,8 @@
 # Getting started
 
-This guide walks through installing dependencies, configuring datasets, and launching your first ESA OpenSR experiment. The stack
-uses Python 3.10+, PyTorch Lightning, and Weights & Biases for experiment tracking.
+This guide walks through installing dependencies, configuring datasets, and launching your first ESA OpenSR experiment. The stack uses Python 3.10+, PyTorch Lightning, and Weights & Biases for experiment tracking.
 
-> 💡 **Only need inference?** Install the published package instead: `python -m pip install opensr-srgan`. It exposes
-> `load_from_config` and `load_inference_model` so you can instantiate models without cloning the repository. Continue with the
-> rest of this guide when you want to train, fine-tune, or otherwise modify the codebase.
+> 💡 **Only need inference?** Install the published package instead: `python -m pip install opensr-srgan`. It exposes `load_from_config` and `load_inference_model` so you can instantiate models without cloning the repository. Continue with the rest of this guide when you want to train, fine-tune, or otherwise modify the codebase.
 
 ## 1. Install the environment
 
@@ -24,8 +21,7 @@ uses Python 3.10+, PyTorch Lightning, and Weights & Biases for experiment tracki
 
 ## 2. Gather training data
 
-The repository now ships with a single, ready-to-use example dataset so you can verify the full training loop without preparing
-custom manifests. Fetch it with the bundled helper:
+The repository now ships with a single, ready-to-use example dataset so you can verify the full training loop without preparing custom manifests. Fetch it with the bundled helper:
 
 ```python
 from opensr_srgan.data.example_data.download_example_dataset import get_example_dataset
@@ -33,16 +29,14 @@ from opensr_srgan.data.example_data.download_example_dataset import get_example_
 get_example_dataset()  # downloads into ./example_dataset/
 ```
 
-The script downloads `example_dataset.zip` from the Hugging Face Hub, extracts it to `example_dataset/`, and removes the archive
-once extraction finishes. The configuration only needs to specify the dataset type:
+The script downloads `example_dataset.zip` from the Hugging Face Hub, extracts it to `example_dataset/`, and removes the archive once extraction finishes. The configuration only needs to specify the dataset type:
 
 ```yaml
 Data:
   dataset_type: ExampleDataset
 ```
 
-When you are ready to integrate your own collections, follow the guidance in [Data](data.md) to add a new dataset class and
-register it with the selector.
+When you are ready to integrate your own collections, follow the guidance in [Data](data.md) to add a new dataset class and register it with the selector.
 
 ## 3. Configure the experiment
 

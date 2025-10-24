@@ -1,14 +1,20 @@
 # Training workflow
 
-`opensr_srgan/train.py` is the canonical entry point for ESA OpenSR experiments. It ties together configuration loading, model instantiation,
-dataset selection, logging, and callbacks. This page explains how the script is organised and how to customise the training loop.
+`opensr_srgan/train.py` is the canonical entry point for ESA OpenSR experiments. It ties together configuration loading, model instantiation, dataset selection, logging, and callbacks. This page explains how the script is organised and how to customise the training loop.
+
+This section is a more technical overview, [Training Guideline](training-guideline.md) gives a more broad overview how to sirveill the training process.
+
+## Data module construction
+In order to train, you need a dataset. `Data.dataset_type` decides which dataset to use and wraps them in a `LightningDataModule`. Should you implement your own, you will need to add it to the dataset_selector.py file with the settings of your choice (see [Data](data.md)). Optionally, the selector instantiates `ExampleDataset` by default—perfect for smoke tests after downloading the sample data, a dataset of 200 RGB-NIR image pairs. The module inherits batch sizes, worker counts, and prefetching parameters from the configuration and prints a summary including dataset size.
+
+
 
 ## Command-line and Python interfaces
 
 You can launch training from the CLI or by importing the helper inside Python.
 
 ```bash
-python -m opensr_srgan.train --config path/to/config.yaml
+python opensr_srgan.train --config path/to/config.yaml
 ```
 
 ```python
@@ -23,25 +29,18 @@ Both entry points accept the same configuration file. The CLI exposes a single o
 
 GPU assignment is handled directly in the configuration. Set `Training.gpus` to a list of device indices (for example `[0, 1, 2, 3]`) to enable multi-GPU training; a single value such as `[0]` keeps the run on one card. When more than one device is listed the trainer automatically activates PyTorch Lightning's Distributed Data Parallel (DDP) backend for significantly faster epochs.
 
-## Initialisation steps
-
+## Initialisation steps - Overview
+The code performs the following, no matter if the script is launched form the CLI or through the import.
 1. **Import dependencies.** Torch, PyTorch Lightning, OmegaConf, and logging backends are loaded up-front.
 2. **Parse arguments.** `argparse` reads the configuration path and ensures the file exists.
 3. **Load configuration.** `OmegaConf.load()` parses the YAML file into an object used throughout the run.
 4. **Construct the model.**
-   * If `Model.load_checkpoint` is set, the script calls `SRGAN_model.load_from_checkpoint()` to reuse learned weights while
-     respecting the new configuration values.
+   * If `Model.load_checkpoint` is set, the script calls `SRGAN_model.load_from_checkpoint()` to import the learned weights while
+     respecting the new configuration values. If `Model.continue_training` is passed with a path to a pretrained checkpoint, all scheduler states, epochs and step numbers, EMA weights, etc are loaded in order to seamlessly continue training from a previous run.
     * Otherwise, it initialises a fresh `SRGAN_model`, which immediately builds the generator/discriminator and prints a
       parameter summary.
-5. **Resume training (optional).** If `Model.continue_training` points to a Lightning checkpoint, the resulting path is passed to
-   `Trainer(..., resume_from_checkpoint=...)` so optimiser states and schedulers resume where they left off.
+5. **Launch Training.** The training is launched with the model, weights and settings passed in the config.
 
-## Data module construction
-
-`select_dataset(config)` decides which dataset pair to use and wraps them in a `LightningDataModule`. With the bundled setup the
-selector instantiates `ExampleDataset` by default—perfect for smoke tests after downloading the sample data. Custom datasets can
-be registered by adding new branches to the selector (see [Data](data.md)). The module inherits batch sizes, worker counts, and
-prefetching parameters from the configuration and prints a summary including dataset size.
 
 ## Logging setup
 

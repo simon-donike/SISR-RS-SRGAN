@@ -1,7 +1,6 @@
 # Configuration
 
-ESA OpenSR relies on YAML files to control every aspect of the training pipeline. This page documents the available keys and how
-they influence the underlying code. Use `opensr_srgan/configs/config_20m.yaml` and `opensr_srgan/configs/config_10m.yaml` as starting points.
+ESA OpenSR relies on YAML files to control every aspect of the training pipeline. This page documents the available keys and how they influence the underlying code. Use `opensr_srgan/configs/config_20m.yaml` and `opensr_srgan/configs/config_10m.yaml` as starting points.
 
 ## File structure
 
@@ -119,16 +118,14 @@ performing sweeps:
 
 ### Discriminator presets
 
-Tune discriminator depth to match the generator capacity—too shallow and adversarial loss underfits, too deep and the
-training loop destabilises. These starting points mirror the architectures bundled with the repo:
+Tune discriminator depth to match the generator capacity—too shallow and adversarial loss underfits, too deep and the training loop destabilises. These starting points mirror the architectures bundled with the repo:
 
 | Discriminator type | Recommended depth parameter | Additional notes |
 | --- | --- | --- |
 | `standard` | `n_blocks = 8` | Mirrors the original SRGAN CNN with alternating stride-1/stride-2 blocks before the dense head.】 |
 | `patchgan` | `n_blocks = 3` | Maps to the 3-layer PatchGAN (a.k.a. `n_layers`); increase to 4–5 for larger crops or when the generator is particularly sharp. |
 
-When adjusting these presets, scale generator and discriminator together and monitor adversarial loss ramps defined in
-`Training.Losses` to keep training stable.
+When adjusting these presets, scale generator and discriminator together and monitor adversarial loss ramps defined in `Training.Losses` to keep training stable.
 
 ## Optimisers
 
@@ -170,5 +167,4 @@ available for experiments that prefer a steady rise.
 * **Override selectively.** When launching through scripts or notebooks, you can load a base config and override specific fields at
   runtime using `OmegaConf.merge`.
 
-With a clear understanding of these fields, you can rapidly iterate on architectures, datasets, and training strategies without
-modifying the underlying code.
+With a clear understanding of these fields, you can rapidly iterate on architectures, datasets, and training strategies without modifying the underlying code.

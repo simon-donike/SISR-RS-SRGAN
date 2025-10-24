@@ -2,6 +2,10 @@
 
 # SISR-RS-SRGAN
 
+| **Runtime** | **Docs / License** | **Tests** |
+|:-----------:|:------------------:|:---------:|
+| ![PythonVersion](https://img.shields.io/badge/Python-v3.10%20%E2%80%93%20v3.12-blue.svg)<br>![PLVersion](https://img.shields.io/badge/PyTorch%20Lightning-v1.x%20%E2%80%93%20v2.x-blue.svg) | [![Docs](https://img.shields.io/badge/docs-mkdocs%20material-brightgreen)](https://srgan.opensr.eu)<br>[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE) | [![CI](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml/badge.svg)](https://github.com/simon-donike/SISR-RS-SRGAN/actions/workflows/ci.yml)<br>[![codecov](https://codecov.io/gh/simon-donike/SISR-RS-SRGAN/graph/badge.svg?token=PWZND7MHRR)](https://codecov.io/gh/simon-donike/SISR-RS-SRGAN) |
+
 ![Super-resolved Sentinel-2 example](assets/6band_banner.png)
 
 SISR-RS-SRGAN is a comprehensive toolkit for training and evaluating super-resolution GANs on remote-sensing imagery. It packages a flexible generator/discriminator zoo, composable perceptual and reconstruction losses, and the training heuristics
@@ -21,6 +25,7 @@ Whether you are reproducing published results, exploring new remote-sensing moda
 * **Battle-tested training loop.** PyTorch Lightning handles mixed precision, gradient accumulation, multi-GPU training, and
   restartable checkpoints while the repo layers in GAN-specific tweaks such as adversarial weight ramping and learning-rate
   restarts.
+* **Lightning 1.x ↔ 2.x compatibility.** The trainer detects the installed Lightning version at runtime and routes to the appropriate automatic- or manual-optimisation step so your configs run unchanged across releases.
 * **Remote-sensing aware defaults.** Normalisation, histogram matching, spectral-band handling, and Sentinel-2 SAFE ingestion are
   ready-made for 10 m and 20 m bands and easily extendable to other sensors.
 

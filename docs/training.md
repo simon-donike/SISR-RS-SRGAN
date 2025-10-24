@@ -2,6 +2,9 @@
 
 `opensr_srgan/train.py` is the canonical entry point for ESA OpenSR experiments. It ties together configuration loading, model instantiation, dataset selection, logging, and callbacks. This page explains how the script is organised and how to customise the training loop.
 
+!!! note "PyTorch Lightning 1.x and 2.x compatible"
+    The training stack now adapts automatically to the installed PyTorch Lightning release. `SRGAN_model.setup_lightning()` inspects `pytorch_lightning.__version__`, binds the legacy automatic-optimisation `training_step_PL1()` when running on 1.x, and switches to the manual-optimisation `training_step_PL2()` helper on 2.x where GAN training requires `automatic_optimization = False`. `opensr_srgan.utils.build_trainer_kwargs.build_lightning_kwargs()` mirrors this by emitting the correct `Trainer` arguments—`resume_from_checkpoint` for 1.x, `ckpt_path` for 2.x—so both Lightning branches resume, log, and step optimisers identically. See [Trainer Details](trainer-details.md) for a step-by-step breakdown of the warm-up checks, adversarial updates, and EMA lifecycle.
+
 This section is a more technical overview, [Training Guideline](training-guideline.md) gives a more broad overview how to sirveill the training process.
 
 ## Data module construction

@@ -1,56 +1,67 @@
-ENTRY: training_step(batch, batch_idx, optimizer_idx)
+ENTRY: trainer.fit(model, datamodule)
 │
-├─ 1) Forward + metrics (no grad)
-│   ├─ (lr, hr) = batch
-│   ├─ sr = G(lr)
-│   ├─ metrics = content_loss.return_metrics(sr, hr)    # {l1, sam, perceptual, tv, psnr, ssim}
-│   └─ LOG: each metric (e.g., "l1", "sam", "perceptual", "tv", "psnr", "ssim")
+├─ PRELUDE (opensr_srgan/train.py)
+│   ├─ Load config (OmegaConf) and resolve device list (`Training.gpus`).
+│   ├─ Check `Model.load_checkpoint` / `Model.continue_training` to decide between fresh training vs. retraining from a checkpoint.
+│   ├─ Call `build_lightning_kwargs()` → detects PyTorch Lightning version, normalises accelerator/devices, and routes resume arguments (`resume_from_checkpoint` for PL<2, `ckpt_path` for PL≥2).
+│   └─ Instantiate `Trainer(**trainer_kwargs)` and invoke `trainer.fit(..., **fit_kwargs)`.
 │
-├─ 2) Pretrain flag
-│   ├─ pretrain = _pretrain_check()  # global_step vs g_pretrain_steps
-│   └─ IF optimizer_idx == 1: LOG "training/pretrain_phase" = float(pretrain)
+├─ SRGAN_model.setup_lightning()
+│   ├─ Parse `pl.__version__` into `self.pl_version`.
+│   ├─ IF `self.pl_version >= (2,0,0)`
+│   │     ├─ Set `automatic_optimization = False` (manual optimisation required by PL2).
+│   │     └─ Bind `training_step_PL2` as the active `training_step` implementation.
+│   └─ ELSE (PL1.x)
+│         ├─ Ensure `automatic_optimization is True`.
+│         └─ Bind `training_step_PL1` (optimizer_idx-based training).
 │
-├─ 3) IF pretrain == True  (G-only warmup)
-│   │
-│   ├─ (content_loss, loss_metrics) = content_loss.return_loss(sr, hr)
-│   │
-│   ├─ IF optimizer_idx == 1 (G step, pretrain):
-│   │     ├─ LOG "generator/content_loss" = content_loss
-│   │     └─ RETURN content_loss            # backprop through content terms only
-│   │
-│   └─ IF optimizer_idx == 0 (D step, pretrain):
-│         ├─ LOG "discriminator/D(x)_prob_mean"    = 0.0
-│         ├─ LOG "discriminator/D(G(z))_prob_mean" = 0.0
-│         ├─ fake_pretrain_loss = 0.0  (scalar, requires_grad=True)
-│         ├─ LOG "discriminator/adversarial_loss"  = fake_pretrain_loss
-│         └─ RETURN fake_pretrain_loss   # closure runs; D weights unchanged
-│
-└─ 4) ELSE pretrain == False  (proper GAN training)
+└─ ACTIVE TRAINING STEP (batch, batch_idx[, optimizer_idx])
     │
-    ├─ 4A) IF optimizer_idx == 0 (D step):
-    │   ├─ hr_logits = D(hr)
-    │   ├─ sr_logits = D(sr.detach())             # detach to block G grads in D step
-    │   ├─ real_target = adv_target               # 0.9 if label_smoothing else 1.0
-    │   ├─ fake_target = 0.0
-    │   ├─ loss_real = BCEWithLogits(hr_logits, real_target)
-    │   ├─ loss_fake = BCEWithLogits(sr_logits, fake_target)
-    │   ├─ d_loss = loss_real + loss_fake
-    │   ├─ LOG "discriminator/adversarial_loss" = d_loss   (sync_dist=True)
-    │   ├─ with no_grad:
-    │   │   ├─ d_real_prob = sigmoid(hr_logits).mean()
-    │   │   └─ d_fake_prob = sigmoid(sr_logits).mean()
-    │   ├─ LOG "discriminator/D(x)_prob_mean"    = d_real_prob (prog_bar, sync_dist)
-    │   ├─ LOG "discriminator/D(G(z))_prob_mean" = d_fake_prob (prog_bar, sync_dist)
-    │   └─ RETURN d_loss
+    ├─ 1) Forward + metrics (no grad for logging reuse)
+    │   ├─ (lr, hr) = batch
+    │   ├─ sr = G(lr)
+    │   └─ metrics = content_loss.return_metrics(sr, hr)
+    │       └─ LOG: `train_metrics/*` (L1, SAM, perceptual, TV, PSNR, SSIM)
     │
-    └─ 4B) IF optimizer_idx == 1 (G step):
-        ├─ (content_loss, loss_metrics) = content_loss.return_loss(sr, hr)     # tuple(loss, metrics)
-        ├─ LOG "generator/content_loss" = content_loss
+    ├─ 2) Phase checks
+    │   ├─ `pretrain = _pretrain_check()`  # compare global_step vs. `Training.g_pretrain_steps`
+    │   ├─ LOG: `training/pretrain_phase` (on G step for PL1, per-batch for PL2)
+    │   └─ `adv_weight = _adv_loss_weight()` or `_compute_adv_loss_weight()`  # ramp toward `Training.Losses.adv_loss_beta`
+    │       └─ LOG: `training/adv_loss_weight`
+    │
+    ├─ 3) IF `pretrain` True  (Generator warm-up)
+    │   ├─ Generator path
+    │   │   ├─ Compute `(content_loss, metrics) = content_loss.return_loss(sr, hr)`
+    │   │   ├─ LOG: `generator/content_loss`
+    │   │   ├─ Reuse metrics for logging (`train_metrics/*`)
+    │   │   ├─ LOG: `training/adv_loss_weight` (even though weight is 0 during warm-up)
+    │   │   └─ RETURN/STEP on `content_loss` only (PL1 returns scalar; PL2 manual_backward + `opt_g.step()`)
+    │   └─ Discriminator path
+    │       ├─ LOG zeros for `discriminator/D(y)_prob`, `discriminator/D(G(x))_prob`, `discriminator/adversarial_loss`
+    │       └─ Return dummy zero tensor with `requires_grad=True` (PL1) or skip optimisation but keep logs (PL2)
+    │
+    └─ 4) ELSE `pretrain` False  (Full GAN training)
         │
-        ├─ sr_logits = D(sr)                                   # no detach so GAN grads reach G
-        ├─ g_adv = BCEWithLogits(sr_logits, target=1.0)        # no smoothing for G
-        ├─ adv_weight = _adv_loss_weight()                     # logs training/adv_loss_weight internally
+        ├─ 4A) Discriminator update
+        │   ├─ hr_logits = D(hr)
+        │   ├─ sr_logits = D(sr.detach())
+        │   ├─ real_target = adv_target (0.9 with label smoothing else 1.0)
+        │   ├─ fake_target = 0.0
+        │   ├─ loss_real = BCEWithLogits(hr_logits, real_target)
+        │   ├─ loss_fake = BCEWithLogits(sr_logits, fake_target)
+        │   ├─ d_loss = loss_real + loss_fake
+        │   ├─ LOG: `discriminator/adversarial_loss`
+        │   ├─ LOG: `discriminator/D(y)_prob` = sigmoid(hr_logits).mean()
+        │   ├─ LOG: `discriminator/D(G(x))_prob` = sigmoid(sr_logits).mean()
+        │   └─ Optimise D (return `d_loss` in PL1; manual backward + `opt_d.step()` in PL2)
         │
-        ├─ total_loss = content_loss + adv_weight * g_adv
-        ├─ LOG "generator/total_loss" = total_loss              (sync_dist=True)
-        └─ RETURN total_loss
+        └─ 4B) Generator update
+            ├─ (content_loss, metrics) = content_loss.return_loss(sr, hr)
+            ├─ LOG: `generator/content_loss`
+            ├─ sr_logits = D(sr)
+            ├─ g_adv = BCEWithLogits(sr_logits, target=1.0)
+            ├─ LOG: `generator/adversarial_loss` = g_adv
+            ├─ total_loss = content_loss + adv_weight * g_adv
+            ├─ LOG: `generator/total_loss`
+            ├─ Optimise G (return `total_loss` in PL1; manual backward + `opt_g.step()` in PL2)
+            └─ IF EMA enabled AND `global_step >= _ema_update_after_step`: update shadow weights (`EMA/update_after_step`, `EMA/is_active` logs)

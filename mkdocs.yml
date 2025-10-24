@@ -52,5 +52,6 @@ nav:
   - Configuration: configuration.md
   - Data: data.md
   - Training: training.md
+  - Trainer Details: trainer-details.md
   - Training Guideline: training-guideline.md
   - Results: results.md

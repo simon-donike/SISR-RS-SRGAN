@@ -166,7 +166,7 @@ def training_step_PL2(self, batch, batch_idx):
         for key, value in metrics.items():
             self.log(f"train_metrics/{key}", value, sync_dist=True)
 
-        # ensure adv-weight is still logged like you do in pretrain
+        # ensure adv-weight is still logged like in pretrain
         self._log_adv_loss_weight(_adv_weight())
 
         # manual optimize G

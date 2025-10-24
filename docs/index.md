@@ -1,36 +1,3 @@
----
-title: Remote-Sensing-SRGAN
-hide:
-  - navigation
-  - toc
----
-
-# 🛰️ SRGAN for Remote Sensing
-
-> Flexible super-resolution GANs for satellite imagery  
-> *Open-source, PyTorch-Lightning-based, and ready for research.*
-
-<div class="grid cards" markdown>
-- :rocket: **Get Started**  
-  Learn installation, configuration, and your first training run.  
-  [:material-play-circle: Getting Started](getting-started.md)
-
-- :gear: **Architecture**  
-  Dive into the model design, generators, discriminators, and loss functions.  
-  [:material-cog-outline: Architecture](architecture.md)
-
-- :bar_chart: **Results**  
-  See qualitative and quantitative outcomes of SRGAN models.  
-  [:material-chart-line: Results](results.md)
-
-- :books: **API Reference**  
-  Detailed documentation of all Python modules and functions.  
-  [:material-code-tags: API Reference](api-reference/index.md)
-</div>
-
----
-
-
 <img src="https://github.com/ESAOpenSR/opensr-model/blob/main/resources/opensr_logo.png?raw=true" width="250"/>
 
 # SISR-RS-SRGAN

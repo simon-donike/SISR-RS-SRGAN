@@ -133,7 +133,7 @@ Table: **Implemented generator types and their characteristics.**
 | `rcab` [@rcab] | Residual Channel Attention Blocks. Adds channel-wise reweighting to enhance textures and small structures. |
 | `rrdb` [@rrdb] | Residual-in-Residual Dense Blocks (RRDB) as in ESRGAN. Deep structure with dense connections, improving detail sharpness. |
 | `lka` [@lka] | Large-Kernel Attention blocks. Capture wide spatial context, beneficial for structured RS patterns (e.g., fields, roads). |
-| `cgan` | stoachastic Conditional Generator with *NoiseResBlock*. |
+| `cgan` | Stochastic Conditional Generator with *NoiseResBlock*. |
 
 :::
 

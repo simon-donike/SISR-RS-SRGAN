@@ -48,7 +48,7 @@ markdown_extensions:
   - pymdownx.tasklist
   - pymdownx.superfences
 
-nav:
+nav:  
   - Home:
       - Overview: index.md
       - Getting Started: getting-started.md

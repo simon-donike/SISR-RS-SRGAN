@@ -1,12 +1,19 @@
 # opensr_srgan/tests/test_radiometrics.py
 import torch
+
 torch.manual_seed(0)
 
 import numpy as np
 import pytest
 
 from opensr_srgan.utils.radiometrics import (
-    normalise_s2, normalise_10k, sen2_stretch, minmax_percentile, minmax, histogram, moment
+    normalise_s2,
+    normalise_10k,
+    sen2_stretch,
+    minmax_percentile,
+    minmax,
+    histogram,
+    moment,
 )
 
 
@@ -38,7 +45,8 @@ def test_sen2_stretch_range():
 def test_minmax_percentile_basic_bounds():
     x = torch.tensor([0.0, 1.0, 2.0, 3.0, 100.0]).view(1, 1, 5, 1)  # include outlier
     y = minmax_percentile(x, pmin=2, pmax=98)
-    assert x.shape == y.shape # only validate shape
+    assert x.shape == y.shape  # only validate shape
+
 
 def test_minmax_unit_range():
     x = torch.randn(4, 5, 6)

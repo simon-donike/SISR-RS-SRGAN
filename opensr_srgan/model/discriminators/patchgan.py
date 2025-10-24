@@ -20,8 +20,11 @@ def get_norm_layer(norm_type: str = "instance"):
     if norm_type == "batch":
         return functools.partial(nn.BatchNorm2d, affine=True, track_running_stats=True)
     if norm_type == "instance":
-        return functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=False)
+        return functools.partial(
+            nn.InstanceNorm2d, affine=False, track_running_stats=False
+        )
     if norm_type == "none":
+
         def _identity(_channels: int):
             return nn.Identity()
 
@@ -32,7 +35,9 @@ def get_norm_layer(norm_type: str = "instance"):
 class NLayerDiscriminator(nn.Module):
     """Defines a PatchGAN discriminator that classifies overlapping patches."""
 
-    def __init__(self, input_nc: int, ndf: int = 64, n_layers: int = 3, norm_layer=nn.BatchNorm2d):
+    def __init__(
+        self, input_nc: int, ndf: int = 64, n_layers: int = 3, norm_layer=nn.BatchNorm2d
+    ):
         super().__init__()
         if isinstance(norm_layer, functools.partial):
             use_bias = norm_layer.func == nn.InstanceNorm2d
@@ -49,7 +54,7 @@ class NLayerDiscriminator(nn.Module):
         nf_mult_prev = 1
         for n in range(1, n_layers):
             nf_mult_prev = nf_mult
-            nf_mult = min(2 ** n, 8)
+            nf_mult = min(2**n, 8)
             sequence += [
                 nn.Conv2d(
                     ndf * nf_mult_prev,
@@ -64,7 +69,7 @@ class NLayerDiscriminator(nn.Module):
             ]
 
         nf_mult_prev = nf_mult
-        nf_mult = min(2 ** n_layers, 8)
+        nf_mult = min(2**n_layers, 8)
         sequence += [
             nn.Conv2d(
                 ndf * nf_mult_prev,
@@ -78,7 +83,9 @@ class NLayerDiscriminator(nn.Module):
             nn.LeakyReLU(0.2, True),
         ]
 
-        sequence += [nn.Conv2d(ndf * nf_mult, 1, kernel_size=kw, stride=1, padding=padw)]
+        sequence += [
+            nn.Conv2d(ndf * nf_mult, 1, kernel_size=kw, stride=1, padding=padw)
+        ]
         self.model = nn.Sequential(*sequence)
 
     def forward(self, input):  # type: ignore[override]
@@ -101,7 +108,9 @@ class PatchGANDiscriminator(nn.Module):
 
         ndf = 64
         norm_layer = get_norm_layer(norm_type)
-        self.model = NLayerDiscriminator(input_nc, ndf=ndf, n_layers=n_layers, norm_layer=norm_layer)
+        self.model = NLayerDiscriminator(
+            input_nc, ndf=ndf, n_layers=n_layers, norm_layer=norm_layer
+        )
 
         self.base_channels = ndf
         self.kernel_size = 4

@@ -21,8 +21,9 @@ def _tensor_to_plot_data(t: torch.Tensor):
     Returns:
         numpy.ndarray: NumPy array representation of the tensor, compatible
         with matplotlib plotting functions.
-    """    
+    """
     return tensor_to_numpy(t.contiguous())
+
 
 def _to_numpy_img(t: torch.Tensor):
     """Convert a normalized image tensor in (C, H, W) format to a NumPy array.
@@ -47,7 +48,7 @@ def _to_numpy_img(t: torch.Tensor):
     t = t.detach().clamp(0, 1)
     if C == 1:
         out = _tensor_to_plot_data(t[0])
-        return out               # grayscale
+        return out  # grayscale
 
     if C in (3, 4):
         rgb = t[:3]
@@ -56,6 +57,7 @@ def _to_numpy_img(t: torch.Tensor):
 
     return _tensor_to_plot_data(t.permute(1, 2, 0))
     # Multichannel (first 3 shown upstream)
+
 
 def plot_tensors(lr, sr, hr, title="Train"):
     """Render LR–SR–HR triplets from a batch as a single PIL image.
@@ -104,7 +106,9 @@ def plot_tensors(lr, sr, hr, title="Train"):
     # figure/axes: always 2D array even for B==1
     fixed_width = 15
     variable_height = (15 / 3) * B
-    fig, axes = plt.subplots(B, 3, figsize=(fixed_width, variable_height), squeeze=False)
+    fig, axes = plt.subplots(
+        B, 3, figsize=(fixed_width, variable_height), squeeze=False
+    )
 
     # loop over batch
     with torch.no_grad():
@@ -114,24 +118,25 @@ def plot_tensors(lr, sr, hr, title="Train"):
             img_hr = _to_numpy_img(hr[i].detach().cpu())
 
             axes[i, 0].imshow(img_lr)
-            axes[i, 0].set_title('LR'); axes[i, 0].axis('off')
+            axes[i, 0].set_title("LR")
+            axes[i, 0].axis("off")
 
             axes[i, 1].imshow(img_sr)
-            axes[i, 1].set_title('SR'); axes[i, 1].axis('off')
+            axes[i, 1].set_title("SR")
+            axes[i, 1].axis("off")
 
             axes[i, 2].imshow(img_hr)
-            axes[i, 2].set_title('HR'); axes[i, 2].axis('off')
+            axes[i, 2].set_title("HR")
+            axes[i, 2].axis("off")
 
     fig.suptitle(title)
     fig.tight_layout()
 
     # render to PIL
     buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight')
+    fig.savefig(buf, format="png", bbox_inches="tight")
     buf.seek(0)
     pil_image = Image.open(buf).convert("RGB").copy()
     buf.close()
     plt.close(fig)
     return pil_image
-
-

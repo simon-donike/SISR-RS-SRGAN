@@ -36,6 +36,7 @@ class SRResNet(nn.Module):
         - The network uses a global skip connection around the residual stack.
         - Upsampling is performed by PixelShuffle via sub-pixel convolution blocks.
     """
+
     def __init__(
         self,
         in_channels: int = 3,
@@ -129,6 +130,7 @@ class Generator(nn.Module):
     Returns:
         torch.Tensor: Super-resolved image produced by the wrapped SRResNet.
     """
+
     def __init__(
         self,
         in_channels: int = 3,

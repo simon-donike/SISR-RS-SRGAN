@@ -42,7 +42,12 @@ if "pytorch_lightning" not in sys.modules:
 
 
 MODULE_NAME = "opensr_srgan.utils.build_trainer_kwargs"
-MODULE_PATH = Path(__file__).resolve().parents[3] / "opensr_srgan" / "utils" / "build_trainer_kwargs.py"
+MODULE_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "opensr_srgan"
+    / "utils"
+    / "build_trainer_kwargs.py"
+)
 
 
 if "opensr_srgan" not in sys.modules:

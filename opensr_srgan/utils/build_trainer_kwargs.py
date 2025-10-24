@@ -56,7 +56,6 @@ def build_lightning_kwargs(
         ``Trainer.__init__`` and ``Trainer.fit`` signatures to stay future-proof.
     """
 
-
     # ---------------------------------------------------------------------
     # 1) Version detection and environment cleanup
     # ---------------------------------------------------------------------

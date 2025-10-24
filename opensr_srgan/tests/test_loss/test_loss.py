@@ -16,7 +16,7 @@ def cfg_10m():
 
 
 def test_generator_content_loss_forward(monkeypatch, cfg_10m):
-    loss_fn = GeneratorContentLoss(cfg_10m,testing=True)
+    loss_fn = GeneratorContentLoss(cfg_10m, testing=True)
 
     B, C, H, W = 1, 13, 32, 32
     sr = torch.rand(B, C, H, W)

@@ -81,6 +81,7 @@ class FlexibleGenerator(nn.Module):
         >>> x = torch.randn(1, 3, 64, 64)
         >>> y = g(x)  # (1, 3, 256, 256)
     """
+
     def __init__(
         self,
         in_channels: int = 6,
@@ -110,14 +111,15 @@ class FlexibleGenerator(nn.Module):
 
         block_factory = _BLOCK_REGISTRY[block_key]
         self.body = nn.Sequential(
-            *[
-                block_factory(n_channels, small_kernel)
-                for _ in range(n_blocks)
-            ]
+            *[block_factory(n_channels, small_kernel) for _ in range(n_blocks)]
         )
-        self.body_tail = nn.Conv2d(n_channels, n_channels, small_kernel, padding=small_kernel // 2)
+        self.body_tail = nn.Conv2d(
+            n_channels, n_channels, small_kernel, padding=small_kernel // 2
+        )
         self.upsampler = make_upsampler(n_channels, scale)
-        self.tail = nn.Conv2d(n_channels, in_channels, large_kernel, padding=padding_large)
+        self.tail = nn.Conv2d(
+            n_channels, in_channels, large_kernel, padding=padding_large
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         feat = self.head(x)

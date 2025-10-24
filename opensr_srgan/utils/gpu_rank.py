@@ -1,5 +1,6 @@
 import os
 
+
 def _is_global_zero() -> bool:
     """Return True if this process is the global rank zero (primary) worker.
 
@@ -19,6 +20,7 @@ def _is_global_zero() -> bool:
     # Prefer torch.distributed if available
     try:
         import torch.distributed as dist
+
         if dist.is_available() and dist.is_initialized():
             return dist.get_rank() == 0
     except Exception:

@@ -1,4 +1,5 @@
 """Fallback helpers for converting Torch tensors to NumPy arrays."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -31,7 +32,7 @@ def tensor_to_numpy(tensor: torch.Tensor) -> np.ndarray:
         tensor (torch.Tensor): Input tensor to convert.
 
     Returns:
-        numpy.ndarray: NumPy array representation of the tensor.  
+        numpy.ndarray: NumPy array representation of the tensor.
         Falls back to ``tensor.tolist()`` conversion if direct bindings are unavailable.
 
     Raises:

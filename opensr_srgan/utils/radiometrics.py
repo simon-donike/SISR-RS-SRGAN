@@ -36,13 +36,13 @@ def normalise_s2(im: torch.Tensor, stage: str = "norm") -> torch.Tensor:
 
     if stage == "norm":
         # Scale roughly from [0, value/10] → [0, 1] → [-1, 1]
-        im = im * (10. / value)
+        im = im * (10.0 / value)
         im = (im * 2) - 1
         im = torch.clamp(im, -1, 1)
     else:  # stage == "denorm"
         # Reverse mapping: [-1, 1] → [0, 1] → [0, value/10]
         im = (im + 1) / 2
-        im = im * (value / 10.)
+        im = im * (value / 10.0)
         im = torch.clamp(im, 0, 1)
 
     return im
@@ -97,11 +97,13 @@ def sen2_stretch(im: torch.Tensor) -> torch.Tensor:
     torch.Tensor
         Contrast-stretched image tensor.
     """
-    stretched = im * (10 / 3.)
+    stretched = im * (10 / 3.0)
     return torch.clamp(stretched, 0.0, 1.0)
 
 
-def minmax_percentile(tensor: torch.Tensor, pmin: float = 2, pmax: float = 98) -> torch.Tensor:
+def minmax_percentile(
+    tensor: torch.Tensor, pmin: float = 2, pmax: float = 98
+) -> torch.Tensor:
     """
     Perform percentile-based min-max normalization to [0, 1].
 
@@ -121,8 +123,8 @@ def minmax_percentile(tensor: torch.Tensor, pmin: float = 2, pmax: float = 98) -
     torch.Tensor
         Tensor scaled to [0, 1] based on percentile range.
     """
-    min_val = torch.quantile(tensor, pmin / 100.)
-    max_val = torch.quantile(tensor, pmax / 100.)
+    min_val = torch.quantile(tensor, pmin / 100.0)
+    max_val = torch.quantile(tensor, pmax / 100.0)
     tensor = (tensor - min_val) / (max_val - min_val)
     return tensor
 
@@ -149,6 +151,7 @@ def minmax(img: torch.Tensor) -> torch.Tensor:
     normalized_img = (img - min_val) / (max_val - min_val)
     return normalized_img
 
+
 # ---------------------------------------------------------------
 # HISTOGRAM MATCHING
 # ---------------------------------------------------------------
@@ -158,7 +161,7 @@ def histogram(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
 
     Each channel in the target image is adjusted so that its cumulative
     distribution function (CDF) matches that of the corresponding channel
-    in the reference image.  
+    in the reference image.
     This preserves overall color/radiometric tone relationships, but aligns
     the pixel intensity distributions more precisely than simple moment matching.
 
@@ -167,10 +170,10 @@ def histogram(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     Parameters
     ----------
     reference : torch.Tensor
-        Reference image or batch, shape (C, H, W) or (B, C, H, W).  
+        Reference image or batch, shape (C, H, W) or (B, C, H, W).
         Its histogram will be used as the target distribution.
     target : torch.Tensor
-        Target image or batch to be adjusted, shape (C, H, W) or (B, C, H, W).  
+        Target image or batch to be adjusted, shape (C, H, W) or (B, C, H, W).
         Must have the same number of channels as `reference`.
 
     Returns
@@ -181,8 +184,10 @@ def histogram(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     """
 
     # Ensure both inputs have correct dimensionality: either (C,H,W) or (B,C,H,W)
-    assert target.ndim in (3, 4) and reference.ndim in (3, 4), \
-        "Expected (C,H,W) or (B,C,H,W) for both reference and target"
+    assert target.ndim in (3, 4) and reference.ndim in (
+        3,
+        4,
+    ), "Expected (C,H,W) or (B,C,H,W) for both reference and target"
 
     # Save device/dtype for conversion back later
     device, dtype = target.device, target.dtype
@@ -206,7 +211,7 @@ def histogram(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
             ref.to(dtype=torch.float32),
             size=(H_tgt, W_tgt),
             mode="bilinear",
-            align_corners=False
+            align_corners=False,
         )
 
     # Convert to NumPy for histogram matching operations
@@ -220,8 +225,8 @@ def histogram(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         rb = b % B_ref
 
         for c in range(C_tgt):
-            ref_ch = ref_np[rb, c]   # reference channel
-            tgt_ch = tgt_np[b, c]    # target channel
+            ref_ch = ref_np[rb, c]  # reference channel
+            tgt_ch = tgt_np[b, c]  # target channel
 
             # Mask invalid pixels (NaN or Inf)
             mask = np.isfinite(tgt_ch) & np.isfinite(ref_ch)
@@ -243,7 +248,6 @@ def histogram(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     return out[0] if target.ndim == 3 else out
 
 
-
 # ---------------------------------------------------------------
 # MOMENT MATCHING
 # ---------------------------------------------------------------
@@ -253,7 +257,7 @@ def moment(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
 
     Each channel in the `target` image is rescaled to match the mean and
     standard deviation (first and second moments) of the corresponding channel
-    in the `reference` image.  
+    in the `reference` image.
     This operation effectively transfers the global radiometric statistics
     (brightness and contrast) from `reference` to `target`.
 
@@ -291,8 +295,8 @@ def moment(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         # --- Compute per-channel mean and std ---
         ref_mean = np.mean(ref_ch)
         tgt_mean = np.mean(tgt_ch)
-        ref_std  = np.std(ref_ch)
-        tgt_std  = np.std(tgt_ch)
+        ref_std = np.std(ref_ch)
+        tgt_std = np.std(tgt_ch)
 
         # --- Apply moment matching formula ---
         # Normalize target → scale by reference std → shift by reference mean
@@ -305,4 +309,3 @@ def moment(reference: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     matched = torch.from_numpy(matched_np).to(device=device, dtype=dtype)
 
     return matched
-

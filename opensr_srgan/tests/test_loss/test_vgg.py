@@ -6,7 +6,7 @@ from opensr_srgan.model.loss.vgg import TruncatedVGG19
 
 
 def test_truncated_vgg19_valid_layers():
-    model = TruncatedVGG19(i=5, j=4,weights=False)
+    model = TruncatedVGG19(i=5, j=4, weights=False)
     model.eval()
     x = torch.randn(1, 3, 64, 64)
     with torch.no_grad():

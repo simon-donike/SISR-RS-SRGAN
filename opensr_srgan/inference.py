@@ -18,9 +18,11 @@ def load_model(config_path=None, ckpt_path=None, device=None):
     if ckpt_path:
         # Try Lightning API first (without 'strict'); fall back to raw state_dict
         try:
-            model = SRGAN_model.load_from_checkpoint(
-                ckpt_path, map_location=device
-            ).eval().to(device)
+            model = (
+                SRGAN_model.load_from_checkpoint(ckpt_path, map_location=device)
+                .eval()
+                .to(device)
+            )
         except TypeError:
             state = torch.load(ckpt_path, map_location=device)
             state = state.get("state_dict", state)

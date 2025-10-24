@@ -32,6 +32,7 @@ class NoiseResBlock(nn.Module):
         res_scale (float, optional): Residual scaling factor (typically 0.2).
             Controls the contribution of the residual path to the output.
     """
+
     def __init__(
         self,
         n_channels: int,
@@ -128,7 +129,10 @@ class ConditionalGANGenerator(nn.Module):
         )
 
         self.body = nn.ModuleList(
-            [NoiseResBlock(n_channels, small_kernel, noise_dim, res_scale) for _ in range(n_blocks)]
+            [
+                NoiseResBlock(n_channels, small_kernel, noise_dim, res_scale)
+                for _ in range(n_blocks)
+            ]
         )
         self.body_tail = nn.Conv2d(
             n_channels,
@@ -137,7 +141,9 @@ class ConditionalGANGenerator(nn.Module):
             padding=small_kernel // 2,
         )
         self.upsampler = make_upsampler(n_channels, scale)
-        self.tail = nn.Conv2d(n_channels, in_channels, large_kernel, padding=padding_large)
+        self.tail = nn.Conv2d(
+            n_channels, in_channels, large_kernel, padding=padding_large
+        )
 
     def sample_noise(
         self,

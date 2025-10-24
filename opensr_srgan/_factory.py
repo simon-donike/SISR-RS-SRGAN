@@ -98,7 +98,7 @@ def load_from_config(
         with _maybe_download(checkpoint_uri) as resolved_path:
             checkpoint = torch.load(str(resolved_path), map_location=map_location)
         state_dict = checkpoint.get("state_dict", checkpoint)
-        model.load_state_dict(state_dict,strict=False)
+        model.load_state_dict(state_dict, strict=False)
 
         if model.ema is not None and "ema_state" in checkpoint:
             model.ema.load_state_dict(checkpoint["ema_state"])
@@ -125,7 +125,9 @@ def load_inference_model(
         preset_meta = _PRESETS[key]
     except KeyError as err:
         valid = ", ".join(sorted(_PRESETS))
-        raise ValueError(f"Unknown preset '{preset}'. Available options: {valid}.") from err
+        raise ValueError(
+            f"Unknown preset '{preset}'. Available options: {valid}."
+        ) from err
 
     try:  # pragma: no cover - import guard only used at runtime
         from huggingface_hub import hf_hub_download
@@ -152,11 +154,13 @@ def load_inference_model(
         map_location=map_location,
         mode="eval",
     )
-    
+
+
 if __name__ == "__main__":
     # simple test
     model = load_inference_model("RGB-NIR")
     import torch
-    lr = torch.randn(1,4,64,64)
+
+    lr = torch.randn(1, 4, 64, 64)
     sr = model.predict_step(lr)
     print(sr.shape)

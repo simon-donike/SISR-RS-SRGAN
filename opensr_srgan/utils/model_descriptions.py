@@ -5,21 +5,24 @@ def print_model_summary(self):
     """
 
     # --- helpers (millions) ---
-    def count_trainable_params(m): return sum(p.numel() for p in m.parameters() if p.requires_grad) / 1e6
-    def count_total_params(m):     return sum(p.numel() for p in m.parameters()) / 1e6
+    def count_trainable_params(m):
+        return sum(p.numel() for p in m.parameters() if p.requires_grad) / 1e6
+
+    def count_total_params(m):
+        return sum(p.numel() for p in m.parameters()) / 1e6
 
     # --- counts ---
     g_trainable = count_trainable_params(self.generator)
-    g_total     = count_total_params(self.generator)
+    g_total = count_total_params(self.generator)
     d_trainable = count_trainable_params(self.discriminator)
-    d_total     = count_total_params(self.discriminator)
+    d_total = count_total_params(self.discriminator)
 
     # expose the exact names you want to use elsewhere
-    g_params = g_trainable   # alias for “trainable G params (M)”
-    d_params = d_trainable   # alias for “trainable D params (M)”
+    g_params = g_trainable  # alias for “trainable G params (M)”
+    d_params = d_trainable  # alias for “trainable D params (M)”
 
     total_trainable = g_trainable + d_trainable
-    total_all       = g_total + d_total
+    total_all = g_total + d_total
 
     # ------------------------------------------------------------------
     # Derive human-readable generator description
@@ -41,7 +44,9 @@ def print_model_summary(self):
     # ------------------------------------------------------------------
     # Resolution info (input → output)
     # ------------------------------------------------------------------
-    scale_factor = getattr(self.config.Generator, "scaling_factor", getattr(self.generator, "scale", None))
+    scale_factor = getattr(
+        self.config.Generator, "scaling_factor", getattr(self.generator, "scale", None)
+    )
     if scale_factor is not None:
         res_str = f"Super-Resolution Factor: ×{scale_factor}"
     else:
@@ -54,9 +59,8 @@ def print_model_summary(self):
     content_w = getattr(loss_cfg, "content_loss_weight", 1.0)
     adv_w = getattr(loss_cfg, "adv_loss_beta", 1.0)
     perceptual_w = getattr(loss_cfg, "perceptual_loss_weight", None)
-    total_w_str = (
-        f"   • Content: {content_w} | Adversarial: {adv_w}"
-        + (f" | Perceptual: {perceptual_w}" if perceptual_w is not None else "")
+    total_w_str = f"   • Content: {content_w} | Adversarial: {adv_w}" + (
+        f" | Perceptual: {perceptual_w}" if perceptual_w is not None else ""
     )
 
     print("\n" + "=" * 90)
@@ -72,7 +76,9 @@ def print_model_summary(self):
     print(f"   • Input Channels:    {self.config.Model.in_bands}")
     print(f"   • Feature Channels:  {self.config.Generator.n_channels}")
     print(f"   • Residual Blocks:   {self.config.Generator.n_blocks}")
-    print(f"   • Kernel Sizes:      small={self.config.Generator.small_kernel_size}, large={self.config.Generator.large_kernel_size}")
+    print(
+        f"   • Kernel Sizes:      small={self.config.Generator.small_kernel_size}, large={self.config.Generator.large_kernel_size}"
+    )
     print(f"   • Params:            {g_params:.2f} M\n")
 
     # ------------------------------------------------------------------
@@ -80,7 +86,11 @@ def print_model_summary(self):
     # ------------------------------------------------------------------
     d_type = getattr(self.config.Discriminator, "model_type", "standard")
     d_blocks = getattr(self.config.Discriminator, "n_blocks", None)
-    effective_blocks = getattr(self.discriminator, "n_blocks", getattr(self.discriminator, "n_layers", d_blocks))
+    effective_blocks = getattr(
+        self.discriminator,
+        "n_blocks",
+        getattr(self.discriminator, "n_layers", d_blocks),
+    )
     base_channels = getattr(self.discriminator, "base_channels", "N/A")
     kernel_size = getattr(self.discriminator, "kernel_size", "N/A")
     fc_size = getattr(self.discriminator, "fc_size", None)
@@ -143,5 +153,7 @@ def print_model_summary(self):
     print(f"📊 Model Summary")
     print(f"   • Total Params:           {total_all:.2f} M")
     print(f"   • Total Trainable Params: {total_trainable:.2f} M")
-    print(f"   • Device:                 {self.device if hasattr(self, 'device') else 'Not set'}")
+    print(
+        f"   • Device:                 {self.device if hasattr(self, 'device') else 'Not set'}"
+    )
     print("=" * 90 + "\n")

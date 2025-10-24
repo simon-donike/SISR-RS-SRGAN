@@ -1,6 +1,7 @@
 from huggingface_hub import hf_hub_download
 import zipfile, os
 
+
 def get_example_dataset(out_dir: str = "example_dataset/"):
     """Download and extract the bundled example dataset from Hugging Face Hub.
 
@@ -45,7 +46,7 @@ def get_example_dataset(out_dir: str = "example_dataset/"):
         if prefix and prefix.endswith("/"):
             for member in members:
                 # strip the prefix
-                target = member[len(prefix):]
+                target = member[len(prefix) :]
                 if not target:  # skip folder itself
                     continue
                 target_path = os.path.join(out_dir, target)

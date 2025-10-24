@@ -9,7 +9,6 @@ from omegaconf import OmegaConf
 from opensr_srgan.utils.model_descriptions import print_model_summary
 
 
-
 class DummyNet(torch.nn.Module):
     def __init__(self, n_params=10):
         super().__init__()
@@ -21,8 +20,10 @@ class DummyNet(torch.nn.Module):
         self.kernel_size = 3
         self.fc_size = 256
 
-    def forward(self, x): return x
-    
+    def forward(self, x):
+        return x
+
+
 # ---- Dummy model container ----
 class DummyModel:
     def __init__(self, cfg):

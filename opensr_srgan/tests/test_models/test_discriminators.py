@@ -5,7 +5,10 @@ import pytest
 torch = pytest.importorskip("torch")
 from torch import nn  # noqa: E402
 
-from opensr_srgan.model.discriminators import Discriminator, PatchGANDiscriminator  # noqa: E402
+from opensr_srgan.model.discriminators import (
+    Discriminator,
+    PatchGANDiscriminator,
+)  # noqa: E402
 
 
 @pytest.mark.parametrize(
